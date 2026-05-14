@@ -184,7 +184,7 @@ export default function Comments() {
     <div>
       <TopBar title="Comentários" subtitle="Central de engajamento, intenção de compra e respostas automáticas" />
       <div className="space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Metric label="Total" value={stats.total} icon={MessageCircle} tone="primary" />
           <Metric label="Intenção" value={stats.purchase} icon={ShoppingBag} tone="warning" />
           <Metric label="Auto resposta" value={stats.replied} icon={Zap} tone="success" />
@@ -208,7 +208,7 @@ export default function Comments() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Buscar autor, comentário ou resposta..." className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:flex">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:flex">
               <Select value={platformFilter} onValueChange={setPlatformFilter}>
                 <SelectTrigger className="h-10 xl:w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>{platforms.map((platform) => <SelectItem key={platform} value={platform}>{platform === 'all' ? 'Plataformas' : platform}</SelectItem>)}</SelectContent>

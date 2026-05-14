@@ -218,7 +218,7 @@ export default function Publications() {
     <div>
       <TopBar title="Publicações" subtitle="Centro de controle pós-publicação e performance" />
       <div className="space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <Metric label="Publicados" value={stats.published} icon={ExternalLink} tone="primary" />
           <Metric label="Agendados" value={stats.scheduled} icon={Calendar} />
           <Metric label="Publicando" value={stats.publishing} icon={Send} tone="warning" />
@@ -233,7 +233,7 @@ export default function Publications() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Buscar produto, legenda, ID ou link..." className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:flex">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 xl:flex">
               <Select value={platformFilter} onValueChange={setPlatformFilter}><SelectTrigger className="h-10 xl:w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Plataformas</SelectItem>{PLATFORMS.map((platform) => <SelectItem key={platform} value={platform}>{platform}</SelectItem>)}</SelectContent></Select>
               <Select value={periodFilter} onValueChange={setPeriodFilter}><SelectTrigger className="h-10 xl:w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Período</SelectItem><SelectItem value="7d">7 dias</SelectItem><SelectItem value="30d">30 dias</SelectItem><SelectItem value="errors">Com erro</SelectItem></SelectContent></Select>
               <Select value={performanceFilter} onValueChange={setPerformanceFilter}><SelectTrigger className="h-10 xl:w-44"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Performance</SelectItem><SelectItem value="top">Maior engajamento</SelectItem><SelectItem value="low">Menor desempenho</SelectItem><SelectItem value="no_metrics">Métricas zeradas</SelectItem></SelectContent></Select>
@@ -380,7 +380,7 @@ function PublicationCard({ post, selected, onToggle, onOpen, onStatus }: { post:
         </button>
         <StatusBadge status={post.status} />
       </div>
-      <div className="mt-3 flex items-center justify-between border-t border-border pt-3"><PlatformIcon platform={post.platform} showLabel size="sm" /><Performance post={post} /></div>
+      <div className="mt-3 flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between"><PlatformIcon platform={post.platform} showLabel size="sm" /><Performance post={post} /></div>
       <div className="mt-3 flex justify-end"><Actions post={post} onOpen={onOpen} onStatus={onStatus} onDelete={() => {}} /></div>
     </div>
   );

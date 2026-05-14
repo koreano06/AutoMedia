@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { Menu } from "lucide-react";
 import Sidebar from "./Sidebar";
+import MobileBottomNav from "./MobileBottomNav";
 import { NotificationProvider, useNotifications } from "@/lib/NotificationContext";
 
 function AppShell() {
@@ -19,17 +19,10 @@ function AppShell() {
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
-      <button
-        type="button"
-        aria-label="Abrir menu"
-        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 md:hidden"
-        onClick={() => setMobileMenuOpen(true)}
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-      <main className="min-h-screen flex-1 overflow-x-clip pb-20 md:ml-64 md:pb-0">
+      <main className="min-h-screen min-w-0 flex-1 overflow-x-clip pb-28 md:ml-64 md:pb-0">
         <Outlet />
       </main>
+      <MobileBottomNav counts={counts} onOpenMenu={() => setMobileMenuOpen(true)} />
     </div>
   );
 }

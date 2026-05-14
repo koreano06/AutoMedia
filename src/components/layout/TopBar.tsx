@@ -25,10 +25,10 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/80 bg-card/85 shadow-sm shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-card/75">
-      <div className="flex min-h-16 items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+      <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 sm:min-h-16 sm:gap-4 sm:px-6 sm:py-3">
         <div className="min-w-0 flex-1">
-          <h1 className="truncate font-syne text-base font-bold leading-tight text-foreground sm:text-lg">{title}</h1>
-          {subtitle && <p className="max-w-[52vw] truncate text-xs text-muted-foreground sm:max-w-none">{subtitle}</p>}
+          <h1 className="truncate font-syne text-[15px] font-bold leading-tight text-foreground sm:text-lg">{title}</h1>
+          {subtitle && <p className="max-w-[46vw] truncate text-[11px] text-muted-foreground sm:max-w-none sm:text-xs">{subtitle}</p>}
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:gap-3">
@@ -46,7 +46,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-xl md:hidden"
+            className="h-8 w-8 rounded-xl sm:h-9 sm:w-9 md:hidden"
             onClick={() => setMobileSearchOpen((open) => !open)}
             aria-label={mobileSearchOpen ? "Fechar busca" : "Abrir busca"}
           >
@@ -60,7 +60,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-xl"
+            className="h-8 w-8 rounded-xl sm:h-9 sm:w-9"
             onClick={toggleTheme}
             title={resolvedTheme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
             aria-label={resolvedTheme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
@@ -74,7 +74,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative h-9 w-9 rounded-xl">
+              <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-xl sm:h-9 sm:w-9">
                 <Bell className="h-4 w-4 text-muted-foreground" />
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
@@ -113,7 +113,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-2xl border border-transparent px-1.5 py-1 transition-colors hover:border-border hover:bg-muted/70 sm:px-2">
+              <button className="flex items-center gap-2 rounded-2xl border border-transparent px-1 py-1 transition-colors hover:border-border hover:bg-muted/70 sm:px-2">
                 <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-primary shadow-sm shadow-primary/25">
                   <span className="text-xs font-bold text-white">{initial}</span>
                   <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-card bg-success" />

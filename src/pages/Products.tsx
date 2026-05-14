@@ -341,7 +341,7 @@ export default function Products() {
     <div>
       <TopBar title="Produtos" subtitle="Central de entrada, análise e criação de conteúdo" />
       <div className="space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <ProductMetric label="Total" value={stats.total} icon={Package} />
           <ProductMetric label="Aguardando análise" value={stats.analyzing} icon={Bot} tone="primary" />
           <ProductMetric label="Com vídeos" value={stats.withVideos} icon={Film} tone="accent" />
@@ -361,7 +361,7 @@ export default function Products() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:flex">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4 lg:flex">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-10 lg:w-44">
                   <SelectValue />

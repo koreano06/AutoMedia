@@ -193,7 +193,7 @@ export default function Settings() {
               const [value, onChange] = automationState[key];
 
               return (
-                <div key={key} className="flex items-center justify-between gap-4 px-4 py-4 sm:px-5">
+                <div key={key} className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-muted">
                       <Icon className="h-3.5 w-3.5 text-muted-foreground" />

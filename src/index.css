@@ -97,6 +97,26 @@
   body {
     @apply bg-background text-foreground font-inter;
   }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
 }
 
 @layer utilities {
@@ -142,5 +162,29 @@
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-border rounded-full;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .touch-pan-x {
+    touch-action: pan-x;
+  }
+
+  .mobile-card-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  .mobile-page-pad {
+    @apply px-3 py-4 sm:p-6;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }

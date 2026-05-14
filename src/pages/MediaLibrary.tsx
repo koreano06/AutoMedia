@@ -315,7 +315,7 @@ export default function MediaLibrary() {
     <div>
       <TopBar title="Biblioteca de Mídia" subtitle="Central de ativos criativos, revisão e preparação para IA" />
       <div className="space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <MediaMetric label="Total" value={stats.total} icon={Layers3} />
           <MediaMetric label="Imagens" value={stats.images} icon={Image} tone="primary" />
           <MediaMetric label="Vídeos" value={stats.videos} icon={Film} tone="accent" />
@@ -336,7 +336,7 @@ export default function MediaLibrary() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:flex">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 xl:flex">
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="h-10 xl:w-44"><SelectValue /></SelectTrigger>
                 <SelectContent>{typeOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>

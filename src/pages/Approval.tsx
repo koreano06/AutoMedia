@@ -406,7 +406,7 @@ export default function Approval() {
               {selectedIds.length > 0 && <span className="font-medium text-primary">{selectedIds.length} selecionados</span>}
               <span className="hidden items-center gap-1 sm:flex"><Keyboard className="h-3.5 w-3.5" /> Atalhos: A aprova, R rejeita, N próximo</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:flex md:flex-wrap">
               {selectedIds.length > 0 && (
                 <>
                   <Button size="sm" variant="outline" onClick={() => handleBulk('approved')}>Aprovar selecionados</Button>

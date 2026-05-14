@@ -282,7 +282,7 @@ export default function Schedule() {
                   <Filter className="h-3.5 w-3.5" /> {filteredPosts.length} posts
                   {selectedIds.length > 0 && <span className="font-medium text-primary">{selectedIds.length} selecionados</span>}
                 </div>
-                <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 md:flex md:flex-wrap">
                   {selectedIds.length > 0 && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleBulk('paused')}><PauseCircle className="mr-1 h-4 w-4" /> Pausar</Button>
