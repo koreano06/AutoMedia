@@ -59,18 +59,53 @@ npm run lint:fix
 npm run typecheck
 ```
 
+## Deploy no Vercel
+
+Este frontend é um projeto Vite/React. No Vercel, use as configurações padrão:
+
+- Framework Preset: `Vite`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Install Command: `npm install`
+
+O arquivo `vercel.json` mantém o roteamento SPA funcionando em páginas internas, como `/products`, `/media`, `/videos` e `/settings`.
+
+### Deploy via GitHub
+
+1. Suba o projeto para um repositório GitHub.
+2. Acesse `https://vercel.com/new`.
+3. Importe o repositório.
+4. Configure as variáveis de ambiente, se necessário.
+5. Clique em `Deploy`.
+
+### Deploy via CLI
+
+```bash
+npm install -g vercel
+vercel login
+vercel
+```
+
+Para produção:
+
+```bash
+vercel --prod
+```
+
 ## Estrutura
 
 ```text
 src/
+  app/          Providers, router e definição central das rotas
   api/          Cliente e integrações de API
   components/   Componentes comuns, layout e biblioteca de UI
+  config/       Configurações estáticas, como navegação
   hooks/        Hooks compartilhados
   lib/          Utilitários, contexto de autenticação e configuração
   pages/        Telas principais do produto
   services/     Acesso a dados e integrações por domínio
   types/        Tipos compartilhados e contratos
-  App.tsx       Rotas da aplicação
+  App.tsx       Composição principal da aplicação
   main.tsx      Entrada do React
   index.css     Tema global e Tailwind
 ```
