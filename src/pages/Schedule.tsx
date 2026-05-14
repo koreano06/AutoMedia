@@ -432,8 +432,64 @@ function SectionTitle({ icon: Icon, title, subtitle }: { icon: typeof Calendar; 
 }
 
 function CalendarGrid({ days, posts, currentDate, selectedDay, onSelectDay, onOpen, compact }: { days: Date[]; posts: Post[]; currentDate: Date; selectedDay: Date; onSelectDay: (day: Date) => void; onOpen: (post: Post) => void; compact?: boolean }) {
+  const selectedPosts = posts
+    .filter((post) => post.scheduled_at && isSameDay(new Date(post.scheduled_at), selectedDay))
+    .sort((a, b) => postTime(a).localeCompare(postTime(b)));
+
   return (
-    <div className="overflow-x-auto">
+    <>
+    <div className="md:hidden">
+      <div className="scrollbar-none flex gap-2 overflow-x-auto border-b border-border p-3">
+        {days.map((day) => {
+          const dayPosts = posts.filter((post) => post.scheduled_at && isSameDay(new Date(post.scheduled_at), day));
+          const isSelected = isSameDay(day, selectedDay);
+          const isToday = isSameDay(day, new Date());
+
+          return (
+            <button
+              key={day.toISOString()}
+              type="button"
+              onClick={() => onSelectDay(day)}
+              className={cn(
+                "flex min-w-[4.25rem] flex-col items-center rounded-2xl border px-3 py-2 text-center transition-colors",
+                isSelected
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                  : isToday
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border bg-muted/30 text-foreground",
+                !isSameMonth(day, currentDate) && compact && "opacity-50",
+              )}
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wider opacity-75">{format(day, 'EEE', { locale: ptBR })}</span>
+              <span className="font-syne text-lg font-bold leading-tight">{format(day, 'dd')}</span>
+              <span className={cn("mt-1 h-1.5 w-1.5 rounded-full", dayPosts.length > 0 ? "bg-current" : "bg-transparent")} />
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="space-y-3 p-3">
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-muted/35 px-3 py-2">
+          <div>
+            <p className="font-syne text-sm font-bold text-foreground">{format(selectedDay, "dd 'de' MMMM", { locale: ptBR })}</p>
+            <p className="text-xs text-muted-foreground">{selectedPosts.length} post(s) nesse dia</p>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => onSelectDay(new Date())}>Hoje</Button>
+        </div>
+
+        {selectedPosts.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-6 text-center">
+            <Calendar className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="text-sm font-medium text-foreground">Nenhum post neste dia</p>
+            <p className="mt-1 text-xs text-muted-foreground">Escolha conteúdos aprovados na lateral para criar a agenda.</p>
+          </div>
+        ) : (
+          selectedPosts.map((post) => <MobileCalendarPost key={post.id} post={post} onOpen={onOpen} />)
+        )}
+      </div>
+    </div>
+
+    <div className="hidden overflow-x-auto md:block">
       <div className="grid min-w-[840px] grid-cols-7 divide-x divide-border">
         {days.map((day) => {
           const dayPosts = posts.filter((post) => post.scheduled_at && isSameDay(new Date(post.scheduled_at), day));
@@ -452,6 +508,30 @@ function CalendarGrid({ days, posts, currentDate, selectedDay, onSelectDay, onOp
         })}
       </div>
     </div>
+    </>
+  );
+}
+
+function MobileCalendarPost({ post, onOpen }: { post: Post; onOpen: (post: Post) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(post)}
+      className="flex w-full gap-3 rounded-2xl border border-border bg-card p-3 text-left shadow-sm shadow-black/[0.02]"
+    >
+      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+        <Clock className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">{postTime(post)}</span>
+          <PlatformIcon platform={post.platform} showLabel size="sm" />
+          <StatusBadge status={post.status} />
+        </div>
+        <p className="mt-2 truncate text-sm font-semibold text-foreground">{post.product_name || 'Produto'}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{post.caption || 'Sem legenda'}</p>
+      </div>
+    </button>
   );
 }
 

@@ -24,7 +24,8 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
   const initial = displayName.trim().charAt(0).toUpperCase() || "A";
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/80 bg-card/85 shadow-sm shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-card/75">
+    <>
+    <header className="fixed left-0 right-0 top-0 z-50 border-b border-border/80 bg-card/90 shadow-sm shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 md:left-64">
       <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 sm:min-h-16 sm:gap-4 sm:px-6 sm:py-3">
         <div className="min-w-0 flex-1">
           <h1 className="truncate font-syne text-[15px] font-bold leading-tight text-foreground sm:text-lg">{title}</h1>
@@ -159,5 +160,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
         </div>
       )}
     </header>
+    <div className={mobileSearchOpen ? "h-[7.25rem] sm:h-16" : "h-14 sm:h-16"} aria-hidden="true" />
+    </>
   );
 }
