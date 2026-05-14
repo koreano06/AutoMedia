@@ -1,33 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Package,
-  Image,
-  Film,
-  CheckSquare,
-  Calendar,
-  BarChart2,
-  MessageSquare,
-  Settings,
-  Zap,
-  ChevronRight,
-  X,
-  BriefcaseBusiness,
-} from "lucide-react";
+import { Settings, Zap, ChevronRight, X } from "lucide-react";
+import { mainNavigation } from "@/config/navigation";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { label: "Produtos", icon: Package, path: "/products" },
-  { label: "Biblioteca de Mídia", icon: Image, path: "/media" },
-  { label: "Geração de Vídeos", icon: Film, path: "/videos" },
-  { label: "Aprovação", icon: CheckSquare, path: "/approval", badgeKey: "approvals" },
-  { label: "Agendamento", icon: Calendar, path: "/schedule", badgeKey: "scheduled" },
-  { label: "Publicações", icon: Zap, path: "/publications", badgeKey: "failures" },
-  { label: "Comentários", icon: MessageSquare, path: "/comments", badgeKey: "comments" },
-  { label: "Comercial", icon: BriefcaseBusiness, path: "/commercial" },
-  { label: "Relatórios", icon: BarChart2, path: "/reports" },
-];
 
 type SidebarProps = {
   counts?: Record<string, number>;
@@ -69,7 +43,7 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto scrollbar-thin space-y-0.5">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-white/20 px-3 mb-3">Menu Principal</p>
-        {navItems.map(({ label, icon: Icon, path, badgeKey }) => {
+        {mainNavigation.map(({ label, icon: Icon, path, badgeKey }) => {
           const isActive = location.pathname === path;
           const badgeCount = badgeKey ? counts[badgeKey] || 0 : 0;
           return (
