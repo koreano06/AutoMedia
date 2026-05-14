@@ -11,8 +11,8 @@
 ## Pontos de Troca Quando o Backend Entrar
 
 - `src/lib/AuthContext.tsx`: trocar localStorage por API real.
-- `src/api/base44Client.ts`: remover SDK legado gradualmente.
-- `src/services/*`: apontar todos para `apiClient`.
+- SDK legado Base44 removido do frontend.
+- `src/services/*`: manter todos apontando para `apiClient`.
 - `src/lib/NotificationContext.tsx`: consumir endpoint de notificações/summary.
 - Uploads: substituir preview local por storage real.
 

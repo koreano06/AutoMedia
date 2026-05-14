@@ -3,6 +3,7 @@ import { listComments } from '@/services/comments';
 import { listJobs } from '@/services/jobs';
 import { listMediaAssets } from '@/services/mediaAssets';
 import { listPosts } from '@/services/posts';
+import type { Comment, Job, MediaAsset, Post } from '@/types/entities';
 
 export type AppNotification = {
   id: string;
@@ -39,6 +40,8 @@ const initialCounts: OperationalCounts = {
 
 const NotificationContext = createContext<NotificationContextValue | null>(null);
 
+const asArray = <T,>(value: T[] | unknown): T[] => (Array.isArray(value) ? value : []);
+
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [counts, setCounts] = useState<OperationalCounts>(initialCounts);
   const [loading, setLoading] = useState(true);
@@ -53,10 +56,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         listJobs(),
       ]);
 
-      const media = mediaResult.status === 'fulfilled' ? mediaResult.value : [];
-      const comments = commentsResult.status === 'fulfilled' ? commentsResult.value : [];
-      const posts = postsResult.status === 'fulfilled' ? postsResult.value : [];
-      const jobs = jobsResult.status === 'fulfilled' ? jobsResult.value : [];
+      const media = mediaResult.status === 'fulfilled' ? asArray<MediaAsset>(mediaResult.value) : [];
+      const comments = commentsResult.status === 'fulfilled' ? asArray<Comment>(commentsResult.value) : [];
+      const posts = postsResult.status === 'fulfilled' ? asArray<Post>(postsResult.value) : [];
+      const jobs = jobsResult.status === 'fulfilled' ? asArray<Job>(jobsResult.value) : [];
 
       setCounts({
         approvals: media.filter((asset) => asset.status === 'pending_review').length,

@@ -7,7 +7,7 @@
 │   └── manifest.json
 ├── src/
 │   ├── api/
-│   │   └── base44Client.ts
+│   │   └── httpClient.ts
 │   ├── app/
 │   │   ├── providers/
 │   │   ├── AppRouter.tsx

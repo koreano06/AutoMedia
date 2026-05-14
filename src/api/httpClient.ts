@@ -4,6 +4,32 @@ type RequestOptions = RequestInit & {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
+type ApiEnvelope<T> = {
+  data?: T;
+  items?: T;
+  result?: T;
+};
+
+function unwrapPayload<T>(payload: unknown) {
+  if (payload && typeof payload === 'object') {
+    const envelope = payload as ApiEnvelope<T>;
+
+    if ('data' in envelope) {
+      return envelope.data as T;
+    }
+
+    if ('items' in envelope) {
+      return envelope.items as T;
+    }
+
+    if ('result' in envelope) {
+      return envelope.result as T;
+    }
+  }
+
+  return payload as T;
+}
+
 function buildUrl(path: string, query?: RequestOptions['query']) {
   const url = new URL(`${API_BASE_URL}${path}`, window.location.origin);
 
@@ -37,7 +63,7 @@ async function request<T>(path: string, options: RequestOptions = {}) {
     throw new Error(message);
   }
 
-  return payload as T;
+  return unwrapPayload<T>(payload);
 }
 
 export const apiClient = {
