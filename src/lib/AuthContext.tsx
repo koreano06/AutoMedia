@@ -58,19 +58,32 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const normalizeUsername = (username: string) => username.trim().toLowerCase();
 
-const canUseStorage = () => typeof window !== 'undefined' && Boolean(window.localStorage);
+const canUseStorage = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  try {
+    const testKey = '__automedia_storage_test__';
+    window.localStorage.setItem(testKey, testKey);
+    window.localStorage.removeItem(testKey);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const readUsers = (): StoredUser[] => {
   if (!canUseStorage()) {
     return [defaultAdmin];
   }
 
-  const rawUsers = window.localStorage.getItem(USERS_STORAGE_KEY);
-  if (!rawUsers) {
-    return [];
-  }
-
   try {
+    const rawUsers = window.localStorage.getItem(USERS_STORAGE_KEY);
+    if (!rawUsers) {
+      return [];
+    }
+
     return JSON.parse(rawUsers) as StoredUser[];
   } catch {
     return [];
@@ -78,8 +91,14 @@ const readUsers = (): StoredUser[] => {
 };
 
 const writeUsers = (users: StoredUser[]) => {
-  if (canUseStorage()) {
+  try {
+    if (!canUseStorage()) {
+      return;
+    }
+
     window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  } catch {
+    // If browser storage is blocked, keep the app usable with the in-memory default admin.
   }
 };
 
@@ -111,28 +130,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoadingAuth(true);
     setAuthError(null);
 
-    const users = ensureDefaultAdmin();
-    const sessionUserId = canUseStorage()
-      ? window.localStorage.getItem(SESSION_STORAGE_KEY)
-      : null;
-    const sessionUser = users.find((storedUser) => storedUser.id === sessionUserId);
+    try {
+      const users = ensureDefaultAdmin();
+      const sessionUserId = canUseStorage()
+        ? window.localStorage.getItem(SESSION_STORAGE_KEY)
+        : null;
+      const sessionUser = users.find((storedUser) => storedUser.id === sessionUserId);
 
-    if (sessionUser) {
-      setUser(toPublicUser(sessionUser));
-      setIsAuthenticated(true);
-    } else {
+      if (sessionUser) {
+        setUser(toPublicUser(sessionUser));
+        setIsAuthenticated(true);
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+      }
+    } catch {
       setUser(null);
       setIsAuthenticated(false);
+    } finally {
+      setIsLoadingAuth(false);
+      setAuthChecked(true);
     }
-
-    setIsLoadingAuth(false);
-    setAuthChecked(true);
   };
 
   const checkAppState = async () => {
     setIsLoadingPublicSettings(true);
-    ensureDefaultAdmin();
-    setIsLoadingPublicSettings(false);
+
+    try {
+      ensureDefaultAdmin();
+    } finally {
+      setIsLoadingPublicSettings(false);
+    }
+
     await checkUserAuth();
   };
 
@@ -153,8 +182,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       throw new Error('Usuário ou senha inválidos.');
     }
 
-    if (canUseStorage()) {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, foundUser.id);
+    try {
+      if (canUseStorage()) {
+        window.localStorage.setItem(SESSION_STORAGE_KEY, foundUser.id);
+      }
+    } catch {
+      // The login still succeeds even if the browser blocks persistent storage.
     }
 
     const publicUser = toPublicUser(foundUser);
@@ -189,8 +222,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     writeUsers([...users, newUser]);
 
-    if (canUseStorage()) {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, newUser.id);
+    try {
+      if (canUseStorage()) {
+        window.localStorage.setItem(SESSION_STORAGE_KEY, newUser.id);
+      }
+    } catch {
+      // The new session remains active in memory for the current page load.
     }
 
     const publicUser = toPublicUser(newUser);
@@ -203,8 +240,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const logout = () => {
-    if (canUseStorage()) {
-      window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    try {
+      if (canUseStorage()) {
+        window.localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore storage cleanup failures so logout never breaks the UI.
     }
 
     setUser(null);
