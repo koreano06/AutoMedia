@@ -15,11 +15,11 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
   return (
     <aside
       className={cn(
-        "sidebar-bg fixed left-0 top-0 z-50 flex h-screen w-72 max-w-[82vw] flex-col border-r border-white/5 transition-transform duration-200 md:z-40 md:w-64 md:translate-x-0",
+        "sidebar-bg fixed left-0 top-0 z-50 flex h-dvh w-[min(18rem,88vw)] flex-col border-r border-white/5 transition-transform duration-200 md:z-40 md:w-64 md:translate-x-0",
         open ? "translate-x-0" : "-translate-x-full"
       )}
     >
-      <div className="px-6 py-6 border-b border-white/5">
+      <div className="border-b border-white/5 px-5 py-5 sm:px-6 sm:py-6">
         <div className="flex items-center justify-between gap-3">
           <Link to="/" onClick={onNavigate} className="flex items-center gap-3 rounded-xl">
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
@@ -41,7 +41,7 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 overflow-y-auto scrollbar-thin space-y-0.5">
+      <nav className="scrollbar-thin flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-white/20 px-3 mb-3">Menu Principal</p>
         {mainNavigation.map(({ label, icon: Icon, path, badgeKey }) => {
           const isActive = location.pathname === path;
@@ -76,7 +76,7 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
         })}
       </nav>
 
-      <div className="px-3 py-4 border-t border-white/5">
+      <div className="border-t border-white/5 px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <Link
           to="/settings"
           onClick={onNavigate}

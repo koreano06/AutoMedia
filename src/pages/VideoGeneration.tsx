@@ -313,7 +313,7 @@ Responda em português com:
     <div>
       <TopBar title="Geração de Vídeos" subtitle="Estúdio de IA para roteiros, variações e vídeos por plataforma" />
       <div className="space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <StudioMetric label="Vídeos" value={stats.total} icon={Film} />
           <StudioMetric label="Em geração" value={stats.generating} icon={Clock} tone="primary" />
           <StudioMetric label="Em revisão" value={stats.review} icon={ListChecks} tone="warning" />
@@ -325,7 +325,7 @@ Responda em português com:
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Wand2} title="Configuração do vídeo" subtitle="Escolha produto, template, formato e briefing" />
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
@@ -378,7 +378,7 @@ Responda em português com:
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Target} title="Briefing profissional" subtitle="Campos separados deixam o roteiro mais consistente" />
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <Field label="Público-alvo" value={briefing.targetAudience} onChange={(value) => setBriefing({ ...briefing, targetAudience: value })} placeholder="ex: mulheres 25-40 que compram skincare" />
@@ -404,7 +404,7 @@ Responda em português com:
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Layers3} title="Mídias para composição" subtitle="Escolha imagens e vídeos da biblioteca para orientar a geração" />
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {availableMedia.slice(0, 10).map((asset) => (
@@ -426,7 +426,7 @@ Responda em português com:
           </div>
 
           <div className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={ListChecks} title="Checklist antes de gerar" subtitle="Reduz erro e melhora o resultado final" />
               <div className="mt-4">
                 <div className="mb-2 flex items-center justify-between text-sm">
@@ -452,7 +452,7 @@ Responda em português com:
               </Button>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Clock} title="Fila de jobs" subtitle="Status, progresso, retry e erros" />
               <div className="mt-4 space-y-2">
                 {queue.length === 0 ? (
@@ -460,7 +460,7 @@ Responda em português com:
                 ) : (
                   queue.map((job) => (
                     <div key={job.id} className="rounded-xl border border-border p-3">
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-foreground">{job.title}</p>
                           <p className="text-xs text-muted-foreground">{job.error_message || 'Tempo estimado: 1-3 min'}</p>
@@ -480,7 +480,7 @@ Responda em português com:
           </div>
         </div>
 
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <SectionTitle icon={Play} title="Prévia do roteiro" subtitle="Revise antes de renderizar o vídeo final" />
             {scriptPreview && <Button variant="outline" size="sm" className="gap-2" onClick={() => navigator.clipboard.writeText(scriptPreview)}><Copy className="h-4 w-4" /> Copiar roteiro</Button>}
@@ -494,7 +494,7 @@ Responda em português com:
           </div>
         </section>
 
-        <section className="rounded-2xl border border-border bg-card p-5">
+        <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <SectionTitle icon={Film} title="Histórico de gerações" subtitle="Vídeos recentes, status, score e ações" />
             <Select value={historyFilter} onValueChange={setHistoryFilter}>
@@ -530,8 +530,8 @@ Responda em português com:
 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: typeof Film; title: string; subtitle: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+    <div className="flex items-start gap-3">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
         <Icon className="h-4 w-4" />
       </div>
       <div>
@@ -554,7 +554,7 @@ function StudioMetric({ label, value, icon: Icon, tone = 'neutral' }: { label: s
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}><Icon className="h-4 w-4" /></div>
-      <p className="font-syne text-2xl font-bold text-foreground">{value}</p>
+      <p className="font-syne text-xl font-bold text-foreground sm:text-2xl">{value}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
     </div>
   );
@@ -643,7 +643,7 @@ function VideoDetailsDialog({ asset, open, onOpenChange, onStatus }: { asset: Me
           </div>
           <div className="space-y-4">
             <div>
-              <h2 className="font-syne text-2xl font-bold text-foreground">{asset.title}</h2>
+        <h2 className="font-syne text-xl font-bold text-foreground sm:text-2xl">{asset.title}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{asset.product_name}</p>
             </div>
             <div className="flex flex-wrap gap-2"><StatusBadge status={asset.status} /><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">Score {score}%</span></div>

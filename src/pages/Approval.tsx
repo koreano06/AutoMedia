@@ -377,7 +377,7 @@ export default function Approval() {
     <div>
       <TopBar title="Aprovação" subtitle={`${stats.pending} conteúdo(s) aguardando revisão`} />
       <div className="space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Metric label="Pendentes" value={stats.pending} icon={Clock} tone="primary" />
           <Metric label="Aprovados hoje" value={stats.approvedToday} icon={CheckCircle} tone="success" />
           <Metric label="Rejeitados" value={stats.rejected} icon={XCircle} tone="destructive" />
@@ -391,7 +391,7 @@ export default function Approval() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Buscar produto, legenda, origem..." className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-5 xl:flex">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-5 xl:flex">
               <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="h-10 xl:w-44"><SelectValue /></SelectTrigger><SelectContent>{statusFilters.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger className="h-10 xl:w-36"><SelectValue placeholder="Tipo" /></SelectTrigger><SelectContent><SelectItem value="all">Todos tipos</SelectItem><SelectItem value="image">Imagem</SelectItem><SelectItem value="video">Vídeo</SelectItem><SelectItem value="generated_video">Vídeo IA</SelectItem></SelectContent></Select>
               <Select value={platformFilter} onValueChange={setPlatformFilter}><SelectTrigger className="h-10 xl:w-40"><SelectValue placeholder="Plataforma" /></SelectTrigger><SelectContent><SelectItem value="all">Plataformas</SelectItem>{PLATFORMS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select>
@@ -406,7 +406,7 @@ export default function Approval() {
               {selectedIds.length > 0 && <span className="font-medium text-primary">{selectedIds.length} selecionados</span>}
               <span className="hidden items-center gap-1 sm:flex"><Keyboard className="h-3.5 w-3.5" /> Atalhos: A aprova, R rejeita, N próximo</span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {selectedIds.length > 0 && (
                 <>
                   <Button size="sm" variant="outline" onClick={() => handleBulk('approved')}>Aprovar selecionados</Button>
@@ -433,7 +433,7 @@ export default function Approval() {
                 </section>
 
                 <section className="grid gap-5 lg:grid-cols-2">
-                  <div className="rounded-2xl border border-border bg-card p-5">
+                  <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
                     <SectionTitle icon={ListChecks} title="Checklist de aprovação" subtitle="Confirme os pontos críticos antes de publicar" />
                     <div className="mt-4 space-y-2">
                       {checklist.map((item) => (
@@ -445,7 +445,7 @@ export default function Approval() {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-border bg-card p-5">
+                  <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
                     <SectionTitle icon={Target} title="Destinos e agendamento" subtitle="Escolha onde e como publicar após aprovar" />
                     <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
                       {PLATFORMS.map((platform) => (
@@ -481,7 +481,7 @@ export default function Approval() {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-border bg-card p-5">
+                <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <SectionTitle icon={Edit3} title="Legenda e observações" subtitle="Edite antes de aprovar ou peça variações para IA" />
                     <div className="flex flex-wrap gap-2">
@@ -553,7 +553,7 @@ function Metric({ label, value, icon: Icon, tone = 'neutral' }: { label: string;
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}><Icon className="h-4 w-4" /></div>
-      <p className="font-syne text-2xl font-bold text-foreground">{value}</p>
+      <p className="font-syne text-xl font-bold text-foreground sm:text-2xl">{value}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
     </div>
   );
@@ -561,8 +561,8 @@ function Metric({ label, value, icon: Icon, tone = 'neutral' }: { label: string;
 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: typeof Clock; title: string; subtitle: string }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div>
+    <div className="flex items-start gap-3">
+      <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div>
       <div><h3 className="font-syne text-sm font-bold text-foreground">{title}</h3><p className="text-xs text-muted-foreground">{subtitle}</p></div>
     </div>
   );
@@ -603,7 +603,7 @@ function PreviewPanel({ asset }: { asset: MediaAsset }) {
         )}
         {asset.type === 'generated_video' && <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground"><Sparkles className="h-3 w-3" /> Gerado com IA</span>}
       </div>
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="font-syne text-xl font-bold text-foreground">{asset.title || asset.product_name || 'Conteúdo para revisão'}</h2>
@@ -611,7 +611,7 @@ function PreviewPanel({ asset }: { asset: MediaAsset }) {
           </div>
           <StatusBadge status={asset.status} />
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <InfoBox label="Tipo" value={asset.type?.replace('_', ' ') || 'mídia'} />
           <InfoBox label="Fonte" value={asset.source || 'Não informada'} />
           <InfoBox label="Duração" value={asset.duration ? `${asset.duration}s` : 'N/A'} />
@@ -625,7 +625,7 @@ function PreviewPanel({ asset }: { asset: MediaAsset }) {
 function ScorePanel({ asset, checklistScore }: { asset: MediaAsset; checklistScore: number }) {
   const score = qualityScore(asset);
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
+    <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
       <SectionTitle icon={Star} title="Score de qualidade" subtitle="Análise visual antes da aprovação" />
       <div className="mt-5 space-y-4">
         <QualityLine label="Qualidade visual" value={score} />
@@ -675,7 +675,7 @@ function Kanban({ assets, selectedAssetId, selectedIds, onSelect, onToggle }: { 
 
 function HistoryPanel({ asset }: { asset: MediaAsset }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
+    <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
       <SectionTitle icon={CalendarClock} title="Histórico da revisão" subtitle="Rastro operacional do conteúdo" />
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <InfoBox label="Revisado por" value={asset.reviewed_by || 'Ainda não revisado'} />

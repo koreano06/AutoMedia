@@ -16,7 +16,7 @@ export default function PageToolbar({ children, resultText, actions, className }
         <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:flex">
           {children}
         </div>
-        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+        {actions && <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap">{actions}</div>}
       </div>
       {resultText && (
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">

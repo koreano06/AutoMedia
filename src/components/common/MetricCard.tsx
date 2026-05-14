@@ -32,7 +32,7 @@ export default function MetricCard({
       <div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', tones[tone])}>
         <Icon className="h-4 w-4" />
       </div>
-      <p className="truncate font-syne text-2xl font-bold text-foreground">{loading ? '—' : value}</p>
+      <p className="truncate font-syne text-xl font-bold text-foreground sm:text-2xl">{loading ? '—' : value}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
       {helper && <p className="mt-2 text-[11px] text-muted-foreground">{helper}</p>}
     </div>

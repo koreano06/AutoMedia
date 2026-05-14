@@ -174,7 +174,7 @@ export default function Reports() {
             <h2 className="font-syne text-lg font-bold text-foreground">Visão estratégica</h2>
             <p className="text-sm text-muted-foreground">Filtre por período e plataforma para entender performance real.</p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-full sm:w-36"><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="7d">7 dias</SelectItem><SelectItem value="30d">30 dias</SelectItem><SelectItem value="90d">90 dias</SelectItem><SelectItem value="all">Tudo</SelectItem></SelectContent>
@@ -183,11 +183,11 @@ export default function Reports() {
               <SelectTrigger className="w-full sm:w-44"><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="all">Todas plataformas</SelectItem>{PLATFORMS.map((platform) => <SelectItem key={platform} value={platform}>{platform}</SelectItem>)}</SelectContent>
             </Select>
-            <Button variant="outline" className="gap-2" onClick={exportCsv}><Download className="h-4 w-4" /> Exportar</Button>
+            <Button variant="outline" className="w-full gap-2 sm:w-auto" onClick={exportCsv}><Download className="h-4 w-4" /> Exportar</Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <Metric label="Taxa publicação" value={`${totals.publishRate}%`} icon={Target} tone="primary" loading={loading} />
           <Metric label="Posts publicados" value={totals.published} icon={Zap} tone="success" loading={loading} />
           <Metric label="Alcance" value={displayNumber(totals.reach)} icon={Eye} loading={loading} />
@@ -198,7 +198,7 @@ export default function Reports() {
 
         <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
           <main className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={LineChartIcon} title="Tendência dos últimos dias" subtitle="Posts, alcance e engajamento por dia" />
               <div className="mt-5 h-[280px] min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
@@ -218,7 +218,7 @@ export default function Reports() {
             </section>
 
             <div className="grid gap-5 lg:grid-cols-2">
-              <section className="overflow-hidden rounded-2xl border border-border bg-card p-5">
+              <section className="overflow-hidden rounded-2xl border border-border bg-card p-4 sm:p-5">
                 <SectionTitle icon={BarChart3} title="Comparação por plataforma" subtitle="Alcance, engajamento e comentários" />
                 <div className="mt-5 h-[260px] min-w-[520px] overflow-x-auto">
                   <ResponsiveContainer width="100%" height="100%">
@@ -234,7 +234,7 @@ export default function Reports() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-border bg-card p-5">
+              <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
                 <SectionTitle icon={Award} title="Distribuição de posts" subtitle="Participação por plataforma" />
                 {platformData.length === 0 ? (
                   <div className="flex h-56 items-center justify-center text-sm text-muted-foreground">Sem dados ainda</div>
@@ -253,7 +253,7 @@ export default function Reports() {
             </div>
 
             {categoryData.length > 0 && (
-              <section className="overflow-hidden rounded-2xl border border-border bg-card p-5">
+              <section className="overflow-hidden rounded-2xl border border-border bg-card p-4 sm:p-5">
                 <SectionTitle icon={Package} title="Desempenho por categoria" subtitle="Produtos, posts e engajamento" />
                 <div className="mt-5 h-[260px] min-w-[620px] overflow-x-auto">
                   <ResponsiveContainer width="100%" height="100%">
@@ -272,14 +272,14 @@ export default function Reports() {
           </main>
 
           <aside className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Sparkles} title="Insights automáticos" subtitle="O que merece atenção agora" />
               <div className="mt-4 space-y-3">
                 {insights.map((insight) => <Insight key={insight} text={insight} />)}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Award} title="Top produtos" subtitle="Ranking por engajamento" />
               <div className="mt-4 space-y-3">
                 {topProducts.length === 0 ? <p className="text-sm text-muted-foreground">Sem produtos ranqueados.</p> : topProducts.map((product, index) => (
@@ -297,7 +297,7 @@ export default function Reports() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Target} title="Metas operacionais" subtitle="Saúde do funil de conteúdo" />
               <div className="mt-4 space-y-4">
                 <Goal label="Publicação" value={totals.publishRate} target="80%" />
@@ -321,11 +321,11 @@ const tooltipStyle = {
 
 function Metric({ label, value, icon: Icon, tone = 'neutral', loading }: { label: string; value: string | number; icon: typeof Target; tone?: 'neutral' | 'primary' | 'success' | 'warning'; loading: boolean }) {
   const toneClass = { neutral: 'bg-muted text-muted-foreground', primary: 'bg-primary/10 text-primary', success: 'bg-success/10 text-success', warning: 'bg-warning/10 text-warning' }[tone];
-  return <div className="rounded-2xl border border-border bg-card p-4"><div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}><Icon className="h-4 w-4" /></div><p className="truncate font-syne text-2xl font-bold text-foreground">{loading ? '—' : value}</p><p className="mt-0.5 text-xs text-muted-foreground">{label}</p></div>;
+  return <div className="rounded-2xl border border-border bg-card p-4"><div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}><Icon className="h-4 w-4" /></div><p className="truncate font-syne text-xl font-bold text-foreground sm:text-2xl">{loading ? '—' : value}</p><p className="mt-0.5 text-xs text-muted-foreground">{label}</p></div>;
 }
 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: typeof Target; title: string; subtitle: string }) {
-  return <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div><div><h3 className="font-syne text-sm font-bold text-foreground">{title}</h3><p className="text-xs text-muted-foreground">{subtitle}</p></div></div>;
+  return <div className="flex items-start gap-3"><div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div><div><h3 className="font-syne text-sm font-bold text-foreground">{title}</h3><p className="text-xs text-muted-foreground">{subtitle}</p></div></div>;
 }
 
 function Insight({ text }: { text: string }) {

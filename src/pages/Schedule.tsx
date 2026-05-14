@@ -245,7 +245,7 @@ export default function Schedule() {
     <div>
       <TopBar title="Agendamento" subtitle="Calendário editorial automático e controle de publicações" />
       <div className="space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Metric label="Hoje" value={stats.today} icon={CalendarClock} tone="primary" />
           <Metric label="Semana" value={stats.week} icon={Calendar} />
           <Metric label="Publicados" value={stats.published} icon={CheckCircle} tone="success" />
@@ -261,7 +261,7 @@ export default function Schedule() {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input placeholder="Buscar produto ou legenda..." className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} />
                 </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:flex">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:flex">
                   <Select value={platformFilter} onValueChange={setPlatformFilter}>
                     <SelectTrigger className="h-10 xl:w-40"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="all">Plataformas</SelectItem>{PLATFORMS.map((platform) => <SelectItem key={platform} value={platform}>{platform}</SelectItem>)}</SelectContent>
@@ -282,7 +282,7 @@ export default function Schedule() {
                   <Filter className="h-3.5 w-3.5" /> {filteredPosts.length} posts
                   {selectedIds.length > 0 && <span className="font-medium text-primary">{selectedIds.length} selecionados</span>}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
                   {selectedIds.length > 0 && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleBulk('paused')}><PauseCircle className="mr-1 h-4 w-4" /> Pausar</Button>
@@ -303,14 +303,14 @@ export default function Schedule() {
               <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'month' ? -30 : -7))}><ChevronLeft className="h-4 w-4" /></Button>
-                  <h3 className="font-syne text-sm font-bold text-foreground">
+                  <h3 className="min-w-0 flex-1 text-center font-syne text-sm font-bold text-foreground sm:text-left">
                     {viewMode === 'month'
                       ? format(currentDate, 'MMMM yyyy', { locale: ptBR })
                       : `${format(weekStart, "dd 'de' MMM", { locale: ptBR })} - ${format(addDays(weekStart, 6), "dd 'de' MMM, yyyy", { locale: ptBR })}`}
                   </h3>
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addDays(currentDate, viewMode === 'month' ? 30 : 7))}><ChevronRight className="h-4 w-4" /></Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => { setCurrentDate(new Date()); setSelectedDay(new Date()); }}>Hoje</Button>
+                <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => { setCurrentDate(new Date()); setSelectedDay(new Date()); }}>Hoje</Button>
               </div>
               {error ? (
                 <div className="p-5"><ErrorState onRetry={load} /></div>
@@ -331,7 +331,7 @@ export default function Schedule() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={ListChecks} title="Alertas e naturalidade" subtitle="Problemas que podem deixar a agenda robótica ou arriscada" />
               <div className="mt-4">
                 <div className="mb-2 flex justify-between text-sm"><span className="font-medium text-foreground">Score de naturalidade</span><span className="font-bold text-primary">{naturalityScore}%</span></div>
@@ -361,9 +361,9 @@ export default function Schedule() {
           </main>
 
           <aside className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Wand2} title="Agendamento inteligente" subtitle="Distribui conteúdos aprovados com naturalidade" />
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Início" value={settings.start} onChange={(value) => setSettings({ ...settings, start: value })} type="time" />
                 <Field label="Fim" value={settings.end} onChange={(value) => setSettings({ ...settings, end: value })} type="time" />
                 <Field label="Intervalo min." value={settings.minInterval} onChange={(value) => setSettings({ ...settings, minInterval: value })} />
@@ -376,7 +376,7 @@ export default function Schedule() {
               <Button className="mt-4 w-full gap-2" onClick={smartSchedule}><Shuffle className="h-4 w-4" /> Distribuir automaticamente</Button>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={PlayCircle} title="Pronto para agendar" subtitle="Conteúdos aprovados ainda sem horário" />
               <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
                 {readyAssets.length === 0 ? (
@@ -398,7 +398,7 @@ export default function Schedule() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Sparkles} title="Resumo estratégico" subtitle="Insights rápidos da agenda" />
               <div className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <Insight text={stats.week > 0 ? `Você tem ${stats.week} posts agendados nesta semana.` : 'A semana ainda está vazia. Use a fila pronta para agendar.'} />
@@ -424,11 +424,11 @@ function Metric({ label, value, icon: Icon, tone = 'neutral' }: { label: string;
     destructive: 'bg-destructive/10 text-destructive',
     warning: 'bg-warning/10 text-warning',
   }[tone];
-  return <div className="rounded-2xl border border-border bg-card p-4"><div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}><Icon className="h-4 w-4" /></div><p className="font-syne text-2xl font-bold text-foreground">{value}</p><p className="mt-0.5 text-xs text-muted-foreground">{label}</p></div>;
+  return <div className="rounded-2xl border border-border bg-card p-4"><div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}><Icon className="h-4 w-4" /></div><p className="font-syne text-xl font-bold text-foreground sm:text-2xl">{value}</p><p className="mt-0.5 text-xs text-muted-foreground">{label}</p></div>;
 }
 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: typeof Calendar; title: string; subtitle: string }) {
-  return <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div><div><h3 className="font-syne text-sm font-bold text-foreground">{title}</h3><p className="text-xs text-muted-foreground">{subtitle}</p></div></div>;
+  return <div className="flex items-start gap-3"><div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div><div><h3 className="font-syne text-sm font-bold text-foreground">{title}</h3><p className="text-xs text-muted-foreground">{subtitle}</p></div></div>;
 }
 
 function CalendarGrid({ days, posts, currentDate, selectedDay, onSelectDay, onOpen, compact }: { days: Date[]; posts: Post[]; currentDate: Date; selectedDay: Date; onSelectDay: (day: Date) => void; onOpen: (post: Post) => void; compact?: boolean }) {
@@ -471,7 +471,7 @@ function DayTimeline({ posts, selectedIds, onToggle, onOpen, onPublish, onDelete
       {timeSlots.map((slot) => {
         const slotPosts = posts.filter((post) => postTime(post).slice(0, 2) === slot.slice(0, 2));
         return (
-          <div key={slot} className="grid grid-cols-[80px_1fr] gap-4 p-4">
+          <div key={slot} className="grid grid-cols-[56px_1fr] gap-3 p-3 sm:grid-cols-[80px_1fr] sm:gap-4 sm:p-4">
             <div className="text-sm font-semibold text-muted-foreground">{slot}</div>
             <div className="space-y-2">
               {slotPosts.length === 0 ? <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">Livre</div> : slotPosts.map((post) => <PostRow key={post.id} post={post} selected={selectedIds.includes(post.id)} onToggle={onToggle} onOpen={onOpen} onPublish={onPublish} onDelete={onDelete} compact />)}
@@ -492,7 +492,7 @@ function PostRow({ post, selected, onToggle, onOpen, onPublish, onDelete, compac
         <PlatformIcon platform={post.platform} />
         <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">{post.product_name || 'Produto'}</p><p className="truncate text-xs text-muted-foreground">{post.caption?.slice(0, 80) || 'Sem legenda'}</p></div>
       </button>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <span className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{post.scheduled_at ? format(new Date(post.scheduled_at), 'dd/MM HH:mm') : '—'}</span>
         <StatusBadge status={post.status} />
         <Button size="icon" variant="ghost" className="h-8 w-8 text-success hover:text-success" onClick={() => onPublish(post)}><Send className="h-3.5 w-3.5" /></Button>
@@ -518,7 +518,7 @@ function PostDialog({ post, open, onOpenChange, onSave, onDelete, onPublish }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-w-3xl">
         <DialogHeader><DialogTitle className="font-syne">Prévia e edição do post</DialogTitle></DialogHeader>
         <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
           <div className="overflow-hidden rounded-2xl bg-muted">{getPreview(post) ? <img src={getPreview(post)} alt="" className="aspect-square w-full object-cover" /> : <div className="flex aspect-square items-center justify-center"><Calendar className="h-10 w-10 text-muted-foreground/40" /></div>}</div>
@@ -550,7 +550,7 @@ function SimulationDialog({ open, onOpenChange, posts, readyAssets, settings }: 
       <DialogContent className="max-w-2xl">
         <DialogHeader><DialogTitle className="font-syne">Simulação da agenda</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border p-4"><p className="font-semibold text-foreground">Distribuição sugerida</p><div className="mt-3 space-y-2">{simulated.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum conteúdo pronto para simular.</p> : simulated.map(({ asset, date }) => <div key={asset.id} className="flex justify-between rounded-xl bg-muted/35 p-3 text-sm"><span>{asset.product_name || asset.title}</span><span className="font-medium">{format(date, 'dd/MM HH:mm')}</span></div>)}</div></div>
+          <div className="rounded-2xl border border-border p-4"><p className="font-semibold text-foreground">Distribuição sugerida</p><div className="mt-3 space-y-2">{simulated.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum conteúdo pronto para simular.</p> : simulated.map(({ asset, date }) => <div key={asset.id} className="flex flex-col gap-1 rounded-xl bg-muted/35 p-3 text-sm sm:flex-row sm:justify-between"><span>{asset.product_name || asset.title}</span><span className="font-medium">{format(date, 'dd/MM HH:mm')}</span></div>)}</div></div>
           <div className="rounded-2xl border border-border p-4"><p className="font-semibold text-foreground">Riscos encontrados</p><div className="mt-3 space-y-2">{alerts.length === 0 ? <p className="text-sm text-success">Sem riscos relevantes.</p> : alerts.map((alert) => <p key={alert} className="text-sm text-warning">{alert}</p>)}</div></div>
         </div>
       </DialogContent>

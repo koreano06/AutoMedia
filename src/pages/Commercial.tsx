@@ -108,19 +108,19 @@ export default function Commercial() {
             <h2 className="font-syne text-lg font-bold text-foreground">Operação comercial conectada ao marketing</h2>
             <p className="text-sm text-muted-foreground">Use estoque, margem e intenção de compra para decidir o que divulgar.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-52"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-52"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas categorias</SelectItem>
                 {categories.map((category) => <SelectItem key={category} value={category}>{category}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Button asChild variant="outline"><Link to="/products">Editar produtos</Link></Button>
+            <Button asChild variant="outline" className="w-full sm:w-auto"><Link to="/products">Editar produtos</Link></Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <Metric label="Produtos" value={filteredProducts.length} icon={Package} loading={loading} />
           <Metric label="Estoque baixo" value={lowStock.length} icon={AlertTriangle} tone="warning" loading={loading} />
           <Metric label="Sem estoque" value={noStock.length} icon={ShoppingBag} tone="destructive" loading={loading} />
@@ -131,7 +131,7 @@ export default function Commercial() {
 
         <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
           <main className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Target} title="Prioridade de divulgação" subtitle="Produtos com demanda, margem e estoque para campanha" />
               <div className="mt-4 overflow-hidden rounded-xl border border-border">
                 <div className="hidden grid-cols-[1fr_100px_100px_100px_120px] gap-3 border-b border-border bg-muted/30 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid">
@@ -146,17 +146,17 @@ export default function Commercial() {
                         <p className="truncate text-sm font-semibold text-foreground">{product.name}</p>
                         <p className="text-xs text-muted-foreground">{product.sku || product.internal_code || 'Sem SKU'} · {product.supplier_name || 'Sem fornecedor'}</p>
                       </div>
-                      <Pill value={productLeads} tone={productLeads > 0 ? 'primary' : 'neutral'} />
-                      <Pill value={stock} tone={stock <= getMinStock(product) ? 'warning' : 'success'} />
-                      <Pill value={`${margin}%`} tone={margin >= 35 ? 'success' : margin > 0 ? 'warning' : 'neutral'} />
-                      <span className="text-sm font-semibold text-foreground">{currency.format(revenue)}</span>
+                      <Pill label="Leads" value={productLeads} tone={productLeads > 0 ? 'primary' : 'neutral'} />
+                      <Pill label="Estoque" value={stock} tone={stock <= getMinStock(product) ? 'warning' : 'success'} />
+                      <Pill label="Margem" value={`${margin}%`} tone={margin >= 35 ? 'success' : margin > 0 ? 'warning' : 'neutral'} />
+                      <span className="flex items-center justify-between text-sm font-semibold text-foreground md:block"><span className="text-xs font-medium text-muted-foreground md:hidden">Potencial</span>{currency.format(revenue)}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Users} title="Leads vindos dos comentários" subtitle="Intenção de compra capturada nas redes sociais" />
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {leads.slice(0, 8).map((lead) => (
@@ -179,7 +179,7 @@ export default function Commercial() {
           </main>
 
           <aside className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={AlertTriangle} title="Alertas comerciais" subtitle="Pontos que podem afetar campanhas" />
               <div className="mt-4 space-y-3">
                 <Alert text={`${noStock.length} produto(s) sem estoque. Evite publicar campanhas desses itens.`} active={noStock.length > 0} />
@@ -189,7 +189,7 @@ export default function Commercial() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={Building2} title="Fornecedores" subtitle="Base simples para operação comercial" />
               <div className="mt-4 space-y-3">
                 {suppliers.length === 0 ? (
@@ -206,7 +206,7 @@ export default function Commercial() {
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={BriefcaseBusiness} title="Próximos encaixes" subtitle="Quando o backend entrar" />
               <div className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <Insight text="Sincronizar estoque com marketplace ou loja própria." />
@@ -233,7 +233,7 @@ function Metric({ label, value, icon: Icon, tone = 'neutral', loading }: { label
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${tones[tone]}`}><Icon className="h-4 w-4" /></div>
-      <p className="truncate font-syne text-2xl font-bold text-foreground">{loading ? '—' : value}</p>
+      <p className="truncate font-syne text-xl font-bold text-foreground sm:text-2xl">{loading ? '—' : value}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
     </div>
   );
@@ -241,21 +241,26 @@ function Metric({ label, value, icon: Icon, tone = 'neutral', loading }: { label
 
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: typeof Package; title: string; subtitle: string }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-start gap-3">
       <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></div>
       <div><h3 className="font-syne text-sm font-bold text-foreground">{title}</h3><p className="text-xs text-muted-foreground">{subtitle}</p></div>
     </div>
   );
 }
 
-function Pill({ value, tone }: { value: string | number; tone: 'neutral' | 'primary' | 'success' | 'warning' }) {
+function Pill({ label, value, tone }: { label: string; value: string | number; tone: 'neutral' | 'primary' | 'success' | 'warning' }) {
   const tones = {
     neutral: 'bg-muted text-muted-foreground',
     primary: 'bg-primary/10 text-primary',
     success: 'bg-success/10 text-success',
     warning: 'bg-warning/10 text-warning',
   };
-  return <span className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${tones[tone]}`}>{value}</span>;
+  return (
+    <span className={`flex w-full items-center justify-between rounded-full px-2.5 py-1 text-xs font-semibold md:w-fit md:justify-start ${tones[tone]}`}>
+      <span className="font-medium opacity-75 md:hidden">{label}</span>
+      {value}
+    </span>
+  );
 }
 
 function Alert({ text, active }: { text: string; active: boolean }) {
