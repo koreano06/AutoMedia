@@ -62,6 +62,7 @@ export type VideoGenerateRequest = {
   style: 'product' | 'lifestyle' | 'unboxing' | 'review';
   duration: '15s' | '30s' | '60s';
   briefing?: string;
+  platform?: Platform;
 };
 
 export type VideoGenerateResponse = {

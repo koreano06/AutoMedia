@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { fileToDataUrl } from '@/lib/fileToDataUrl';
 import { createMediaAsset, listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
 import type { EntityId, MediaAsset, Status } from '@/types/entities';
 
@@ -293,9 +294,12 @@ export default function MediaLibrary() {
 
     setSavingUpload(true);
     try {
+      const fileUrl = uploadFile ? await fileToDataUrl(uploadFile) : '';
+      const url = uploadForm.url || fileUrl;
       await createMediaAsset({
         ...uploadForm,
-        thumbnail_url: uploadForm.thumbnail_url || uploadForm.url,
+        url,
+        thumbnail_url: uploadForm.thumbnail_url || url,
         status: 'pending_review',
         quality_score: uploadFile || uploadForm.url ? 72 : 40,
       });
@@ -304,8 +308,8 @@ export default function MediaLibrary() {
       setUploadForm(emptyUploadForm);
       setUploadFile(null);
       load();
-    } catch {
-      toast.error('Não foi possível importar a mídia');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível importar a mídia');
     } finally {
       setSavingUpload(false);
     }

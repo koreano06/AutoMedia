@@ -1,4 +1,5 @@
 import { apiClient } from '@/api/httpClient';
+import type { MediaCollectResponse } from '@/types/api';
 import type { EntityId, MediaAsset } from '@/types/entities';
 
 export type MediaAssetPayload = Omit<MediaAsset, 'id'>;
@@ -21,6 +22,10 @@ export async function filterMediaAssets(filter: Partial<MediaAsset>, order = '-c
 
 export async function createMediaAsset(payload: MediaAssetPayload) {
   return apiClient.post<MediaAsset>('/media-assets', payload);
+}
+
+export async function collectMedia(payload: { product_id: EntityId; query?: string; sources?: string[] }) {
+  return apiClient.post<MediaCollectResponse>('/media/collect', payload);
 }
 
 export async function updateMediaAsset(id: EntityId, payload: Partial<MediaAsset>) {

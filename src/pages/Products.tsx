@@ -30,9 +30,12 @@ import {
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { createProduct, deleteProduct, listProducts, updateProduct } from '@/services/products';
+import { analyzeProduct, createProduct, deleteProduct, listProducts, updateProduct } from '@/services/products';
+import { collectMedia } from '@/services/mediaAssets';
+import { generateVideo } from '@/services/videos';
 import type { EntityId, Product, Status } from '@/types/entities';
 import { cn } from '@/lib/utils';
+import { fileToDataUrl } from '@/lib/fileToDataUrl';
 
 const categories = ['Eletrônicos', 'Moda', 'Casa & Decoração', 'Beleza', 'Esportes', 'Alimentos', 'Brinquedos', 'Outro'];
 
@@ -115,6 +118,7 @@ const getProductDate = (product: Product) =>
   new Date(product.created_at || product.updated_at || 0).getTime();
 
 const getProductPrice = (product: Product) => Number(product.price || 0);
+const productImage = (product: Product) => product.image_url || product.uploaded_image_url || '';
 
 const getPipelineStage = (product: Product) => {
   if (product.status === 'approved' || product.status === 'scheduled' || product.status === 'published') {
@@ -237,11 +241,6 @@ export default function Products() {
       return;
     }
 
-    if (!form.source_url.trim() && !form.image_url.trim() && !imageFile) {
-      toast.error('Adicione um link do produto, URL de imagem ou imagem para análise.');
-      return;
-    }
-
     if (!isValidUrl(form.source_url) || !isValidUrl(form.image_url)) {
       toast.error('Confira se os links estão completos, começando com http ou https.');
       return;
@@ -261,9 +260,11 @@ export default function Products() {
     try {
       const price = form.price ? Number(form.price) : undefined;
       const costPrice = form.cost_price ? Number(form.cost_price) : undefined;
+      const uploadedImageUrl = imageFile ? await fileToDataUrl(imageFile) : undefined;
       await createProduct({
         ...form,
         input_source: imageFile ? 'image_upload' : form.source_url ? 'product_url' : 'manual',
+        uploaded_image_url: uploadedImageUrl,
         price,
         cost_price: costPrice,
         margin_percent: price && costPrice ? Math.round(((price - costPrice) / price) * 100) : undefined,
@@ -276,8 +277,8 @@ export default function Products() {
       setShowModal(false);
       resetForm();
       load();
-    } catch {
-      toast.error('Não foi possível adicionar o produto');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível adicionar o produto');
     } finally {
       setSaving(false);
     }
@@ -307,12 +308,56 @@ export default function Products() {
     }
   };
 
+  const handleAnalyze = async (product: Product) => {
+    try {
+      await analyzeProduct({ product_id: product.id, source_url: product.source_url });
+      await updateProduct(product.id, { status: 'analyzing' });
+      toast.success('Análise enviada para a fila');
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a análise');
+    }
+  };
+
+  const handleCollectMedia = async (product: Product) => {
+    try {
+      await collectMedia({ product_id: product.id, query: product.name, sources: ['web', 'youtube', 'marketplaces'] });
+      await updateProduct(product.id, { status: 'collecting' });
+      toast.success('Coleta de mídias enviada para a fila');
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a coleta');
+    }
+  };
+
+  const handleGenerateVideo = async (product: Product) => {
+    try {
+      await generateVideo({
+        product_id: product.id,
+        media_asset_ids: [],
+        style: 'product',
+        duration: '30s',
+        briefing: product.description || `Crie um vídeo curto sobre ${product.name}`,
+        platform: 'instagram',
+      });
+      await updateProduct(product.id, {
+        status: 'generating',
+        videos_generated: (product.videos_generated || 0) + 1,
+      });
+      toast.success('Geração de vídeo enviada para a fila');
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a geração de vídeo');
+    }
+  };
+
   const handleDuplicate = async (product: Product) => {
     try {
       await createProduct({
         name: `${product.name} - cópia`,
         source_url: product.source_url,
         image_url: product.image_url,
+        uploaded_image_url: product.uploaded_image_url,
         category: product.category,
         description: product.description,
         brand: product.brand,
@@ -456,6 +501,9 @@ export default function Products() {
                 onDuplicate={handleDuplicate}
                 onOpen={setSelectedProduct}
                 onStatusChange={handleStatusChange}
+                onAnalyze={handleAnalyze}
+                onCollectMedia={handleCollectMedia}
+                onGenerateVideo={handleGenerateVideo}
               />
             ))}
           </div>
@@ -469,6 +517,9 @@ export default function Products() {
                 onDuplicate={handleDuplicate}
                 onOpen={setSelectedProduct}
                 onStatusChange={handleStatusChange}
+                onAnalyze={handleAnalyze}
+                onCollectMedia={handleCollectMedia}
+                onGenerateVideo={handleGenerateVideo}
               />
             ))}
           </div>
@@ -621,6 +672,9 @@ export default function Products() {
         onDelete={handleDelete}
         onDuplicate={handleDuplicate}
         onStatusChange={handleStatusChange}
+        onAnalyze={handleAnalyze}
+        onCollectMedia={handleCollectMedia}
+        onGenerateVideo={handleGenerateVideo}
       />
     </div>
   );
@@ -662,12 +716,18 @@ function ProductActions({
   onDuplicate,
   onOpen,
   onStatusChange,
+  onAnalyze,
+  onCollectMedia,
+  onGenerateVideo,
 }: {
   product: Product;
   onDelete: (id: EntityId) => void;
   onDuplicate: (product: Product) => void;
   onOpen: (product: Product) => void;
   onStatusChange: (id: EntityId, status: Status, message?: string) => void;
+  onAnalyze: (product: Product) => void;
+  onCollectMedia: (product: Product) => void;
+  onGenerateVideo: (product: Product) => void;
 }) {
   return (
     <DropdownMenu>
@@ -680,13 +740,13 @@ function ProductActions({
         <DropdownMenuItem onClick={() => onOpen(product)} className="gap-2">
           <Eye className="h-3.5 w-3.5" /> Ver detalhes
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onStatusChange(product.id, 'analyzing', 'Produto enviado para análise')} className="gap-2">
+        <DropdownMenuItem onClick={() => onAnalyze(product)} className="gap-2">
           <Bot className="h-3.5 w-3.5" /> Analisar com IA
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onStatusChange(product.id, 'collecting', 'Coleta de mídias iniciada')} className="gap-2">
+        <DropdownMenuItem onClick={() => onCollectMedia(product)} className="gap-2">
           <Image className="h-3.5 w-3.5" /> Buscar mídias
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onStatusChange(product.id, 'generating', 'Produto enviado para geração de vídeo')} className="gap-2">
+        <DropdownMenuItem onClick={() => onGenerateVideo(product)} className="gap-2">
           <Film className="h-3.5 w-3.5" /> Gerar vídeo
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onStatusChange(product.id, 'review', 'Produto enviado para aprovação')} className="gap-2">
@@ -709,18 +769,24 @@ function ProductCard({
   onDuplicate,
   onOpen,
   onStatusChange,
+  onAnalyze,
+  onCollectMedia,
+  onGenerateVideo,
 }: {
   product: Product;
   onDelete: (id: EntityId) => void;
   onDuplicate: (product: Product) => void;
   onOpen: (product: Product) => void;
   onStatusChange: (id: EntityId, status: Status, message?: string) => void;
+  onAnalyze: (product: Product) => void;
+  onCollectMedia: (product: Product) => void;
+  onGenerateVideo: (product: Product) => void;
 }) {
   return (
     <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.06]">
       <button type="button" className="relative h-44 w-full overflow-hidden bg-muted text-left" onClick={() => onOpen(product)}>
-        {product.image_url ? (
-          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+        {productImage(product) ? (
+          <img src={productImage(product)} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
             <Package className="h-10 w-10 text-muted-foreground/30" />
@@ -742,7 +808,7 @@ function ProductCard({
             <p className="truncate text-sm font-semibold text-foreground">{product.name}</p>
             <p className="mt-0.5 truncate text-xs text-muted-foreground">{product.brand || product.category || 'Sem categoria'}</p>
           </button>
-          <ProductActions product={product} onDelete={onDelete} onDuplicate={onDuplicate} onOpen={onOpen} onStatusChange={onStatusChange} />
+          <ProductActions product={product} onDelete={onDelete} onDuplicate={onDuplicate} onOpen={onOpen} onStatusChange={onStatusChange} onAnalyze={onAnalyze} onCollectMedia={onCollectMedia} onGenerateVideo={onGenerateVideo} />
         </div>
 
         <div className="mt-3 flex items-center justify-between">
@@ -768,19 +834,25 @@ function ProductRow({
   onDuplicate,
   onOpen,
   onStatusChange,
+  onAnalyze,
+  onCollectMedia,
+  onGenerateVideo,
 }: {
   product: Product;
   onDelete: (id: EntityId) => void;
   onDuplicate: (product: Product) => void;
   onOpen: (product: Product) => void;
   onStatusChange: (id: EntityId, status: Status, message?: string) => void;
+  onAnalyze: (product: Product) => void;
+  onCollectMedia: (product: Product) => void;
+  onGenerateVideo: (product: Product) => void;
 }) {
   return (
     <div className="flex flex-col gap-3 border-b border-border p-4 last:border-b-0 sm:flex-row sm:items-center">
       <button type="button" onClick={() => onOpen(product)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-muted">
-          {product.image_url ? (
-            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+          {productImage(product) ? (
+            <img src={productImage(product)} alt={product.name} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
               <Package className="h-5 w-5 text-muted-foreground/40" />
@@ -803,7 +875,7 @@ function ProductRow({
           <p className="text-sm font-bold text-primary">{product.price ? `R$ ${Number(product.price).toFixed(2)}` : 'Sem preço'}</p>
           <StatusBadge status={product.status} className="mt-1" />
         </div>
-        <ProductActions product={product} onDelete={onDelete} onDuplicate={onDuplicate} onOpen={onOpen} onStatusChange={onStatusChange} />
+        <ProductActions product={product} onDelete={onDelete} onDuplicate={onDuplicate} onOpen={onOpen} onStatusChange={onStatusChange} onAnalyze={onAnalyze} onCollectMedia={onCollectMedia} onGenerateVideo={onGenerateVideo} />
       </div>
     </div>
   );
@@ -825,6 +897,9 @@ function ProductDetailsDialog({
   onDelete,
   onDuplicate,
   onStatusChange,
+  onAnalyze,
+  onCollectMedia,
+  onGenerateVideo,
 }: {
   product: Product | null;
   open: boolean;
@@ -832,6 +907,9 @@ function ProductDetailsDialog({
   onDelete: (id: EntityId) => void;
   onDuplicate: (product: Product) => void;
   onStatusChange: (id: EntityId, status: Status, message?: string) => void;
+  onAnalyze: (product: Product) => void;
+  onCollectMedia: (product: Product) => void;
+  onGenerateVideo: (product: Product) => void;
 }) {
   if (!product) return null;
 
@@ -845,8 +923,8 @@ function ProductDetailsDialog({
         <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
           <div>
             <div className="aspect-square overflow-hidden rounded-2xl bg-muted">
-              {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+              {productImage(product) ? (
+                <img src={productImage(product)} alt={product.name} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
                   <Package className="h-12 w-12 text-muted-foreground/30" />
@@ -897,13 +975,13 @@ function ProductDetailsDialog({
             <div className="rounded-2xl border border-border p-4">
               <p className="mb-3 text-sm font-semibold text-foreground">Ações rápidas</p>
               <div className="grid gap-2 sm:grid-cols-2">
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatusChange(product.id, 'analyzing', 'Produto enviado para análise')}>
+                <Button variant="outline" className="justify-start gap-2" onClick={() => onAnalyze(product)}>
                   <Bot className="h-4 w-4" /> Analisar com IA
                 </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatusChange(product.id, 'collecting', 'Coleta de mídias iniciada')}>
+                <Button variant="outline" className="justify-start gap-2" onClick={() => onCollectMedia(product)}>
                   <Image className="h-4 w-4" /> Buscar mídias
                 </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatusChange(product.id, 'generating', 'Produto enviado para geração de vídeo')}>
+                <Button variant="outline" className="justify-start gap-2" onClick={() => onGenerateVideo(product)}>
                   <Film className="h-4 w-4" /> Gerar vídeo
                 </Button>
                 <Button variant="outline" className="justify-start gap-2" onClick={() => onStatusChange(product.id, 'review', 'Produto enviado para aprovação')}>
