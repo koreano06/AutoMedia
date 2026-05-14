@@ -8,6 +8,8 @@ type ApiEnvelope<T> = {
   data?: T;
   items?: T;
   result?: T;
+  results?: T;
+  records?: T;
 };
 
 function unwrapPayload<T>(payload: unknown) {
@@ -25,9 +27,41 @@ function unwrapPayload<T>(payload: unknown) {
     if ('result' in envelope) {
       return envelope.result as T;
     }
+
+    if ('results' in envelope) {
+      return envelope.results as T;
+    }
+
+    if ('records' in envelope) {
+      return envelope.records as T;
+    }
   }
 
   return payload as T;
+}
+
+export function normalizeList<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) {
+    return payload as T[];
+  }
+
+  const unwrapped = unwrapPayload<unknown>(payload);
+
+  if (Array.isArray(unwrapped)) {
+    return unwrapped as T[];
+  }
+
+  if (unwrapped && typeof unwrapped === 'object') {
+    const nested = unwrapped as ApiEnvelope<unknown>;
+    const candidates = [nested.data, nested.items, nested.result, nested.results, nested.records];
+    const firstArray = candidates.find(Array.isArray);
+
+    if (firstArray) {
+      return firstArray as T[];
+    }
+  }
+
+  return [];
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']) {
@@ -68,6 +102,7 @@ async function request<T>(path: string, options: RequestOptions = {}) {
 
 export const apiClient = {
   get: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: 'GET' }),
+  getList: async <T>(path: string, options?: RequestOptions) => normalizeList<T>(await request<unknown>(path, { ...options, method: 'GET' })),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>(path, { ...options, method: 'POST', body: body instanceof FormData ? body : JSON.stringify(body ?? {}) }),
   patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>

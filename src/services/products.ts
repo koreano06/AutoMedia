@@ -4,7 +4,7 @@ import type { EntityId, Product, Status } from '@/types/entities';
 export type ProductPayload = Omit<Product, 'id'>;
 
 export async function listProducts(order = '-created_date', limit = 50) {
-  return apiClient.get<Product[]>('/products', { query: { order, limit } });
+  return apiClient.getList<Product>('/products', { query: { order, limit } });
 }
 
 export async function createProduct(payload: ProductPayload) {

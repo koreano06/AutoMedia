@@ -4,7 +4,7 @@ import type { EntityId, Post } from '@/types/entities';
 export type PostPayload = Omit<Post, 'id'>;
 
 export async function listPosts(order = '-published_at', limit = 100) {
-  return apiClient.get<Post[]>('/posts', { query: { order, limit } });
+  return apiClient.getList<Post>('/posts', { query: { order, limit } });
 }
 
 export async function createPost(payload: PostPayload) {
