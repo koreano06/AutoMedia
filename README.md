@@ -25,8 +25,8 @@ npm install
 
 ```env
 VITE_APP_ID=seu_app_id
-VITE_APP_BASE_URL=https://seu-backend.app
-VITE_API_BASE_URL=/api
+VITE_APP_BASE_URL=https://auto-media-sooty.vercel.app
+VITE_API_BASE_URL=https://auto-media-backend.vercel.app/api
 ```
 
 3. Inicie o servidor de desenvolvimento:
@@ -77,6 +77,12 @@ O arquivo `vercel.json` mantém o roteamento SPA funcionando em páginas interna
 3. Importe o repositório.
 4. Configure as variáveis de ambiente, se necessário.
 5. Clique em `Deploy`.
+
+Variável principal para produção:
+
+```env
+VITE_API_BASE_URL=https://auto-media-backend.vercel.app/api
+```
 
 ### Deploy via CLI
 

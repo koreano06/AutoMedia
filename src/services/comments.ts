@@ -1,10 +1,10 @@
-import { base44 } from '@/api/base44Client';
+import { apiClient } from '@/api/httpClient';
 import type { Comment, EntityId } from '@/types/entities';
 
 export async function listComments(order = '-detected_at', limit = 100) {
-  return base44.entities.Comment.list(order, limit) as Promise<Comment[]>;
+  return apiClient.get<Comment[]>('/comments', { query: { order, limit } });
 }
 
 export async function updateComment(id: EntityId, payload: Partial<Comment>) {
-  return base44.entities.Comment.update(id, payload);
+  return apiClient.patch<Comment>(`/comments/${id}`, payload);
 }
