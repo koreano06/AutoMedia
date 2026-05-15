@@ -865,86 +865,90 @@ function MediaDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-5xl overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-h-[92vh] w-[calc(100vw-1rem)] max-w-4xl overflow-hidden p-0 sm:w-[calc(100vw-2rem)]">
+        <DialogHeader className="border-b border-border px-4 py-3 sm:px-5">
           <DialogTitle className="font-syne">Preview da mídia</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
-          <div className="overflow-hidden rounded-2xl bg-muted">
-            {assetPreview(asset) ? (
-              isVideoAsset(asset) && asset.url ? (
-                <video src={asset.url} controls poster={asset.thumbnail_url} className="max-h-[560px] w-full bg-black object-contain" />
-              ) : (
-                <img src={assetPreview(asset)} alt={asset.title || ''} className="max-h-[560px] w-full object-contain" />
-              )
-            ) : (
-              <div className="flex aspect-video items-center justify-center">
-                {isVideoAsset(asset) ? <Film className="h-12 w-12 text-muted-foreground/30" /> : <Image className="h-12 w-12 text-muted-foreground/30" />}
-              </div>
-            )}
-          </div>
-          <div className="space-y-4">
-            <div>
-              <h2 className="font-syne text-2xl font-bold text-foreground">{asset.title || 'Sem título'}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{asset.product_name || 'Sem produto vinculado'}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <StatusBadge status={asset.status} />
-              <span className={cn('rounded-full px-2.5 py-1 text-xs font-medium', getQualityTone(score))}>{getQualityLabel(score)}</span>
-              {asset.type === 'generated_video' && <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">IA</span>}
-            </div>
-            <div className="rounded-2xl border border-border p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">Score de qualidade</p>
-                <span className="text-sm font-bold text-foreground">{score}%</span>
-              </div>
-              <Progress value={score} />
-              <p className="mt-2 text-xs text-muted-foreground">
-                {score < 50 ? 'Recomendado revisar resolução, enquadramento ou nitidez.' : score < 80 ? 'Boa para testes, mas pode melhorar antes de publicar.' : 'Ativo forte para criativos e publicações.'}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <DetailBox label="Tipo" value={asset.type?.replace('_', ' ') || 'mídia'} />
-              <DetailBox label="Origem" value={asset.source || 'Não informada'} />
-              <DetailBox label="Duração" value={asset.duration ? `${asset.duration}s` : 'Não informada'} />
-              <DetailBox label="Tamanho" value={asset.file_size ? `${Math.round(asset.file_size / 1024)} KB` : 'Não informado'} />
-            </div>
-            <div className="rounded-2xl border border-border p-4">
-              <p className="mb-3 text-sm font-semibold text-foreground">Ações rápidas</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'approved', 'Mídia aprovada')}>
-                  <CheckCircle className="h-4 w-4" /> Aprovar
-                </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'rejected', 'Mídia rejeitada')}>
-                  <XCircle className="h-4 w-4" /> Rejeitar
-                </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'generating', 'Mídia enviada para vídeo')}>
-                  <Film className="h-4 w-4" /> Usar para vídeo
-                </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'processing', 'Legenda enviada para geração')}>
-                  <Sparkles className="h-4 w-4" /> Criar legenda
-                </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'processing', 'Remoção de fundo preparada')}>
-                  <Wand2 className="h-4 w-4" /> Remover fundo
-                </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'processing', 'Variações enviadas para IA')}>
-                  <Bot className="h-4 w-4" /> Gerar variações
-                </Button>
+        <div className="max-h-[calc(92vh-56px)] overflow-y-auto px-4 py-4 sm:px-5">
+          <div className="grid gap-5 lg:grid-cols-[minmax(280px,0.92fr)_minmax(0,1.08fr)]">
+            <div className="lg:sticky lg:top-0 lg:self-start">
+              <div className="overflow-hidden rounded-2xl border border-border bg-muted shadow-sm">
+                {assetPreview(asset) ? (
+                  isVideoAsset(asset) && asset.url ? (
+                    <video src={asset.url} controls poster={asset.thumbnail_url} className="aspect-[4/5] max-h-[62vh] w-full bg-black object-contain lg:aspect-[3/4]" />
+                  ) : (
+                    <img src={assetPreview(asset)} alt={asset.title || ''} className="aspect-[4/5] max-h-[62vh] w-full object-contain lg:aspect-[3/4]" />
+                  )
+                ) : (
+                  <div className="flex aspect-[4/5] items-center justify-center lg:aspect-[3/4]">
+                    {isVideoAsset(asset) ? <Film className="h-12 w-12 text-muted-foreground/30" /> : <Image className="h-12 w-12 text-muted-foreground/30" />}
+                  </div>
+                )}
               </div>
             </div>
-            <div className="rounded-2xl border border-border p-4">
-              <p className="mb-3 text-sm font-semibold text-foreground">Histórico e links</p>
-              <InfoLine label="Link original" value={asset.source_url || asset.url || 'Não informado'} />
-              <InfoLine label="Uso" value={asset.status === 'published' ? 'Já usada em publicação' : asset.media_asset_id ? 'Vinculada a vídeo' : 'Ainda disponível'} />
-              <InfoLine label="Legenda" value={asset.caption || 'Sem legenda gerada'} />
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button variant="outline" className="flex-1 gap-2" onClick={() => onCopyLink(asset)}>
-                <Copy className="h-4 w-4" /> Copiar link
-              </Button>
-              <Button className="flex-1 gap-2" onClick={() => asset.url && window.open(asset.url, '_blank')}>
-                <Download className="h-4 w-4" /> Abrir mídia
-              </Button>
+            <div className="min-w-0 space-y-4">
+              <div className="min-w-0">
+                <h2 className="break-words font-syne text-xl font-bold leading-tight text-foreground sm:text-2xl">{asset.title || 'Sem título'}</h2>
+                <p className="mt-1 truncate text-sm text-muted-foreground">{asset.product_name || 'Sem produto vinculado'}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge status={asset.status} />
+                <span className={cn('rounded-full px-2.5 py-1 text-xs font-medium', getQualityTone(score))}>{getQualityLabel(score)}</span>
+                {asset.type === 'generated_video' && <span className="rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">IA</span>}
+              </div>
+              <div className="rounded-2xl border border-border p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-foreground">Score de qualidade</p>
+                  <span className="text-sm font-bold text-foreground">{score}%</span>
+                </div>
+                <Progress value={score} />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {score < 50 ? 'Recomendado revisar resolução, enquadramento ou nitidez.' : score < 80 ? 'Boa para testes, mas pode melhorar antes de publicar.' : 'Ativo forte para criativos e publicações.'}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <DetailBox label="Tipo" value={asset.type?.replace('_', ' ') || 'mídia'} />
+                <DetailBox label="Origem" value={asset.source || 'Não informada'} />
+                <DetailBox label="Duração" value={asset.duration ? `${asset.duration}s` : 'Não informada'} />
+                <DetailBox label="Tamanho" value={asset.file_size ? `${Math.round(asset.file_size / 1024)} KB` : 'Não informado'} />
+              </div>
+              <div className="rounded-2xl border border-border p-4">
+                <p className="mb-3 text-sm font-semibold text-foreground">Ações rápidas</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button size="sm" variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'approved', 'Mídia aprovada')}>
+                    <CheckCircle className="h-4 w-4" /> Aprovar
+                  </Button>
+                  <Button size="sm" variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'rejected', 'Mídia rejeitada')}>
+                    <XCircle className="h-4 w-4" /> Rejeitar
+                  </Button>
+                  <Button size="sm" variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'generating', 'Mídia enviada para vídeo')}>
+                    <Film className="h-4 w-4" /> Usar para vídeo
+                  </Button>
+                  <Button size="sm" variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'processing', 'Legenda enviada para geração')}>
+                    <Sparkles className="h-4 w-4" /> Criar legenda
+                  </Button>
+                  <Button size="sm" variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'processing', 'Remoção de fundo preparada')}>
+                    <Wand2 className="h-4 w-4" /> Remover fundo
+                  </Button>
+                  <Button size="sm" variant="outline" className="justify-start gap-2" onClick={() => onStatus(asset.id, 'processing', 'Variações enviadas para IA')}>
+                    <Bot className="h-4 w-4" /> Gerar variações
+                  </Button>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-border p-4">
+                <p className="mb-3 text-sm font-semibold text-foreground">Histórico e links</p>
+                <InfoLine label="Link original" value={asset.source_url || asset.url || 'Não informado'} />
+                <InfoLine label="Uso" value={asset.status === 'published' ? 'Já usada em publicação' : asset.media_asset_id ? 'Vinculada a vídeo' : 'Ainda disponível'} />
+                <InfoLine label="Legenda" value={asset.caption || 'Sem legenda gerada'} />
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" className="flex-1 gap-2" onClick={() => onCopyLink(asset)}>
+                  <Copy className="h-4 w-4" /> Copiar link
+                </Button>
+                <Button className="flex-1 gap-2" onClick={() => asset.url && window.open(asset.url, '_blank')}>
+                  <Download className="h-4 w-4" /> Abrir mídia
+                </Button>
+              </div>
             </div>
           </div>
         </div>

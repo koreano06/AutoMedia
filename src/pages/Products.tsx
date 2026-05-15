@@ -732,31 +732,31 @@ function ProductActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="secondary" size="icon" className="h-8 w-8 shadow-sm">
+        <Button variant="secondary" size="icon" className="h-8 w-8 shrink-0 shadow-sm">
           <MoreHorizontal className="h-3.5 w-3.5" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onClick={() => onOpen(product)} className="gap-2">
-          <Eye className="h-3.5 w-3.5" /> Ver detalhes
+      <DropdownMenuContent align="end" sideOffset={8} className="w-56 rounded-xl p-1">
+        <DropdownMenuItem onClick={() => onOpen(product)} className="h-9 gap-2 rounded-lg text-sm">
+          <Eye className="h-3.5 w-3.5 shrink-0" /> Ver detalhes
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onAnalyze(product)} className="gap-2">
-          <Bot className="h-3.5 w-3.5" /> Analisar com IA
+        <DropdownMenuItem onClick={() => onAnalyze(product)} className="h-9 gap-2 rounded-lg text-sm">
+          <Bot className="h-3.5 w-3.5 shrink-0" /> Analisar com IA
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onCollectMedia(product)} className="gap-2">
-          <Image className="h-3.5 w-3.5" /> Buscar mídias
+        <DropdownMenuItem onClick={() => onCollectMedia(product)} className="h-9 gap-2 rounded-lg text-sm">
+          <Image className="h-3.5 w-3.5 shrink-0" /> Buscar mídias
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onGenerateVideo(product)} className="gap-2">
-          <Film className="h-3.5 w-3.5" /> Gerar vídeo
+        <DropdownMenuItem onClick={() => onGenerateVideo(product)} className="h-9 gap-2 rounded-lg text-sm">
+          <Film className="h-3.5 w-3.5 shrink-0" /> Gerar vídeo
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onStatusChange(product.id, 'review', 'Produto enviado para aprovação')} className="gap-2">
-          <CheckCircle className="h-3.5 w-3.5" /> Enviar p/ aprovação
+        <DropdownMenuItem onClick={() => onStatusChange(product.id, 'review', 'Produto enviado para aprovação')} className="h-9 gap-2 rounded-lg text-sm">
+          <CheckCircle className="h-3.5 w-3.5 shrink-0" /> Enviar p/ aprovação
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onDuplicate(product)} className="gap-2">
-          <Copy className="h-3.5 w-3.5" /> Duplicar
+        <DropdownMenuItem onClick={() => onDuplicate(product)} className="h-9 gap-2 rounded-lg text-sm">
+          <Copy className="h-3.5 w-3.5 shrink-0" /> Duplicar
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onDelete(product.id)} className="gap-2 text-destructive">
-          <Trash2 className="h-3.5 w-3.5" /> Excluir
+        <DropdownMenuItem onClick={() => onDelete(product.id)} className="h-9 gap-2 rounded-lg text-sm text-destructive">
+          <Trash2 className="h-3.5 w-3.5 shrink-0" /> Excluir
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -784,14 +784,17 @@ function ProductCard({
 }) {
   return (
     <div className="group overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.06]">
-      <button type="button" className="relative h-44 w-full overflow-hidden bg-muted text-left" onClick={() => onOpen(product)}>
-        {productImage(product) ? (
-          <img src={productImage(product)} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <Package className="h-10 w-10 text-muted-foreground/30" />
-          </div>
-        )}
+      <div className="relative h-44 w-full overflow-hidden bg-muted">
+        <button type="button" className="absolute inset-0 w-full text-left" onClick={() => onOpen(product)}>
+          {productImage(product) ? (
+            <img src={productImage(product)} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <Package className="h-10 w-10 text-muted-foreground/30" />
+            </div>
+          )}
+        </button>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 via-black/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
         <div className="absolute left-2 top-2">
           <span className="rounded-full bg-card/90 px-2.5 py-1 text-[10px] font-semibold text-foreground shadow-sm backdrop-blur">
             {getPipelineStage(product)}
@@ -800,7 +803,18 @@ function ProductCard({
         <div className="absolute bottom-2 left-2">
           <StatusBadge status={product.status} />
         </div>
-      </button>
+        <div className="absolute bottom-2 right-2 flex max-w-[calc(100%-6.5rem)] items-center gap-1.5 opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
+          <Button size="sm" className="h-8 gap-1 rounded-full px-2.5 text-[11px] shadow-lg" onClick={() => onAnalyze(product)}>
+            <Bot className="h-3.5 w-3.5" /> IA
+          </Button>
+          <Button size="sm" variant="secondary" className="h-8 gap-1 rounded-full px-2.5 text-[11px] shadow-lg" onClick={() => onCollectMedia(product)}>
+            <Image className="h-3.5 w-3.5" /> Mídias
+          </Button>
+          <div className="rounded-full shadow-lg">
+            <ProductActions product={product} onDelete={onDelete} onDuplicate={onDuplicate} onOpen={onOpen} onStatusChange={onStatusChange} onAnalyze={onAnalyze} onCollectMedia={onCollectMedia} onGenerateVideo={onGenerateVideo} />
+          </div>
+        </div>
+      </div>
 
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
@@ -808,7 +822,9 @@ function ProductCard({
             <p className="truncate text-sm font-semibold text-foreground">{product.name}</p>
             <p className="mt-0.5 truncate text-xs text-muted-foreground">{product.brand || product.category || 'Sem categoria'}</p>
           </button>
-          <ProductActions product={product} onDelete={onDelete} onDuplicate={onDuplicate} onOpen={onOpen} onStatusChange={onStatusChange} onAnalyze={onAnalyze} onCollectMedia={onCollectMedia} onGenerateVideo={onGenerateVideo} />
+          <div className="opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+            <ProductActions product={product} onDelete={onDelete} onDuplicate={onDuplicate} onOpen={onOpen} onStatusChange={onStatusChange} onAnalyze={onAnalyze} onCollectMedia={onCollectMedia} onGenerateVideo={onGenerateVideo} />
+          </div>
         </div>
 
         <div className="mt-3 flex items-center justify-between">
