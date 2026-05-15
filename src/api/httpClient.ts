@@ -2,7 +2,7 @@ type RequestOptions = RequestInit & {
   query?: Record<string, string | number | boolean | undefined>;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://auto-media-backend.vercel.app/api';
 
 type ApiEnvelope<T> = {
   data?: T;
