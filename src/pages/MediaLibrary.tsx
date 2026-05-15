@@ -4,7 +4,7 @@ import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -868,6 +868,9 @@ function MediaDetailsDialog({
       <DialogContent className="max-h-[92vh] w-[calc(100vw-1rem)] max-w-4xl overflow-hidden p-0 sm:w-[calc(100vw-2rem)]">
         <DialogHeader className="border-b border-border px-4 py-3 sm:px-5">
           <DialogTitle className="font-syne">Preview da mídia</DialogTitle>
+          <DialogDescription className="sr-only">
+            Visualize a mídia selecionada, revise qualidade, detalhes técnicos e ações rápidas.
+          </DialogDescription>
         </DialogHeader>
         <div className="max-h-[calc(92vh-56px)] overflow-y-auto px-4 py-4 sm:px-5">
           <div className="grid gap-5 lg:grid-cols-[minmax(280px,0.92fr)_minmax(0,1.08fr)]">
