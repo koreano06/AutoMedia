@@ -12,6 +12,22 @@ type ApiEnvelope<T> = {
   records?: T;
 };
 
+export class ApiRequestError extends Error {
+  status: number;
+  payload: unknown;
+
+  constructor(message: string, status: number, payload: unknown) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+export function isNotFoundError(error: unknown) {
+  return error instanceof ApiRequestError && error.status === 404;
+}
+
 function unwrapPayload<T>(payload: unknown) {
   if (payload && typeof payload === 'object') {
     const envelope = payload as ApiEnvelope<T>;
@@ -94,7 +110,7 @@ async function request<T>(path: string, options: RequestOptions = {}) {
 
   if (!response.ok) {
     const message = typeof payload === 'object' && payload?.error?.message ? payload.error.message : 'Erro inesperado na API';
-    throw new Error(message);
+    throw new ApiRequestError(message, response.status, payload);
   }
 
   return unwrapPayload<T>(payload);

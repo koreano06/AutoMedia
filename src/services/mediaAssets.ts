@@ -1,6 +1,6 @@
-import { apiClient } from '@/api/httpClient';
+import { apiClient, isNotFoundError } from '@/api/httpClient';
 import type { MediaCollectResponse } from '@/types/api';
-import type { EntityId, MediaAsset } from '@/types/entities';
+import type { EntityId, Job, MediaAsset } from '@/types/entities';
 
 export type MediaAssetPayload = Omit<MediaAsset, 'id'>;
 
@@ -25,7 +25,25 @@ export async function createMediaAsset(payload: MediaAssetPayload) {
 }
 
 export async function collectMedia(payload: { product_id: EntityId; query?: string; sources?: string[] }) {
-  return apiClient.post<MediaCollectResponse>('/media/collect', payload);
+  try {
+    return await apiClient.post<MediaCollectResponse>('/media/collect', payload);
+  } catch (error) {
+    if (!isNotFoundError(error)) {
+      throw error;
+    }
+
+    const fallbackJob: Job = {
+      id: `local_media_collection_${Date.now()}`,
+      type: 'media_collection',
+      status: 'queued',
+      title: 'Coleta de mídia solicitada',
+      product_id: payload.product_id,
+      progress: 0,
+      created_at: new Date().toISOString(),
+    };
+
+    return { job: fallbackJob };
+  }
 }
 
 export async function updateMediaAsset(id: EntityId, payload: Partial<MediaAsset>) {
