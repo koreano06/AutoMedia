@@ -95,14 +95,18 @@ function buildUrl(path: string, query?: RequestOptions['query']) {
 async function request<T>(path: string, options: RequestOptions = {}) {
   const { query, headers, body, ...init } = options;
   const isFormData = body instanceof FormData;
+  const requestHeaders: HeadersInit = {
+    ...headers,
+  };
+
+  if (body !== undefined && !isFormData) {
+    requestHeaders['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(buildUrl(path, query), {
     ...init,
     body,
-    headers: {
-      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-      ...headers,
-    },
+    headers: requestHeaders,
   });
 
   const contentType = response.headers.get('content-type');
