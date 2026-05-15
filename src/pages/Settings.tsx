@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Bell, Zap, Link2, Clock, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { connectPlatform, disconnectPlatform, listPlatformAccounts, type PlatformAccountWithConfig } from '@/services/platforms';
 
 const platforms = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'] as const;
 const SETTINGS_STORAGE_KEY = 'automedia_settings';
@@ -79,6 +80,8 @@ export default function Settings() {
   const [purchaseKeywords, setPurchaseKeywords] = useState(defaultSettings.purchaseKeywords);
   const [postingStart, setPostingStart] = useState(defaultSettings.postingStart);
   const [postingEnd, setPostingEnd] = useState(defaultSettings.postingEnd);
+  const [platformAccounts, setPlatformAccounts] = useState<PlatformAccountWithConfig[]>([]);
+  const [platformLoading, setPlatformLoading] = useState<Partial<Record<Platform, boolean>>>({});
 
   useEffect(() => {
     const savedSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
@@ -102,6 +105,27 @@ export default function Settings() {
     }
   }, []);
 
+  useEffect(() => {
+    listPlatformAccounts()
+      .then((accounts) => {
+        if (!accounts.length) return;
+
+        setPlatformAccounts(accounts);
+        setConnected((current) => {
+          const next = { ...current };
+          accounts.forEach((account) => {
+            if (platforms.includes(account.platform as Platform)) {
+              next[account.platform as Platform] = account.status === 'connected';
+            }
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        toast.error('Não foi possível carregar integrações. Usando estado local.');
+      });
+  }, []);
+
   const automationState = {
     autoReply: [autoReply, setAutoReply],
     autoSchedule: [autoSchedule, setAutoSchedule],
@@ -109,11 +133,38 @@ export default function Settings() {
     randomSchedule: [randomSchedule, setRandomSchedule],
   } as const;
 
-  const handleConnect = (platform: Platform) => {
-    const nextConnected = !connected[platform];
+  const handleConnect = async (platform: Platform) => {
+    setPlatformLoading((prev) => ({ ...prev, [platform]: true }));
 
-    setConnected((prev) => ({ ...prev, [platform]: nextConnected }));
-    toast.success(nextConnected ? `${platform} conectado com sucesso!` : `${platform} desconectado`);
+    try {
+      if (connected[platform]) {
+        const account = await disconnectPlatform(platform);
+        setPlatformAccounts((prev) => prev.map((item) => (item.platform === platform ? { ...item, ...account } : item)));
+        setConnected((prev) => ({ ...prev, [platform]: false }));
+        toast.success(`${platform} desconectado`);
+        return;
+      }
+
+      const response = await connectPlatform(platform);
+      setPlatformAccounts((prev) => {
+        const exists = prev.some((item) => item.platform === platform);
+        return exists ? prev.map((item) => (item.platform === platform ? response.account : item)) : [...prev, response.account];
+      });
+      setConnected((prev) => ({ ...prev, [platform]: response.account.status === 'connected' }));
+
+      if (response.mode === 'live' && response.oauth_url) {
+        window.location.href = response.oauth_url;
+        return;
+      }
+
+      toast.success(`${platform} conectado em modo teste`);
+    } catch {
+      const nextConnected = !connected[platform];
+      setConnected((prev) => ({ ...prev, [platform]: nextConnected }));
+      toast.warning('API de integrações indisponível. Alteração salva somente nesta sessão.');
+    } finally {
+      setPlatformLoading((prev) => ({ ...prev, [platform]: false }));
+    }
   };
 
   const handleSave = () => {
@@ -150,7 +201,14 @@ export default function Settings() {
           <div className="divide-y divide-border">
             {platforms.map((platform) => (
               <div key={platform} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <PlatformIcon platform={platform} showLabel />
+                <div>
+                  <PlatformIcon platform={platform} showLabel />
+                  {platformAccounts.find((account) => account.platform === platform)?.mode && (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Modo {platformAccounts.find((account) => account.platform === platform)?.mode === 'mock' ? 'teste' : 'produção'} · escopos OAuth preparados
+                    </p>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-3">
                   {connected[platform] ? (
                     <span className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs text-success">
@@ -167,9 +225,10 @@ export default function Settings() {
                     size="sm"
                     variant={connected[platform] ? 'outline' : 'default'}
                     className="h-8"
+                    disabled={Boolean(platformLoading[platform])}
                     onClick={() => handleConnect(platform)}
                   >
-                    {connected[platform] ? 'Desconectar' : 'Conectar'}
+                    {platformLoading[platform] ? 'Aguarde...' : connected[platform] ? 'Desconectar' : 'Conectar'}
                   </Button>
                 </div>
               </div>

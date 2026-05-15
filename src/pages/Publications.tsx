@@ -36,7 +36,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { deletePost, listPosts, updatePost } from '@/services/posts';
+import { deletePost, listPosts, publishPostNow, updatePost } from '@/services/posts';
 import type { EntityId, Post, Status } from '@/types/entities';
 
 const PLATFORMS = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'];
@@ -147,11 +147,15 @@ export default function Publications() {
 
   const updateStatus = async (post: Post, status: Status, message: string) => {
     try {
-      await updatePost(post.id, {
-        status,
-        last_sync_at: new Date().toISOString(),
-        retry_count: status === 'publishing' ? (post.retry_count || 0) + 1 : post.retry_count,
-      });
+      if (status === 'publishing') {
+        await publishPostNow(post.id);
+      } else {
+        await updatePost(post.id, {
+          status,
+          last_sync_at: new Date().toISOString(),
+          retry_count: post.retry_count,
+        });
+      }
       toast.success(message);
       setSelectedPost((current) => current?.id === post.id ? { ...current, status } : current);
       load();

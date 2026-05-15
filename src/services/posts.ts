@@ -15,6 +15,10 @@ export async function updatePost(id: EntityId, payload: Partial<Post>) {
   return apiClient.patch<Post>(`/posts/${id}`, payload);
 }
 
+export async function publishPostNow(id: EntityId) {
+  return apiClient.post<Post>(`/posts/${id}/publish-now`);
+}
+
 export async function deletePost(id: EntityId) {
   return apiClient.delete<Post>(`/posts/${id}`);
 }

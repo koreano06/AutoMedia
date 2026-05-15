@@ -37,7 +37,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { createPost, deletePost as deletePostById, listPosts, updatePost } from '@/services/posts';
+import { createPost, deletePost as deletePostById, listPosts, publishPostNow, updatePost } from '@/services/posts';
 import { filterMediaAssets } from '@/services/mediaAssets';
 import type { EntityId, MediaAsset, Post, Status } from '@/types/entities';
 
@@ -158,7 +158,7 @@ export default function Schedule() {
 
   const publishNow = async (post: Post) => {
     try {
-      await updatePost(post.id, { status: 'published', published_at: new Date().toISOString() });
+      await publishPostNow(post.id);
       toast.success('Publicado agora!');
       load();
     } catch {
