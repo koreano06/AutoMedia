@@ -15,7 +15,7 @@ export type ConnectPlatformResponse = {
 
 export async function listPlatformAccounts() {
   try {
-    return await apiClient.getList<PlatformAccountWithConfig>('/platforms/accounts');
+    return await apiClient.getList<PlatformAccountWithConfig>('/platform-accounts');
   } catch (error) {
     if (!isNotFoundError(error)) throw error;
     return [];
@@ -23,9 +23,9 @@ export async function listPlatformAccounts() {
 }
 
 export async function connectPlatform(platform: Platform) {
-  return apiClient.post<ConnectPlatformResponse>(`/platforms/${platform}/connect`);
+  return apiClient.post<ConnectPlatformResponse>('/platform-connect', { platform });
 }
 
 export async function disconnectPlatform(platform: Platform) {
-  return apiClient.post<PlatformAccountWithConfig>(`/platforms/${platform}/disconnect`);
+  return apiClient.post<PlatformAccountWithConfig>('/platform-disconnect', { platform });
 }
