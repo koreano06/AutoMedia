@@ -1,23 +1,16 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import TopBar from '@/components/layout/TopBar';
-import PlatformIcon from '@/components/common/PlatformIcon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Bell, Zap, Link2, Clock, MessageSquare, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
+import { ArrowRight, Bell, Clock, Link2, MessageSquare, Zap } from 'lucide-react';
 import { toast } from 'sonner';
-import { connectPlatform, disconnectPlatform, listPlatformAccounts, type PlatformAccountWithConfig } from '@/services/platforms';
 
-const platforms = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'] as const;
 const SETTINGS_STORAGE_KEY = 'automedia_settings';
 
-type Platform = (typeof platforms)[number];
-type ConnectedState = Record<Platform, boolean>;
-
 type SettingsState = {
-  connected: ConnectedState;
   autoReply: boolean;
   autoSchedule: boolean;
   notifications: boolean;
@@ -28,14 +21,6 @@ type SettingsState = {
 };
 
 const defaultSettings: SettingsState = {
-  connected: {
-    instagram: true,
-    tiktok: false,
-    facebook: true,
-    youtube: false,
-    shopee: false,
-    mercadolivre: false,
-  },
   autoReply: true,
   autoSchedule: true,
   notifications: true,
@@ -48,32 +33,31 @@ const defaultSettings: SettingsState = {
 const automationSettings = [
   {
     key: 'autoReply',
-    label: 'Resposta Automática a Comentários',
-    desc: 'Responde automaticamente quando detecta intenção de compra',
+    label: 'Resposta automática',
+    desc: 'Marca comentários com intenção de compra e prepara uma resposta com link.',
     icon: MessageSquare,
   },
   {
     key: 'autoSchedule',
-    label: 'Agendamento Automático',
-    desc: 'Agenda posts automaticamente após aprovação',
+    label: 'Agendamento automático',
+    desc: 'Cria publicações após aprovação sem precisar montar tudo manualmente.',
     icon: Clock,
   },
   {
     key: 'randomSchedule',
-    label: 'Horários Aleatórios',
-    desc: 'Publica em horários variados para parecer natural',
+    label: 'Horários naturais',
+    desc: 'Distribui posts em horários variados dentro da janela escolhida.',
     icon: Zap,
   },
   {
     key: 'notifications',
     label: 'Notificações',
-    desc: 'Receba alertas sobre aprovações e publicações',
+    desc: 'Mostra alertas sobre aprovações, publicações e comentários importantes.',
     icon: Bell,
   },
 ] as const;
 
 export default function Settings() {
-  const [connected, setConnected] = useState<ConnectedState>(defaultSettings.connected);
   const [autoReply, setAutoReply] = useState(defaultSettings.autoReply);
   const [autoSchedule, setAutoSchedule] = useState(defaultSettings.autoSchedule);
   const [notifications, setNotifications] = useState(defaultSettings.notifications);
@@ -81,19 +65,13 @@ export default function Settings() {
   const [purchaseKeywords, setPurchaseKeywords] = useState(defaultSettings.purchaseKeywords);
   const [postingStart, setPostingStart] = useState(defaultSettings.postingStart);
   const [postingEnd, setPostingEnd] = useState(defaultSettings.postingEnd);
-  const [platformAccounts, setPlatformAccounts] = useState<PlatformAccountWithConfig[]>([]);
-  const [platformLoading, setPlatformLoading] = useState<Partial<Record<Platform, boolean>>>({});
 
   useEffect(() => {
     const savedSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-
-    if (!savedSettings) {
-      return;
-    }
+    if (!savedSettings) return;
 
     try {
       const parsed = JSON.parse(savedSettings) as Partial<SettingsState>;
-      setConnected({ ...defaultSettings.connected, ...parsed.connected });
       setAutoReply(parsed.autoReply ?? defaultSettings.autoReply);
       setAutoSchedule(parsed.autoSchedule ?? defaultSettings.autoSchedule);
       setNotifications(parsed.notifications ?? defaultSettings.notifications);
@@ -106,27 +84,6 @@ export default function Settings() {
     }
   }, []);
 
-  useEffect(() => {
-    listPlatformAccounts()
-      .then((accounts) => {
-        if (!accounts.length) return;
-
-        setPlatformAccounts(accounts);
-        setConnected((current) => {
-          const next = { ...current };
-          accounts.forEach((account) => {
-            if (platforms.includes(account.platform as Platform)) {
-              next[account.platform as Platform] = account.status === 'connected';
-            }
-          });
-          return next;
-        });
-      })
-      .catch(() => {
-        toast.error('Não foi possível carregar integrações. Usando estado local.');
-      });
-  }, []);
-
   const automationState = {
     autoReply: [autoReply, setAutoReply],
     autoSchedule: [autoSchedule, setAutoSchedule],
@@ -134,43 +91,8 @@ export default function Settings() {
     randomSchedule: [randomSchedule, setRandomSchedule],
   } as const;
 
-  const handleConnect = async (platform: Platform) => {
-    setPlatformLoading((prev) => ({ ...prev, [platform]: true }));
-
-    try {
-      if (connected[platform]) {
-        const account = await disconnectPlatform(platform);
-        setPlatformAccounts((prev) => prev.map((item) => (item.platform === platform ? { ...item, ...account } : item)));
-        setConnected((prev) => ({ ...prev, [platform]: false }));
-        toast.success(`${platform} desconectado`);
-        return;
-      }
-
-      const response = await connectPlatform(platform);
-      setPlatformAccounts((prev) => {
-        const exists = prev.some((item) => item.platform === platform);
-        return exists ? prev.map((item) => (item.platform === platform ? response.account : item)) : [...prev, response.account];
-      });
-      setConnected((prev) => ({ ...prev, [platform]: response.account.status === 'connected' }));
-
-      if (response.mode === 'live' && response.oauth_url) {
-        window.location.href = response.oauth_url;
-        return;
-      }
-
-      toast.success(`${platform} conectado em modo teste`);
-    } catch {
-      const nextConnected = !connected[platform];
-      setConnected((prev) => ({ ...prev, [platform]: nextConnected }));
-      toast.warning('API de integrações indisponível. Alteração salva somente nesta sessão.');
-    } finally {
-      setPlatformLoading((prev) => ({ ...prev, [platform]: false }));
-    }
-  };
-
   const handleSave = () => {
     const settings: SettingsState = {
-      connected,
       autoReply,
       autoSchedule,
       notifications,
@@ -186,15 +108,20 @@ export default function Settings() {
 
   return (
     <div>
-      <TopBar title="Configurações" subtitle="Gerencie suas integrações e preferências" />
+      <TopBar title="Configurações" subtitle="Preferências de automação e operação" />
       <div className="max-w-3xl space-y-6 p-4 sm:p-6">
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+        <section className="rounded-3xl border border-border bg-card p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-syne text-sm font-bold text-foreground">Nova central visual de integrações</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Conecte redes sociais com passo a passo, permissões, status e teste de conexão.
-              </p>
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/10">
+                <Link2 className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-syne text-base font-bold text-foreground">Redes sociais e marketplaces</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  As conexões agora ficam em uma central própria, com status, teste e autorização visual.
+                </p>
+              </div>
             </div>
             <Button asChild className="gap-2">
               <Link to="/integrations">
@@ -203,66 +130,12 @@ export default function Settings() {
               </Link>
             </Button>
           </div>
-        </div>
+        </section>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
-              <Link2 className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="font-syne text-sm font-bold text-foreground">Plataformas Conectadas</p>
-              <p className="text-xs text-muted-foreground">Conecte suas redes sociais e marketplaces</p>
-            </div>
-          </div>
-
-          <div className="divide-y divide-border">
-            {platforms.map((platform) => (
-              <div key={platform} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <PlatformIcon platform={platform} showLabel />
-                  {platformAccounts.find((account) => account.platform === platform)?.mode && (
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      Modo {platformAccounts.find((account) => account.platform === platform)?.mode === 'mock' ? 'teste' : 'produção'} · escopos OAuth preparados
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  {connected[platform] ? (
-                    <span className="flex items-center gap-1.5 rounded-full border border-success/20 bg-success/10 px-3 py-1 text-xs text-success">
-                      <CheckCircle className="h-3 w-3" />
-                      Conectado
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground">
-                      <XCircle className="h-3 w-3" />
-                      Desconectado
-                    </span>
-                  )}
-                  <Button
-                    size="sm"
-                    variant={connected[platform] ? 'outline' : 'default'}
-                    className="h-8"
-                    disabled={Boolean(platformLoading[platform])}
-                    onClick={() => handleConnect(platform)}
-                  >
-                    {platformLoading[platform] ? 'Aguarde...' : connected[platform] ? 'Desconectar' : 'Conectar'}
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
-              <Zap className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="font-syne text-sm font-bold text-foreground">Automações</p>
-              <p className="text-xs text-muted-foreground">Configure o comportamento automático</p>
-            </div>
+        <section className="overflow-hidden rounded-3xl border border-border bg-card">
+          <div className="border-b border-border px-5 py-4">
+            <p className="font-syne text-sm font-bold text-foreground">Automações</p>
+            <p className="text-xs text-muted-foreground">Controle o comportamento automático da plataforma.</p>
           </div>
 
           <div className="divide-y divide-border">
@@ -272,8 +145,8 @@ export default function Settings() {
               return (
                 <div key={key} className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-muted">
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-muted">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-foreground">{label}</p>
@@ -285,17 +158,12 @@ export default function Settings() {
               );
             })}
           </div>
-        </div>
+        </section>
 
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
-              <Clock className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="font-syne text-sm font-bold text-foreground">Horário de Postagem</p>
-              <p className="text-xs text-muted-foreground">Define o intervalo de horas para publicação</p>
-            </div>
+        <section className="rounded-3xl border border-border bg-card p-5">
+          <div className="mb-4">
+            <p className="font-syne text-sm font-bold text-foreground">Janela de postagem</p>
+            <p className="text-xs text-muted-foreground">Intervalo usado para distribuir posts automáticos.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -307,25 +175,18 @@ export default function Settings() {
               <Input type="time" value={postingEnd} onChange={(event) => setPostingEnd(event.target.value)} />
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">
-              <MessageSquare className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <p className="font-syne text-sm font-bold text-foreground">Palavras-chave de Compra</p>
-              <p className="text-xs text-muted-foreground">
-                O sistema responde automaticamente quando detectar essas frases nos comentários
-              </p>
-            </div>
+        <section className="rounded-3xl border border-border bg-card p-5">
+          <div className="mb-4">
+            <p className="font-syne text-sm font-bold text-foreground">Palavras-chave de compra</p>
+            <p className="text-xs text-muted-foreground">
+              Comentários com essas frases entram no fluxo de resposta automática.
+            </p>
           </div>
-          <div>
-            <Label className="mb-1 block text-xs text-muted-foreground">Palavras-chave separadas por vírgula</Label>
-            <Input value={purchaseKeywords} onChange={(event) => setPurchaseKeywords(event.target.value)} className="text-sm" />
-          </div>
-        </div>
+          <Label className="mb-1 block text-xs text-muted-foreground">Separadas por vírgula</Label>
+          <Input value={purchaseKeywords} onChange={(event) => setPurchaseKeywords(event.target.value)} className="text-sm" />
+        </section>
 
         <Button onClick={handleSave} className="w-full">
           Salvar Configurações

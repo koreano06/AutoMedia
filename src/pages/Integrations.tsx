@@ -4,21 +4,7 @@ import PlatformIcon from '@/components/common/PlatformIcon';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  ExternalLink,
-  KeyRound,
-  Link2,
-  LockKeyhole,
-  PlugZap,
-  RefreshCw,
-  ShieldCheck,
-  Sparkles,
-  Unplug,
-  XCircle,
-} from 'lucide-react';
+import { CheckCircle, Clock, ExternalLink, Link2, PlugZap, RefreshCw, ShieldCheck, Unplug, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { connectPlatform, disconnectPlatform, listPlatformAccounts, type PlatformAccountWithConfig } from '@/services/platforms';
@@ -28,56 +14,49 @@ const STORAGE_KEY = 'automedia_platform_connection_overrides';
 
 type IntegrationPlatform = (typeof platforms)[number];
 type ConnectionStatus = 'connected' | 'disconnected' | 'expired' | 'error';
-type LocalOverrides = Record<string, { status: ConnectionStatus; connected_at?: string; tested_at?: string }>;
+type LocalOverrides = Record<string, { status: ConnectionStatus; tested_at?: string }>;
 
 const platformDetails: Record<IntegrationPlatform, {
-  headline: string;
+  title: string;
   description: string;
-  capabilities: string[];
-  permissions: string[];
-  accent: string;
+  action: string;
+  scopes: string[];
 }> = {
   instagram: {
-    headline: 'Reels, posts e comentários',
-    description: 'Conecte contas profissionais via Meta para publicar criativos e responder leads.',
-    capabilities: ['Publicar criativos', 'Ler comentários', 'Responder intenção de compra'],
-    permissions: ['instagram_basic', 'instagram_content_publish', 'pages_show_list'],
-    accent: 'from-fuchsia-500/20 via-pink-500/10 to-orange-500/20',
+    title: 'Instagram',
+    description: 'Reels, posts e respostas em comentários.',
+    action: 'Melhor para vendas por conteúdo curto.',
+    scopes: ['Publicar conteúdo', 'Ler comentários', 'Responder leads'],
   },
   tiktok: {
-    headline: 'Vídeos curtos e automação',
-    description: 'Prepare vídeos para envio pela Content Posting API quando o app estiver aprovado.',
-    capabilities: ['Upload de vídeo', 'Publicação direta', 'Controle de status'],
-    permissions: ['user.info.basic', 'video.publish', 'video.upload'],
-    accent: 'from-slate-900/20 via-cyan-500/10 to-rose-500/20',
+    title: 'TikTok',
+    description: 'Vídeos curtos e campanhas virais.',
+    action: 'Ideal para alcance e descoberta.',
+    scopes: ['Enviar vídeos', 'Publicar vídeos', 'Ver status'],
   },
   facebook: {
-    headline: 'Páginas e campanhas',
-    description: 'Use páginas do Facebook para publicar posts e acompanhar interação.',
-    capabilities: ['Publicar em páginas', 'Sincronizar posts', 'Ler engajamento'],
-    permissions: ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'],
-    accent: 'from-blue-600/20 via-sky-500/10 to-indigo-500/20',
+    title: 'Facebook',
+    description: 'Páginas, posts e engajamento.',
+    action: 'Bom para páginas e comunidades.',
+    scopes: ['Publicar em páginas', 'Ler engajamento', 'Gerenciar posts'],
   },
   youtube: {
-    headline: 'Shorts e vídeos',
-    description: 'Conecte canais do YouTube para preparar envio de vídeos aprovados.',
-    capabilities: ['Upload de vídeo', 'Título e descrição', 'Status de publicação'],
-    permissions: ['youtube.upload'],
-    accent: 'from-red-600/20 via-orange-500/10 to-red-500/20',
+    title: 'YouTube',
+    description: 'Shorts e vídeos de produto.',
+    action: 'Use para vídeos mais duradouros.',
+    scopes: ['Upload de vídeo', 'Título e descrição', 'Status do vídeo'],
   },
   shopee: {
-    headline: 'Loja e catálogo',
-    description: 'Prepare integração de catálogo para campanhas e links de compra.',
-    capabilities: ['Vincular loja', 'Produtos e links', 'Campanhas comerciais'],
-    permissions: ['shop_authorization', 'product_write'],
-    accent: 'from-orange-500/20 via-amber-500/10 to-red-500/20',
+    title: 'Shopee',
+    description: 'Loja, catálogo e links de compra.',
+    action: 'Conecta conteúdo com marketplace.',
+    scopes: ['Autorizar loja', 'Produtos', 'Links comerciais'],
   },
   mercadolivre: {
-    headline: 'Anúncios e marketplace',
-    description: 'Conecte a conta para trabalhar com anúncios e links de produtos.',
-    capabilities: ['Conta de vendedor', 'Links de anúncio', 'Produtos comerciais'],
-    permissions: ['offline_access', 'write'],
-    accent: 'from-yellow-400/25 via-amber-300/15 to-blue-500/10',
+    title: 'Mercado Livre',
+    description: 'Anúncios, produtos e vendas.',
+    action: 'Use para operação comercial.',
+    scopes: ['Conta vendedor', 'Anúncios', 'Links de produto'],
   },
 };
 
@@ -89,21 +68,23 @@ function readOverrides(): LocalOverrides {
   }
 }
 
-function writeOverrides(overrides: LocalOverrides) {
+function saveOverrides(overrides: LocalOverrides) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
 }
 
-function mergeAccount(account: PlatformAccountWithConfig | undefined, overrides: LocalOverrides, platform: IntegrationPlatform): PlatformAccountWithConfig {
+function getAccount(platform: IntegrationPlatform, accounts: PlatformAccountWithConfig[], overrides: LocalOverrides): PlatformAccountWithConfig {
+  const account = accounts.find((item) => item.platform === platform);
   const override = overrides[platform];
+
   return {
     id: account?.id || `platform_${platform}`,
     platform,
-    account_name: account?.account_name || platform,
+    account_name: account?.account_name || platformDetails[platform].title,
     status: override?.status || account?.status || 'disconnected',
     last_sync_at: override?.tested_at || account?.last_sync_at,
     configured: account?.configured ?? true,
     mode: account?.mode || 'mock',
-    required_scopes: account?.required_scopes || platformDetails[platform].permissions,
+    required_scopes: account?.required_scopes || platformDetails[platform].scopes,
   };
 }
 
@@ -113,111 +94,79 @@ export default function Integrations() {
   const [loading, setLoading] = useState(true);
   const [busyPlatform, setBusyPlatform] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<IntegrationPlatform | null>(null);
-  const [step, setStep] = useState(1);
 
-  const mergedAccounts = useMemo(
-    () => platforms.map((platform) => mergeAccount(accounts.find((account) => account.platform === platform), overrides, platform)),
+  const platformAccounts = useMemo(
+    () => platforms.map((platform) => getAccount(platform, accounts, overrides)),
     [accounts, overrides],
   );
 
-  const stats = useMemo(() => {
-    const connected = mergedAccounts.filter((account) => account.status === 'connected').length;
-    const configured = mergedAccounts.filter((account) => account.configured).length;
-    return {
-      connected,
-      configured,
-      readiness: Math.round((connected / platforms.length) * 100),
-    };
-  }, [mergedAccounts]);
-
-  const selectedAccount = selectedPlatform
-    ? mergeAccount(accounts.find((account) => account.platform === selectedPlatform), overrides, selectedPlatform)
-    : null;
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      setAccounts(await listPlatformAccounts());
-    } catch {
-      toast.error('Não foi possível carregar integrações.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const connectedCount = platformAccounts.filter((account) => account.status === 'connected').length;
+  const readiness = Math.round((connectedCount / platforms.length) * 100);
+  const selectedAccount = selectedPlatform ? getAccount(selectedPlatform, accounts, overrides) : null;
 
   useEffect(() => {
-    load();
+    listPlatformAccounts()
+      .then(setAccounts)
+      .catch(() => toast.error('Não foi possível carregar as integrações.'))
+      .finally(() => setLoading(false));
   }, []);
 
-  const persistOverride = (platform: IntegrationPlatform, status: ConnectionStatus, extra: Partial<LocalOverrides[string]> = {}) => {
-    const next = {
-      ...overrides,
-      [platform]: {
-        ...overrides[platform],
-        status,
-        ...extra,
-      },
-    };
+  const persistStatus = (platform: IntegrationPlatform, status: ConnectionStatus) => {
+    const next = { ...overrides, [platform]: { status, tested_at: new Date().toISOString() } };
     setOverrides(next);
-    writeOverrides(next);
+    saveOverrides(next);
   };
 
-  const startConnection = (platform: IntegrationPlatform) => {
-    setSelectedPlatform(platform);
-    setStep(1);
-  };
-
-  const confirmConnection = async () => {
-    if (!selectedPlatform) return;
-
-    setBusyPlatform(selectedPlatform);
+  const handleConnect = async (platform: IntegrationPlatform) => {
+    setBusyPlatform(platform);
     try {
-      const response = await connectPlatform(selectedPlatform);
-      persistOverride(selectedPlatform, response.account.status, { connected_at: new Date().toISOString(), tested_at: new Date().toISOString() });
+      const response = await connectPlatform(platform);
+
       setAccounts((current) => {
-        const exists = current.some((account) => account.platform === selectedPlatform);
-        return exists ? current.map((account) => (account.platform === selectedPlatform ? response.account : account)) : [...current, response.account];
+        const exists = current.some((item) => item.platform === platform);
+        return exists ? current.map((item) => (item.platform === platform ? response.account : item)) : [...current, response.account];
       });
 
+      persistStatus(platform, response.account.status);
+
       if (response.mode === 'live') {
-        setStep(3);
         window.location.href = response.oauth_url;
         return;
       }
 
-      setStep(4);
-      toast.success(`${selectedPlatform} conectado em modo teste.`);
+      toast.success(`${platformDetails[platform].title} conectado em modo teste.`);
+      setSelectedPlatform(null);
     } catch {
-      persistOverride(selectedPlatform, 'error');
-      toast.error('Não foi possível iniciar conexão.');
+      persistStatus(platform, 'error');
+      toast.error('Não foi possível conectar.');
     } finally {
       setBusyPlatform(null);
     }
   };
 
-  const disconnect = async (platform: IntegrationPlatform) => {
+  const handleDisconnect = async (platform: IntegrationPlatform) => {
     setBusyPlatform(platform);
     try {
       await disconnectPlatform(platform);
-      persistOverride(platform, 'disconnected');
-      toast.success(`${platform} desconectado.`);
+      persistStatus(platform, 'disconnected');
+      toast.success(`${platformDetails[platform].title} desconectado.`);
     } catch {
-      persistOverride(platform, 'disconnected');
+      persistStatus(platform, 'disconnected');
       toast.warning('Desconectado visualmente. A API não confirmou a alteração.');
     } finally {
       setBusyPlatform(null);
     }
   };
 
-  const testConnection = async (platform: IntegrationPlatform) => {
+  const handleTest = async (platform: IntegrationPlatform) => {
     setBusyPlatform(platform);
     try {
       await connectPlatform(platform);
-      persistOverride(platform, 'connected', { tested_at: new Date().toISOString() });
-      toast.success(`Conexão com ${platform} validada.`);
+      persistStatus(platform, 'connected');
+      toast.success('Conexão validada.');
     } catch {
-      persistOverride(platform, 'error');
-      toast.error(`Falha ao validar ${platform}.`);
+      persistStatus(platform, 'error');
+      toast.error('Falha ao validar conexão.');
     } finally {
       setBusyPlatform(null);
     }
@@ -225,86 +174,56 @@ export default function Integrations() {
 
   return (
     <div>
-      <TopBar title="Integrações" subtitle="Conecte redes sociais e marketplaces com um fluxo guiado" />
+      <TopBar title="Integrações" subtitle="Conecte suas redes para publicar e responder automaticamente" />
       <div className="space-y-6 p-4 sm:p-6">
-        <section className="overflow-hidden rounded-3xl border border-border bg-card">
-          <div className="relative isolate grid gap-6 p-5 sm:p-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.16),transparent_34%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))]" />
-            <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+        <section className="rounded-3xl border border-border bg-card p-5 sm:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                OAuth oficial, visual simples
+                Conexão segura
               </div>
               <h2 className="font-syne text-2xl font-bold leading-tight text-foreground sm:text-3xl">
-                Central de conexão para publicar e responder sem confusão técnica.
+                Conecte uma vez. Publique em vários canais.
               </h2>
-              <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-                O usuário vê etapas claras. O backend cuida de autorização, tokens, escopos e envio para o provider correto.
+              <p className="mt-2 text-sm text-muted-foreground">
+                Escolha uma plataforma, autorize a conexão e o AutoMedia usa essa conta nas telas de aprovação, agendamento e comentários.
               </p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <HeroMetric label="Conectadas" value={`${stats.connected}/${platforms.length}`} icon={PlugZap} />
-                <HeroMetric label="Configuradas" value={`${stats.configured}/${platforms.length}`} icon={KeyRound} />
-                <HeroMetric label="Prontidão" value={`${stats.readiness}%`} icon={Sparkles} />
-              </div>
             </div>
-            <div className="rounded-2xl border border-border bg-background/70 p-4 shadow-sm backdrop-blur">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-foreground">Checklist operacional</p>
-                <span className="text-xs text-muted-foreground">Fluxo de publicação</span>
+            <div className="w-full rounded-2xl border border-border bg-muted/30 p-4 lg:max-w-xs">
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="font-medium text-foreground">Prontidão</span>
+                <span className="text-muted-foreground">{connectedCount}/{platforms.length}</span>
               </div>
-              <Progress value={stats.readiness} />
-              <div className="mt-4 space-y-3">
-                <ChecklistItem checked={stats.connected > 0} label="Ao menos uma rede conectada" />
-                <ChecklistItem checked label="Permissões mapeadas por plataforma" />
-                <ChecklistItem checked label="Publicação passa pelo backend/provider" />
-                <ChecklistItem checked={stats.connected === platforms.length} label="Todas as plataformas conectadas" />
-              </div>
+              <Progress value={readiness} />
+              <p className="mt-2 text-xs text-muted-foreground">
+                {connectedCount > 0 ? 'Você já pode testar publicações em modo simulado.' : 'Conecte sua primeira plataforma para começar.'}
+              </p>
             </div>
           </div>
         </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {mergedAccounts.map((account) => (
+          {platformAccounts.map((account) => (
             <IntegrationCard
               key={account.platform}
               account={account}
               loading={loading || busyPlatform === account.platform}
-              onConnect={() => startConnection(account.platform as IntegrationPlatform)}
-              onDisconnect={() => disconnect(account.platform as IntegrationPlatform)}
-              onTest={() => testConnection(account.platform as IntegrationPlatform)}
+              onOpen={() => setSelectedPlatform(account.platform as IntegrationPlatform)}
+              onTest={() => handleTest(account.platform as IntegrationPlatform)}
+              onDisconnect={() => handleDisconnect(account.platform as IntegrationPlatform)}
             />
           ))}
         </section>
       </div>
 
-      <ConnectionDialog
+      <ConnectDialog
         platform={selectedPlatform}
         account={selectedAccount}
-        step={step}
         loading={Boolean(selectedPlatform && busyPlatform === selectedPlatform)}
-        onStep={setStep}
         onClose={() => setSelectedPlatform(null)}
-        onConfirm={confirmConnection}
+        onConnect={() => selectedPlatform && handleConnect(selectedPlatform)}
       />
-    </div>
-  );
-}
-
-function HeroMetric({ label, value, icon: Icon }: { label: string; value: string; icon: typeof PlugZap }) {
-  return (
-    <div className="rounded-2xl border border-border bg-background/70 p-4">
-      <Icon className="mb-3 h-4 w-4 text-primary" />
-      <p className="font-syne text-2xl font-bold text-foreground">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function ChecklistItem({ checked, label }: { checked: boolean; label: string }) {
-  return (
-    <div className="flex items-center gap-2 text-sm">
-      {checked ? <CheckCircle className="h-4 w-4 text-success" /> : <Clock className="h-4 w-4 text-muted-foreground" />}
-      <span className={checked ? 'text-foreground' : 'text-muted-foreground'}>{label}</span>
     </div>
   );
 }
@@ -312,215 +231,155 @@ function ChecklistItem({ checked, label }: { checked: boolean; label: string }) 
 function IntegrationCard({
   account,
   loading,
-  onConnect,
-  onDisconnect,
+  onOpen,
   onTest,
+  onDisconnect,
 }: {
   account: PlatformAccountWithConfig;
   loading: boolean;
-  onConnect: () => void;
-  onDisconnect: () => void;
+  onOpen: () => void;
   onTest: () => void;
+  onDisconnect: () => void;
 }) {
   const platform = account.platform as IntegrationPlatform;
   const details = platformDetails[platform];
   const connected = account.status === 'connected';
-  const hasError = account.status === 'error';
 
   return (
-    <article className="group overflow-hidden rounded-3xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.05]">
-      <div className={cn('border-b border-border bg-gradient-to-br p-5', details.accent)}>
-        <div className="flex items-start justify-between gap-4">
-          <PlatformIcon platform={platform} showLabel size="lg" />
-          <ConnectionPill status={account.status} />
-        </div>
-        <h3 className="mt-5 font-syne text-xl font-bold text-foreground">{details.headline}</h3>
-        <p className="mt-2 min-h-10 text-sm text-muted-foreground">{details.description}</p>
+    <article className="rounded-3xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.05]">
+      <div className="flex items-start justify-between gap-4">
+        <PlatformIcon platform={platform} showLabel size="lg" />
+        <StatusPill status={account.status} />
       </div>
-      <div className="space-y-4 p-5">
-        <div className="grid grid-cols-2 gap-2">
-          {details.capabilities.map((item) => (
-            <div key={item} className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              {item}
-            </div>
-          ))}
+      <p className="mt-5 text-sm font-medium text-foreground">{details.description}</p>
+      <p className="mt-1 min-h-9 text-xs text-muted-foreground">{details.action}</p>
+      <div className="mt-4 rounded-2xl bg-muted/35 p-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Modo</span>
+          <span className="font-medium text-foreground">{account.mode === 'live' ? 'Produção' : 'Teste'}</span>
         </div>
-        <div className="rounded-2xl border border-border p-3">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <LockKeyhole className="h-3.5 w-3.5" />
-            Permissões
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {(account.required_scopes || details.permissions).slice(0, 4).map((scope) => (
-              <span key={scope} className="rounded-full bg-muted px-2 py-1 text-[10px] text-muted-foreground">
-                {scope}
-              </span>
-            ))}
-          </div>
+        <div className="mt-2 flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Último teste</span>
+          <span className="font-medium text-foreground">
+            {account.last_sync_at ? new Date(account.last_sync_at).toLocaleDateString('pt-BR') : 'Nunca'}
+          </span>
         </div>
-        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-          <span>Modo {account.mode === 'live' ? 'produção' : 'teste'}</span>
-          <span>{account.last_sync_at ? `Sync ${new Date(account.last_sync_at).toLocaleDateString('pt-BR')}` : 'Nunca sincronizado'}</span>
-        </div>
-        {hasError && (
-          <div className="flex items-start gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
-            <AlertTriangle className="mt-0.5 h-4 w-4" />
-            <span>{account.error_message || 'A conexão precisa de atenção.'}</span>
-          </div>
-        )}
-        <div className="grid gap-2 sm:grid-cols-2">
-          {connected ? (
-            <>
-              <Button variant="outline" className="gap-2" disabled={loading} onClick={onTest}>
-                <RefreshCw className="h-4 w-4" />
-                Testar
-              </Button>
-              <Button variant="outline" className="gap-2 text-destructive hover:text-destructive" disabled={loading} onClick={onDisconnect}>
-                <Unplug className="h-4 w-4" />
-                Desconectar
-              </Button>
-            </>
-          ) : (
-            <Button className="col-span-full gap-2" disabled={loading} onClick={onConnect}>
-              <Link2 className="h-4 w-4" />
-              Conectar {platform}
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {connected ? (
+          <>
+            <Button variant="outline" disabled={loading} onClick={onTest}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Testar
             </Button>
-          )}
-        </div>
+            <Button variant="outline" disabled={loading} onClick={onDisconnect} className="text-destructive hover:text-destructive">
+              <Unplug className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
+          </>
+        ) : (
+          <Button disabled={loading} onClick={onOpen} className="col-span-full">
+            <Link2 className="mr-2 h-4 w-4" />
+            Conectar
+          </Button>
+        )}
       </div>
     </article>
   );
 }
 
-function ConnectionPill({ status }: { status?: string }) {
+function StatusPill({ status }: { status?: string }) {
   const connected = status === 'connected';
   const error = status === 'error' || status === 'expired';
+
   return (
-    <span className={cn(
-      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
-      connected && 'border-success/20 bg-success/10 text-success',
-      error && 'border-destructive/20 bg-destructive/10 text-destructive',
-      !connected && !error && 'border-border bg-background/80 text-muted-foreground',
-    )}>
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
+        connected && 'border-success/20 bg-success/10 text-success',
+        error && 'border-destructive/20 bg-destructive/10 text-destructive',
+        !connected && !error && 'border-border bg-muted text-muted-foreground',
+      )}
+    >
       {connected ? <CheckCircle className="h-3 w-3" /> : error ? <XCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
       {connected ? 'Conectado' : error ? 'Atenção' : 'Desconectado'}
     </span>
   );
 }
 
-function ConnectionDialog({
+function ConnectDialog({
   platform,
   account,
-  step,
   loading,
-  onStep,
   onClose,
-  onConfirm,
+  onConnect,
 }: {
   platform: IntegrationPlatform | null;
   account: PlatformAccountWithConfig | null;
-  step: number;
   loading: boolean;
-  onStep: (step: number) => void;
   onClose: () => void;
-  onConfirm: () => void;
+  onConnect: () => void;
 }) {
   if (!platform || !account) return null;
 
   const details = platformDetails[platform];
-  const steps = ['Preparar', 'Permissões', 'Autorizar', 'Concluído'];
 
   return (
     <Dialog open={Boolean(platform)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl overflow-hidden p-0">
-        <DialogHeader className={cn('border-b border-border bg-gradient-to-br p-5 text-left', details.accent)}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
           <DialogTitle className="flex items-center gap-3 font-syne text-2xl">
             <PlatformIcon platform={platform} size="lg" />
-            Conectar {platform}
+            Conectar {details.title}
           </DialogTitle>
           <DialogDescription>
-            Fluxo guiado para autorizar permissões e deixar a plataforma pronta para publicação automática.
+            Vamos usar a autorização oficial da plataforma. Você nunca informa sua senha dentro do AutoMedia.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-5 p-5">
-          <div className="grid grid-cols-4 gap-2">
-            {steps.map((label, index) => {
-              const active = step >= index + 1;
-              return (
-                <div key={label} className="space-y-2">
-                  <div className={cn('h-1.5 rounded-full', active ? 'bg-primary' : 'bg-muted')} />
-                  <p className={cn('text-[10px] font-medium uppercase tracking-wide', active ? 'text-primary' : 'text-muted-foreground')}>{label}</p>
-                </div>
-              );
-            })}
+
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border bg-muted/30 p-4">
+            <div className="flex items-start gap-3">
+              <PlugZap className="mt-0.5 h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">O que será habilitado</p>
+                <p className="mt-1 text-xs text-muted-foreground">{details.description}</p>
+              </div>
+            </div>
           </div>
 
-          {step === 1 && (
-            <DialogPanel
-              icon={ShieldCheck}
-              title="Vamos preparar a conexão"
-              text="Você não precisa informar senha no AutoMedia. A autorização abre no ambiente oficial da plataforma."
-              items={['OAuth oficial', 'Tokens guardados pelo backend', 'Permissões separadas por rede']}
-            />
-          )}
-          {step === 2 && (
-            <DialogPanel
-              icon={KeyRound}
-              title="Permissões solicitadas"
-              text="Essas permissões permitem publicar conteúdo, ler comentários e acionar respostas automáticas quando a plataforma liberar."
-              items={account.required_scopes || details.permissions}
-            />
-          )}
-          {step === 3 && (
-            <DialogPanel
-              icon={ExternalLink}
-              title={account.mode === 'live' ? 'Autorizar na plataforma' : 'Modo teste ativo'}
-              text={account.mode === 'live' ? 'Vamos redirecionar para a tela oficial de autorização.' : 'Como o backend está em mock, simularemos a autorização para validar o fluxo visual.'}
-              items={['Selecionar conta/página', 'Confirmar permissões', 'Voltar conectado ao AutoMedia']}
-            />
-          )}
-          {step === 4 && (
-            <DialogPanel
-              icon={CheckCircle}
-              title="Conexão pronta"
-              text="A plataforma está marcada como conectada e já pode ser usada nas telas de aprovação e publicação."
-              items={['Publicação pelo backend', 'Status visível no painel', 'Teste de conexão disponível']}
-            />
-          )}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permissões</p>
+            <div className="flex flex-wrap gap-2">
+              {(account.required_scopes || details.scopes).map((scope) => (
+                <span key={scope} className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+                  {scope}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border p-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Modo atual</span>
+              <span className="font-medium text-foreground">{account.mode === 'live' ? 'Produção' : 'Teste seguro'}</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {account.mode === 'live'
+                ? 'Ao continuar, você será levado para a autorização oficial.'
+                : 'No modo teste, simulamos a autorização para validar o fluxo sem credenciais reais.'}
+            </p>
+          </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={onClose}>Fechar</Button>
-            {step < 3 && <Button onClick={() => onStep(step + 1)}>Continuar</Button>}
-            {step === 3 && (
-              <Button className="gap-2" disabled={loading} onClick={onConfirm}>
-                <PlugZap className="h-4 w-4" />
-                {loading ? 'Conectando...' : account.mode === 'live' ? 'Autorizar agora' : 'Simular conexão'}
-              </Button>
-            )}
-            {step === 4 && <Button onClick={onClose}>Finalizar</Button>}
+            <Button variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button onClick={onConnect} disabled={loading}>
+              {loading ? 'Conectando...' : account.mode === 'live' ? 'Autorizar' : 'Conectar em teste'}
+              {account.mode === 'live' && <ExternalLink className="ml-2 h-4 w-4" />}
+            </Button>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function DialogPanel({ icon: Icon, title, text, items }: { icon: typeof ShieldCheck; title: string; text: string; items: string[] }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-        <Icon className="h-5 w-5" />
-      </div>
-      <h3 className="font-syne text-lg font-bold text-foreground">{title}</h3>
-      <p className="mt-1 text-sm text-muted-foreground">{text}</p>
-      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        {items.map((item) => (
-          <div key={item} className="flex items-center gap-2 rounded-xl bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            <CheckCircle className="h-3.5 w-3.5 text-success" />
-            <span className="truncate">{item}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
