@@ -12,7 +12,7 @@ export async function createPost(payload: PostPayload) {
 }
 
 export async function updatePost(id: EntityId, payload: Partial<Post>) {
-  return apiClient.patch<Post>(`/posts/${id}`, payload);
+  return apiClient.post<Post>('/post-update', { id, ...payload });
 }
 
 export async function publishPostNow(id: EntityId) {
@@ -20,5 +20,5 @@ export async function publishPostNow(id: EntityId) {
 }
 
 export async function deletePost(id: EntityId) {
-  return apiClient.delete<Post>(`/posts/${id}`);
+  return apiClient.post<Post>('/post-delete', { id });
 }

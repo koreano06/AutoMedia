@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { invokeLLM } from '@/services/ai';
-import { listComments, updateComment } from '@/services/comments';
+import { autoReplyComment, listComments } from '@/services/comments';
 import type { Comment, EntityId } from '@/types/entities';
 
 const filters = [
@@ -137,10 +137,9 @@ export default function Comments() {
 
   const markReplied = async (comment: Comment, reply = replyText) => {
     try {
-      await updateComment(comment.id, {
-        auto_replied: true,
-        reply_content: reply || 'Resposta enviada automaticamente.',
-        replied_at: new Date().toISOString(),
+      await autoReplyComment({
+        comment_id: comment.id,
+        reply_template: reply || 'Olá! Aqui está o link do produto: {{product_url}}',
       });
       toast.success('Comentário marcado como respondido');
       setActiveComment((current) => current?.id === comment.id ? { ...current, auto_replied: true, reply_content: reply } : current);
@@ -156,10 +155,9 @@ export default function Comments() {
       return;
     }
     try {
-      await Promise.all(selectedIds.map((id) => updateComment(id, {
-        auto_replied: true,
-        reply_content: 'Olá! Vou te enviar o link do produto.',
-        replied_at: new Date().toISOString(),
+      await Promise.all(selectedIds.map((id) => autoReplyComment({
+        comment_id: id,
+        reply_template: 'Olá! Aqui está o link do produto: {{product_url}}',
       })));
       toast.success('Respostas em massa marcadas');
       setSelectedIds([]);

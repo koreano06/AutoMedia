@@ -6,5 +6,9 @@ export async function listComments(order = '-detected_at', limit = 100) {
 }
 
 export async function updateComment(id: EntityId, payload: Partial<Comment>) {
-  return apiClient.patch<Comment>(`/comments/${id}`, payload);
+  return apiClient.post<Comment>('/comment-update', { id, ...payload });
+}
+
+export async function autoReplyComment(payload: { comment_id: EntityId; product_id?: EntityId; reply_template?: string }) {
+  return apiClient.post<Comment>('/comment-auto-reply', payload);
 }

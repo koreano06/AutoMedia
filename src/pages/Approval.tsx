@@ -38,7 +38,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { createPost } from '@/services/posts';
+import { createPost, publishPostNow } from '@/services/posts';
 import { listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
 import { invokeLLM } from '@/services/ai';
 import type { EntityId, MediaAsset, Platform, Status } from '@/types/entities';
@@ -238,16 +238,20 @@ export default function Approval() {
 
     if (status === 'approved' || status === 'scheduled') {
       for (const platform of platforms) {
-        await createPost({
+        const post = await createPost({
           product_id: asset.product_id,
           product_name: asset.product_name,
           media_asset_id: asset.id,
           platform,
           caption: text,
-          status: scheduleMode === 'now' ? 'published' : 'scheduled',
+          status: 'scheduled',
           scheduled_at: getScheduleDate(),
           thumbnail_url: asset.thumbnail_url || asset.url,
         });
+
+        if (scheduleMode === 'now') {
+          await publishPostNow(post.id);
+        }
       }
     }
   };

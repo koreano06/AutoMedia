@@ -5,7 +5,7 @@ import { createMediaAsset } from './mediaAssets';
 
 export async function generateVideo(payload: VideoGenerateRequest) {
   try {
-    return await apiClient.post<VideoGenerateResponse & { asset?: unknown }>('/videos/generate', payload);
+    return await apiClient.post<VideoGenerateResponse & { asset?: unknown }>('/video-generate', payload);
   } catch (error) {
     if (!isNotFoundError(error)) {
       throw error;
