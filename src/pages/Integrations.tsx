@@ -189,6 +189,9 @@ export default function Integrations() {
               <p className="mt-2 text-sm text-muted-foreground">
                 Escolha uma plataforma, autorize a conexão e o AutoMedia usa essa conta nas telas de aprovação, agendamento e comentários.
               </p>
+              <p className="mt-4 rounded-2xl border border-border bg-muted/35 px-3 py-2 text-xs text-muted-foreground">
+                No modo teste, a conexão fica salva neste navegador. Para publicação real, o backend precisa salvar tokens OAuth no banco e usar as credenciais oficiais de cada plataforma.
+              </p>
             </div>
             <div className="w-full rounded-2xl border border-border bg-muted/30 p-4 lg:max-w-xs">
               <div className="mb-2 flex items-center justify-between text-sm">
@@ -209,7 +212,8 @@ export default function Integrations() {
               key={account.platform}
               account={account}
               loading={loading || busyPlatform === account.platform}
-              onOpen={() => setSelectedPlatform(account.platform as IntegrationPlatform)}
+              onDetails={() => setSelectedPlatform(account.platform as IntegrationPlatform)}
+              onConnect={() => handleConnect(account.platform as IntegrationPlatform)}
               onTest={() => handleTest(account.platform as IntegrationPlatform)}
               onDisconnect={() => handleDisconnect(account.platform as IntegrationPlatform)}
             />
@@ -231,13 +235,15 @@ export default function Integrations() {
 function IntegrationCard({
   account,
   loading,
-  onOpen,
+  onDetails,
+  onConnect,
   onTest,
   onDisconnect,
 }: {
   account: PlatformAccountWithConfig;
   loading: boolean;
-  onOpen: () => void;
+  onDetails: () => void;
+  onConnect: () => void;
   onTest: () => void;
   onDisconnect: () => void;
 }) {
@@ -264,6 +270,11 @@ function IntegrationCard({
             {account.last_sync_at ? new Date(account.last_sync_at).toLocaleDateString('pt-BR') : 'Nunca'}
           </span>
         </div>
+        {account.mode !== 'live' && (
+          <p className="mt-3 border-t border-border pt-2 text-[11px] text-muted-foreground">
+            Modo teste salvo neste navegador.
+          </p>
+        )}
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {connected ? (
@@ -278,10 +289,15 @@ function IntegrationCard({
             </Button>
           </>
         ) : (
-          <Button disabled={loading} onClick={onOpen} className="col-span-full">
-            <Link2 className="mr-2 h-4 w-4" />
-            Conectar
-          </Button>
+          <>
+            <Button disabled={loading} onClick={onConnect}>
+              <Link2 className="mr-2 h-4 w-4" />
+              Conectar
+            </Button>
+            <Button variant="outline" disabled={loading} onClick={onDetails}>
+              Detalhes
+            </Button>
+          </>
         )}
       </div>
     </article>
