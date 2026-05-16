@@ -75,16 +75,19 @@ function saveOverrides(overrides: LocalOverrides) {
 function getAccount(platform: IntegrationPlatform, accounts: PlatformAccountWithConfig[], overrides: LocalOverrides): PlatformAccountWithConfig {
   const account = accounts.find((item) => item.platform === platform);
   const override = overrides[platform];
+  const canUseLocalOverride = !account || account.mode === 'mock';
 
   return {
     id: account?.id || `platform_${platform}`,
     platform,
     account_name: account?.account_name || platformDetails[platform].title,
-    status: override?.status || account?.status || 'disconnected',
-    last_sync_at: override?.tested_at || account?.last_sync_at,
+    status: canUseLocalOverride ? override?.status || account?.status || 'disconnected' : account?.status || 'disconnected',
+    last_sync_at: canUseLocalOverride ? override?.tested_at || account?.last_sync_at : account?.last_sync_at,
     configured: account?.configured ?? true,
     mode: account?.mode || 'mock',
     required_scopes: account?.required_scopes || platformDetails[platform].scopes,
+    setup_status: account?.setup_status,
+    setup_hint: account?.setup_hint,
   };
 }
 
@@ -111,6 +114,20 @@ export default function Integrations() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const platform = params.get('platform');
+
+    if (params.get('connected') === '1' && platform) {
+      toast.success(`${platform} conectado com autorização oficial.`);
+      listPlatformAccounts().then(setAccounts).catch(() => undefined);
+    }
+
+    if (params.get('error')) {
+      toast.error(`Falha na autorização: ${params.get('error')}`);
+    }
+  }, []);
+
   const persistStatus = (platform: IntegrationPlatform, status: ConnectionStatus) => {
     const next = { ...overrides, [platform]: { status, tested_at: new Date().toISOString() } };
     setOverrides(next);
@@ -122,17 +139,17 @@ export default function Integrations() {
     try {
       const response = await connectPlatform(platform);
 
+      if (response.mode === 'live') {
+        window.location.href = response.oauth_url;
+        return;
+      }
+
       setAccounts((current) => {
         const exists = current.some((item) => item.platform === platform);
         return exists ? current.map((item) => (item.platform === platform ? response.account : item)) : [...current, response.account];
       });
 
       persistStatus(platform, response.account.status);
-
-      if (response.mode === 'live') {
-        window.location.href = response.oauth_url;
-        return;
-      }
 
       toast.success(`${platformDetails[platform].title} conectado em modo teste.`);
       setSelectedPlatform(null);
@@ -250,6 +267,7 @@ function IntegrationCard({
   const platform = account.platform as IntegrationPlatform;
   const details = platformDetails[platform];
   const connected = account.status === 'connected';
+  const needsCredentials = account.setup_status === 'missing_credentials' || account.configured === false;
 
   return (
     <article className="rounded-3xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.05]">
@@ -275,6 +293,11 @@ function IntegrationCard({
             Modo teste salvo neste navegador.
           </p>
         )}
+        {account.mode === 'live' && account.setup_hint && (
+          <p className={cn('mt-3 border-t border-border pt-2 text-[11px]', needsCredentials ? 'text-warning' : 'text-muted-foreground')}>
+            {account.setup_hint}
+          </p>
+        )}
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         {connected ? (
@@ -290,9 +313,9 @@ function IntegrationCard({
           </>
         ) : (
           <>
-            <Button disabled={loading} onClick={onConnect}>
+            <Button disabled={loading || needsCredentials} onClick={onConnect}>
               <Link2 className="mr-2 h-4 w-4" />
-              Conectar
+              {needsCredentials ? 'Configurar API' : 'Conectar'}
             </Button>
             <Button variant="outline" disabled={loading} onClick={onDetails}>
               Detalhes

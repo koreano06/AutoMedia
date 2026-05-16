@@ -5,6 +5,8 @@ export type PlatformAccountWithConfig = PlatformAccount & {
   configured?: boolean;
   mode?: 'mock' | 'live';
   required_scopes?: string[];
+  setup_status?: 'mock' | 'ready' | 'missing_credentials';
+  setup_hint?: string;
 };
 
 export type ConnectPlatformResponse = {
