@@ -7,6 +7,7 @@ import {
   Film,
   Image,
   LayoutDashboard,
+  Link2,
   MessageSquare,
   Package,
   Zap,
@@ -30,6 +31,7 @@ export const mainNavigation: NavigationItem[] = [
   { label: "Agendamento", icon: Calendar, path: "/schedule", badgeKey: "scheduled" },
   { label: "Publicações", icon: Zap, path: "/publications", badgeKey: "failures" },
   { label: "Comentários", icon: MessageSquare, path: "/comments", badgeKey: "comments" },
+  { label: "Integrações", icon: Link2, path: "/integrations" },
   { label: "Comercial", icon: BriefcaseBusiness, path: "/commercial" },
   { label: "Relatórios", icon: BarChart2, path: "/reports" },
 ];

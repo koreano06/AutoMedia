@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import TopBar from '@/components/layout/TopBar';
 import PlatformIcon from '@/components/common/PlatformIcon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Bell, Zap, Link2, Clock, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
+import { Bell, Zap, Link2, Clock, MessageSquare, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { connectPlatform, disconnectPlatform, listPlatformAccounts, type PlatformAccountWithConfig } from '@/services/platforms';
 
@@ -187,6 +188,23 @@ export default function Settings() {
     <div>
       <TopBar title="Configurações" subtitle="Gerencie suas integrações e preferências" />
       <div className="max-w-3xl space-y-6 p-4 sm:p-6">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-syne text-sm font-bold text-foreground">Nova central visual de integrações</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Conecte redes sociais com passo a passo, permissões, status e teste de conexão.
+              </p>
+            </div>
+            <Button asChild className="gap-2">
+              <Link to="/integrations">
+                Abrir integrações
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <div className="flex items-center gap-3 border-b border-border px-5 py-4">
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10">

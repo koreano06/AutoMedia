@@ -5,6 +5,7 @@ import Approval from "@/pages/Approval";
 import Comments from "@/pages/Comments";
 import Commercial from "@/pages/Commercial";
 import Dashboard from "@/pages/Dashboard";
+import Integrations from "@/pages/Integrations";
 import MediaLibrary from "@/pages/MediaLibrary";
 import Products from "@/pages/Products";
 import Publications from "@/pages/Publications";
@@ -25,6 +26,7 @@ export const appRoutes: RouteObject[] = [
       { path: "/schedule", element: <Schedule /> },
       { path: "/publications", element: <Publications /> },
       { path: "/comments", element: <Comments /> },
+      { path: "/integrations", element: <Integrations /> },
       { path: "/commercial", element: <Commercial /> },
       { path: "/reports", element: <Reports /> },
       { path: "/settings", element: <Settings /> },
