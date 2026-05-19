@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { CheckCircle, Clock, ExternalLink, Link2, PlugZap, RefreshCw, ShieldCheck, Unplug, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { connectPlatform, disconnectPlatform, listPlatformAccounts, type PlatformAccountWithConfig } from '@/services/platforms';
+import { connectPlatform, disconnectPlatform, listPlatformAccounts, syncPlatformAccount, type PlatformAccountWithConfig } from '@/services/platforms';
 
 const platforms = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'] as const;
 const STORAGE_KEY = 'automedia_platform_connection_overrides';
@@ -178,7 +178,8 @@ export default function Integrations() {
   const handleTest = async (platform: IntegrationPlatform) => {
     setBusyPlatform(platform);
     try {
-      await connectPlatform(platform);
+      const response = await syncPlatformAccount(platform);
+      setAccounts((current) => current.map((item) => (item.platform === platform ? response.account : item)));
       persistStatus(platform, 'connected');
       toast.success('Conexão validada.');
     } catch {

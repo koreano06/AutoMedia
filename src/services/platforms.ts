@@ -31,3 +31,11 @@ export async function connectPlatform(platform: Platform) {
 export async function disconnectPlatform(platform: Platform) {
   return apiClient.post<PlatformAccountWithConfig>('/platform-disconnect', { platform });
 }
+
+export async function refreshPlatformToken(platform: Platform) {
+  return apiClient.post<PlatformAccountWithConfig>('/platform-refresh-token', { platform });
+}
+
+export async function syncPlatformAccount(platform: Platform) {
+  return apiClient.post<{ account: PlatformAccountWithConfig; info: unknown }>('/platform-sync-account', { platform });
+}
