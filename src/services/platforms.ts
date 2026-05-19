@@ -7,6 +7,7 @@ export type PlatformAccountWithConfig = PlatformAccount & {
   required_scopes?: string[];
   setup_status?: 'mock' | 'ready' | 'missing_credentials';
   setup_hint?: string;
+  metadata?: Record<string, string | number | boolean>;
 };
 
 export type ConnectPlatformResponse = {

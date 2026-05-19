@@ -2,12 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import PlatformIcon from '@/components/common/PlatformIcon';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Clock, ExternalLink, Link2, PlugZap, RefreshCw, ShieldCheck, Unplug, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, ExternalLink, KeyRound, Link2, PlugZap, RefreshCw, ShieldCheck, Store, Unplug, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { connectPlatform, disconnectPlatform, listPlatformAccounts, syncPlatformAccount, type PlatformAccountWithConfig } from '@/services/platforms';
+import { ApiRequestError } from '@/api/httpClient';
+import {
+  connectPlatform,
+  disconnectPlatform,
+  listPlatformAccounts,
+  refreshPlatformToken,
+  syncPlatformAccount,
+  type PlatformAccountWithConfig,
+} from '@/services/platforms';
 
 const platforms = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'] as const;
 const STORAGE_KEY = 'automedia_platform_connection_overrides';
@@ -15,6 +24,7 @@ const STORAGE_KEY = 'automedia_platform_connection_overrides';
 type IntegrationPlatform = (typeof platforms)[number];
 type ConnectionStatus = 'connected' | 'disconnected' | 'expired' | 'error';
 type LocalOverrides = Record<string, { status: ConnectionStatus; tested_at?: string }>;
+type OAuthNotice = { type: 'success' | 'error'; platform?: string; message: string } | null;
 
 const platformDetails: Record<IntegrationPlatform, {
   title: string;
@@ -72,6 +82,34 @@ function saveOverrides(overrides: LocalOverrides) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
 }
 
+function friendlyError(error: unknown) {
+  return error instanceof ApiRequestError ? error.message : 'A API não confirmou a operação.';
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return 'Nunca';
+  return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function formatExpiry(value?: string) {
+  if (!value) return 'Sem expiração informada';
+  const date = new Date(value);
+  const expired = date.getTime() < Date.now();
+  return `${expired ? 'Expirado em' : 'Expira em'} ${date.toLocaleDateString('pt-BR')}`;
+}
+
+function getReadableAccountInfo(info: unknown) {
+  if (!info || typeof info !== 'object') return null;
+  const record = info as Record<string, unknown>;
+  const name = record.shop_name || record.name || record.account_name || record.username;
+  const id = record.shop_id || record.id || record.account_id;
+
+  if (name && id) return `${String(name)} (${String(id)})`;
+  if (name) return String(name);
+  if (id) return String(id);
+  return null;
+}
+
 function getAccount(platform: IntegrationPlatform, accounts: PlatformAccountWithConfig[], overrides: LocalOverrides): PlatformAccountWithConfig {
   const account = accounts.find((item) => item.platform === platform);
   const override = overrides[platform];
@@ -97,6 +135,7 @@ export default function Integrations() {
   const [loading, setLoading] = useState(true);
   const [busyPlatform, setBusyPlatform] = useState<string | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<IntegrationPlatform | null>(null);
+  const [oauthNotice, setOauthNotice] = useState<OAuthNotice>(null);
 
   const platformAccounts = useMemo(
     () => platforms.map((platform) => getAccount(platform, accounts, overrides)),
@@ -104,12 +143,18 @@ export default function Integrations() {
   );
 
   const connectedCount = platformAccounts.filter((account) => account.status === 'connected').length;
+  const productionCount = platformAccounts.filter((account) => account.mode === 'live' && account.configured).length;
   const readiness = Math.round((connectedCount / platforms.length) * 100);
   const selectedAccount = selectedPlatform ? getAccount(selectedPlatform, accounts, overrides) : null;
 
+  const reloadAccounts = async () => {
+    const nextAccounts = await listPlatformAccounts();
+    setAccounts(nextAccounts);
+    return nextAccounts;
+  };
+
   useEffect(() => {
-    listPlatformAccounts()
-      .then(setAccounts)
+    reloadAccounts()
       .catch(() => toast.error('Não foi possível carregar as integrações.'))
       .finally(() => setLoading(false));
   }, []);
@@ -117,14 +162,23 @@ export default function Integrations() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const platform = params.get('platform');
+    const platformName = platform && platform in platformDetails ? platformDetails[platform as IntegrationPlatform].title : platform || undefined;
 
     if (params.get('connected') === '1' && platform) {
-      toast.success(`${platform} conectado com autorização oficial.`);
-      listPlatformAccounts().then(setAccounts).catch(() => undefined);
+      const message = `${platformName} vinculado com autorização oficial.`;
+      setOauthNotice({ type: 'success', platform, message });
+      toast.success(message);
+      reloadAccounts().catch(() => undefined);
     }
 
     if (params.get('error')) {
-      toast.error(`Falha na autorização: ${params.get('error')}`);
+      const message = `Falha na autorização ${platformName ? `da ${platformName}` : ''}: ${params.get('error')}`;
+      setOauthNotice({ type: 'error', platform: platform || undefined, message });
+      toast.error(message);
+    }
+
+    if (params.has('connected') || params.has('error')) {
+      window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
@@ -153,9 +207,8 @@ export default function Integrations() {
 
       toast.success(`${platformDetails[platform].title} conectado em modo teste.`);
       setSelectedPlatform(null);
-    } catch {
-      persistStatus(platform, 'error');
-      toast.error('Não foi possível conectar.');
+    } catch (error) {
+      toast.error(`Não foi possível conectar. ${friendlyError(error)}`);
     } finally {
       setBusyPlatform(null);
     }
@@ -164,12 +217,13 @@ export default function Integrations() {
   const handleDisconnect = async (platform: IntegrationPlatform) => {
     setBusyPlatform(platform);
     try {
-      await disconnectPlatform(platform);
-      persistStatus(platform, 'disconnected');
+      const response = await disconnectPlatform(platform);
+      setAccounts((current) => current.map((item) => (item.platform === platform ? response : item)));
+      const currentMode = accounts.find((item) => item.platform === platform)?.mode;
+      if ((response.mode || currentMode) === 'mock') persistStatus(platform, 'disconnected');
       toast.success(`${platformDetails[platform].title} desconectado.`);
-    } catch {
-      persistStatus(platform, 'disconnected');
-      toast.warning('Desconectado visualmente. A API não confirmou a alteração.');
+    } catch (error) {
+      toast.error(`Não foi possível desconectar. ${friendlyError(error)}`);
     } finally {
       setBusyPlatform(null);
     }
@@ -180,11 +234,24 @@ export default function Integrations() {
     try {
       const response = await syncPlatformAccount(platform);
       setAccounts((current) => current.map((item) => (item.platform === platform ? response.account : item)));
-      persistStatus(platform, 'connected');
-      toast.success('Conexão validada.');
-    } catch {
-      persistStatus(platform, 'error');
-      toast.error('Falha ao validar conexão.');
+      if (response.account.mode === 'mock') persistStatus(platform, 'connected');
+      const accountInfo = getReadableAccountInfo(response.info);
+      toast.success(accountInfo ? `${platformDetails[platform].title} validado: ${accountInfo}` : `${platformDetails[platform].title} validado com a API.`);
+    } catch (error) {
+      toast.error(`Falha ao validar conexão. ${friendlyError(error)}`);
+    } finally {
+      setBusyPlatform(null);
+    }
+  };
+
+  const handleRefresh = async (platform: IntegrationPlatform) => {
+    setBusyPlatform(platform);
+    try {
+      const account = await refreshPlatformToken(platform);
+      setAccounts((current) => current.map((item) => (item.platform === platform ? account : item)));
+      toast.success(`Token da ${platformDetails[platform].title} renovado.`);
+    } catch (error) {
+      toast.error(`Não foi possível renovar token. ${friendlyError(error)}`);
     } finally {
       setBusyPlatform(null);
     }
@@ -208,7 +275,7 @@ export default function Integrations() {
                 Escolha uma plataforma, autorize a conexão e o AutoMedia usa essa conta nas telas de aprovação, agendamento e comentários.
               </p>
               <p className="mt-4 rounded-2xl border border-border bg-muted/35 px-3 py-2 text-xs text-muted-foreground">
-                No modo teste, a conexão fica salva neste navegador. Para publicação real, o backend precisa salvar tokens OAuth no banco e usar as credenciais oficiais de cada plataforma.
+                Status vindo do backend. Em modo produção, a vinculação só aparece como concluída depois do OAuth oficial retornar e salvar tokens no banco.
               </p>
             </div>
             <div className="w-full rounded-2xl border border-border bg-muted/30 p-4 lg:max-w-xs">
@@ -218,11 +285,26 @@ export default function Integrations() {
               </div>
               <Progress value={readiness} />
               <p className="mt-2 text-xs text-muted-foreground">
-                {connectedCount > 0 ? 'Você já pode testar publicações em modo simulado.' : 'Conecte sua primeira plataforma para começar.'}
+                {productionCount > 0 ? `${productionCount} plataforma(s) com credenciais de produção.` : 'Ambiente em modo teste ou aguardando credenciais oficiais.'}
               </p>
             </div>
           </div>
         </section>
+
+        {oauthNotice && (
+          <section className={cn(
+            'rounded-3xl border p-4 sm:p-5',
+            oauthNotice.type === 'success' ? 'border-success/20 bg-success/10 text-success' : 'border-destructive/20 bg-destructive/10 text-destructive',
+          )}>
+            <div className="flex items-start gap-3">
+              {oauthNotice.type === 'success' ? <CheckCircle className="mt-0.5 h-5 w-5" /> : <AlertCircle className="mt-0.5 h-5 w-5" />}
+              <div>
+                <p className="text-sm font-semibold">{oauthNotice.type === 'success' ? 'Vinculação confirmada' : 'Autorização não concluída'}</p>
+                <p className="mt-1 text-xs opacity-85">{oauthNotice.message}</p>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {platformAccounts.map((account) => (
@@ -233,6 +315,7 @@ export default function Integrations() {
               onDetails={() => setSelectedPlatform(account.platform as IntegrationPlatform)}
               onConnect={() => handleConnect(account.platform as IntegrationPlatform)}
               onTest={() => handleTest(account.platform as IntegrationPlatform)}
+              onRefresh={() => handleRefresh(account.platform as IntegrationPlatform)}
               onDisconnect={() => handleDisconnect(account.platform as IntegrationPlatform)}
             />
           ))}
@@ -256,6 +339,7 @@ function IntegrationCard({
   onDetails,
   onConnect,
   onTest,
+  onRefresh,
   onDisconnect,
 }: {
   account: PlatformAccountWithConfig;
@@ -263,35 +347,61 @@ function IntegrationCard({
   onDetails: () => void;
   onConnect: () => void;
   onTest: () => void;
+  onRefresh: () => void;
   onDisconnect: () => void;
 }) {
   const platform = account.platform as IntegrationPlatform;
   const details = platformDetails[platform];
   const connected = account.status === 'connected';
   const needsCredentials = account.setup_status === 'missing_credentials' || account.configured === false;
+  const supportsRefresh = platform === 'shopee';
 
   return (
-    <article className="rounded-3xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.05]">
+    <article className={cn(
+      'rounded-3xl border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.05]',
+      connected ? 'border-success/25' : 'border-border',
+    )}>
       <div className="flex items-start justify-between gap-4">
         <PlatformIcon platform={platform} showLabel size="lg" />
         <StatusPill status={account.status} />
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Badge variant="outline" className="rounded-full">
+          {account.mode === 'live' ? 'OAuth oficial' : 'Modo teste'}
+        </Badge>
+        {account.configured ? (
+          <Badge variant="outline" className="rounded-full border-success/30 text-success">API configurada</Badge>
+        ) : (
+          <Badge variant="outline" className="rounded-full border-warning/30 text-warning">Credenciais pendentes</Badge>
+        )}
       </div>
       <p className="mt-5 text-sm font-medium text-foreground">{details.description}</p>
       <p className="mt-1 min-h-9 text-xs text-muted-foreground">{details.action}</p>
       <div className="mt-4 rounded-2xl bg-muted/35 p-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Modo</span>
-          <span className="font-medium text-foreground">{account.mode === 'live' ? 'Produção' : 'Teste'}</span>
+          <span className="text-muted-foreground">Conta</span>
+          <span className="max-w-[55%] truncate font-medium text-foreground">{account.account_id || account.account_name}</span>
         </div>
         <div className="mt-2 flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Último teste</span>
+          <span className="text-muted-foreground">Última sincronização</span>
           <span className="font-medium text-foreground">
-            {account.last_sync_at ? new Date(account.last_sync_at).toLocaleDateString('pt-BR') : 'Nunca'}
+            {formatDateTime(account.last_sync_at)}
           </span>
         </div>
+        <div className="mt-2 flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">Token</span>
+          <span className={cn('font-medium', account.expires_at && new Date(account.expires_at).getTime() < Date.now() ? 'text-destructive' : 'text-foreground')}>
+            {formatExpiry(account.expires_at)}
+          </span>
+        </div>
+        {account.error_message && (
+          <p className="mt-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+            {account.error_message}
+          </p>
+        )}
         {account.mode !== 'live' && (
           <p className="mt-3 border-t border-border pt-2 text-[11px] text-muted-foreground">
-            Modo teste salvo neste navegador.
+            Modo teste: valida o fluxo sem enviar você para OAuth externo.
           </p>
         )}
         {account.mode === 'live' && account.setup_hint && (
@@ -305,8 +415,14 @@ function IntegrationCard({
           <>
             <Button variant="outline" disabled={loading} onClick={onTest}>
               <RefreshCw className="mr-2 h-4 w-4" />
-              Testar
+              Sincronizar
             </Button>
+            {supportsRefresh && (
+              <Button variant="outline" disabled={loading} onClick={onRefresh}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                Renovar token
+              </Button>
+            )}
             <Button variant="outline" disabled={loading} onClick={onDisconnect} className="text-destructive hover:text-destructive">
               <Unplug className="mr-2 h-4 w-4" />
               Sair
@@ -380,7 +496,7 @@ function ConnectDialog({
         <div className="space-y-4">
           <div className="rounded-2xl border border-border bg-muted/30 p-4">
             <div className="flex items-start gap-3">
-              <PlugZap className="mt-0.5 h-5 w-5 text-primary" />
+              {platform === 'shopee' ? <Store className="mt-0.5 h-5 w-5 text-primary" /> : <PlugZap className="mt-0.5 h-5 w-5 text-primary" />}
               <div>
                 <p className="text-sm font-semibold text-foreground">O que será habilitado</p>
                 <p className="mt-1 text-xs text-muted-foreground">{details.description}</p>
@@ -406,9 +522,14 @@ function ConnectDialog({
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               {account.mode === 'live'
-                ? 'Ao continuar, você será levado para a autorização oficial.'
+                ? 'Ao continuar, você será levado para a autorização oficial. A conta só ficará conectada depois do retorno OAuth salvar tokens no banco.'
                 : 'No modo teste, simulamos a autorização para validar o fluxo sem credenciais reais.'}
             </p>
+            {account.account_id && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Conta vinculada: <span className="font-medium text-foreground">{account.account_id}</span>
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
