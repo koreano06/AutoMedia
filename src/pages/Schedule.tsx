@@ -37,11 +37,12 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { SOCIAL_PLATFORMS } from '@/config/platforms';
 import { createPost, deletePost as deletePostById, listPosts, publishPostNow, updatePost } from '@/services/posts';
 import { filterMediaAssets } from '@/services/mediaAssets';
 import type { EntityId, MediaAsset, Post, Status } from '@/types/entities';
 
-const PLATFORMS = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'];
+const PLATFORMS = SOCIAL_PLATFORMS;
 const statusOptions = ['all', 'scheduled', 'published', 'failed', 'paused', 'draft'];
 const timeSlots = ['08:00', '10:30', '12:30', '14:30', '16:30', '19:00', '21:00'];
 

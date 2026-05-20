@@ -38,12 +38,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { SOCIAL_PLATFORMS } from '@/config/platforms';
 import { createPost, publishPostNow } from '@/services/posts';
 import { listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
 import { invokeLLM } from '@/services/ai';
 import type { EntityId, MediaAsset, Platform, Status } from '@/types/entities';
 
-const PLATFORMS = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'] as const;
+const PLATFORMS = SOCIAL_PLATFORMS;
 
 const statusFilters = [
   { value: 'all', label: 'Todos' },

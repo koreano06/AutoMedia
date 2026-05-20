@@ -7,6 +7,7 @@ import Commercial from "@/pages/Commercial";
 import Dashboard from "@/pages/Dashboard";
 import Integrations from "@/pages/Integrations";
 import MediaLibrary from "@/pages/MediaLibrary";
+import MarketplaceAds from "@/pages/MarketplaceAds";
 import Products from "@/pages/Products";
 import Publications from "@/pages/Publications";
 import Reports from "@/pages/Reports";
@@ -20,6 +21,7 @@ export const appRoutes: RouteObject[] = [
     children: [
       { path: "/", element: <Dashboard /> },
       { path: "/products", element: <Products /> },
+      { path: "/marketplace-ads", element: <MarketplaceAds /> },
       { path: "/media", element: <MediaLibrary /> },
       { path: "/videos", element: <VideoGeneration /> },
       { path: "/approval", element: <Approval /> },

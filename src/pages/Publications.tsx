@@ -36,10 +36,11 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { SOCIAL_PLATFORMS } from '@/config/platforms';
 import { deletePost, listPosts, publishPostNow, updatePost } from '@/services/posts';
 import type { EntityId, Post, Status } from '@/types/entities';
 
-const PLATFORMS = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'];
+const PLATFORMS = SOCIAL_PLATFORMS;
 const statusTabs = [
   { value: 'all', label: 'Todos' },
   { value: 'scheduled', label: 'Agendados' },

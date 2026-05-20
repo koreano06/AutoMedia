@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { SOCIAL_PLATFORMS } from '@/config/platforms';
 import { createMediaAsset, filterMediaAssets, listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
 import { listProducts, updateProduct } from '@/services/products';
 import { invokeLLM } from '@/services/ai';
@@ -58,7 +59,7 @@ const formats = [
 const durations = ['15s', '30s', '60s'] as const;
 const rhythms = ['Rápido', 'Médio', 'Explicativo', 'Cortes dinâmicos', 'Legendas grandes'];
 const audioOptions = ['Sem música', 'Música tendência', 'Música energética', 'Música leve', 'Narração IA', 'Apenas texto na tela'];
-const platforms = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'];
+const platforms = SOCIAL_PLATFORMS;
 const historyFilters = [
   { value: 'all', label: 'Todos' },
   { value: 'processing', label: 'Em geração' },

@@ -30,6 +30,7 @@ import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { SOCIAL_PLATFORMS } from '@/config/platforms';
 import { invokeLLM } from '@/services/ai';
 import { autoReplyComment, listComments } from '@/services/comments';
 import type { Comment, EntityId } from '@/types/entities';
@@ -42,7 +43,7 @@ const filters = [
   { key: 'negative', label: 'Risco' },
 ];
 
-const platforms = ['all', 'instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'];
+const platforms = ['all', ...SOCIAL_PLATFORMS];
 const quickReplies = [
   'Claro! Vou te enviar o link do produto agora.',
   'Oi! Esse produto está disponível. Quer que eu te mande o link?',

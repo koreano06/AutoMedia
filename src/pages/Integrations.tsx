@@ -9,6 +9,7 @@ import { AlertCircle, CheckCircle, Clock, ExternalLink, KeyRound, Link2, PlugZap
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ApiRequestError } from '@/api/httpClient';
+import { ALL_PLATFORMS } from '@/config/platforms';
 import {
   connectPlatform,
   disconnectPlatform,
@@ -18,7 +19,7 @@ import {
   type PlatformAccountWithConfig,
 } from '@/services/platforms';
 
-const platforms = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'] as const;
+const platforms = ALL_PLATFORMS;
 const STORAGE_KEY = 'automedia_platform_connection_overrides';
 
 type IntegrationPlatform = (typeof platforms)[number];

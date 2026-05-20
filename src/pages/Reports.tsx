@@ -36,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { ALL_PLATFORMS } from '@/config/platforms';
 import { listProducts } from '@/services/products';
 import { listPosts } from '@/services/posts';
 import type { Post, Product } from '@/types/entities';
@@ -48,7 +49,7 @@ const COLORS = [
   'hsl(var(--chart-5))',
   'hsl(var(--success))',
 ];
-const PLATFORMS = ['instagram', 'tiktok', 'facebook', 'youtube', 'shopee', 'mercadolivre'];
+const PLATFORMS = ALL_PLATFORMS;
 const displayNumber = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value;
 const engagement = (post: Post) => (post.engagement_likes || 0) + (post.engagement_comments || 0) + (post.engagement_shares || 0);
 
