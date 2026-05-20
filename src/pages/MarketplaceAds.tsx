@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -24,16 +24,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { MARKETPLACE_PLATFORMS, type MarketplacePlatform } from '@/config/platforms';
 import { cn } from '@/lib/utils';
-import { createPost, listPosts, publishPostNow } from '@/services/posts';
+import {
+  createMarketplaceListing,
+  listMarketplaceListings,
+  publishMarketplaceListingNow,
+} from '@/services/marketplaceListings';
 import { listProducts } from '@/services/products';
 import { listPlatformAccounts, type PlatformAccountWithConfig } from '@/services/platforms';
-import type { Post, Product } from '@/types/entities';
+import type { MarketplaceListing, Product } from '@/types/entities';
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-
-function isMarketplacePost(post: Post) {
-  return MARKETPLACE_PLATFORMS.includes(post.platform as MarketplacePlatform);
-}
 
 function isAccountReady(account?: PlatformAccountWithConfig) {
   if (!account) return false;
@@ -47,30 +47,29 @@ function productPrice(product?: Product) {
 
 export default function MarketplaceAds() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [listings, setListings] = useState<MarketplaceListing[]>([]);
   const [accounts, setAccounts] = useState<PlatformAccountWithConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
-  const marketplacePosts = useMemo(() => posts.filter(isMarketplacePost), [posts]);
   const readyAccounts = MARKETPLACE_PLATFORMS.filter((platform) => isAccountReady(accounts.find((account) => account.platform === platform)));
-  const published = marketplacePosts.filter((post) => post.status === 'published').length;
-  const failed = marketplacePosts.filter((post) => post.status === 'failed').length;
-  const drafts = marketplacePosts.filter((post) => post.status === 'draft' || post.status === 'scheduled').length;
+  const published = listings.filter((listing) => listing.status === 'published').length;
+  const failed = listings.filter((listing) => listing.status === 'failed').length;
+  const drafts = listings.filter((listing) => listing.status === 'draft' || listing.status === 'ready').length;
 
   const load = async () => {
     setLoading(true);
     setError(false);
     try {
-      const [productData, postData, accountData] = await Promise.all([
+      const [productData, listingData, accountData] = await Promise.all([
         listProducts('-created_date', 200),
-        listPosts('-created_at', 200),
+        listMarketplaceListings('-created_at', 200),
         listPlatformAccounts(),
       ]);
       setProducts(productData);
-      setPosts(postData);
+      setListings(listingData);
       setAccounts(accountData);
     } catch {
       setError(true);
@@ -81,16 +80,16 @@ export default function MarketplaceAds() {
 
   useEffect(() => { load(); }, []);
 
-  const publishAd = async (post: Post) => {
-    const account = accounts.find((item) => item.platform === post.platform);
+  const publishAd = async (listing: MarketplaceListing) => {
+    const account = accounts.find((item) => item.platform === listing.platform);
     if (!isAccountReady(account)) {
       toast.error('Conecte e sincronize essa plataforma antes de publicar.');
       return;
     }
 
-    setPublishingId(post.id);
+    setPublishingId(listing.id);
     try {
-      await publishPostNow(post.id);
+      await publishMarketplaceListingNow(listing.id);
       toast.success('Publicação enviada para o marketplace.');
       load();
     } catch {
@@ -130,7 +129,7 @@ export default function MarketplaceAds() {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Metric label="Anúncios" value={marketplacePosts.length} icon={ShoppingBag} />
+              <Metric label="Anúncios" value={listings.length} icon={ShoppingBag} />
               <Metric label="Publicados" value={published} icon={CheckCircle2} tone="success" />
               <Metric label="Rascunhos" value={drafts} icon={PackageCheck} />
               <Metric label="Falhas" value={failed} icon={AlertTriangle} tone="warning" />
@@ -173,7 +172,7 @@ export default function MarketplaceAds() {
 
           {loading ? (
             <div className="p-5"><div className="h-60 animate-pulse rounded-2xl bg-muted" /></div>
-          ) : marketplacePosts.length === 0 ? (
+          ) : listings.length === 0 ? (
             <div className="p-12 text-center">
               <Store className="mx-auto mb-3 h-10 w-10 text-muted-foreground/35" />
               <p className="font-syne text-lg font-bold text-foreground">Nenhum anúncio criado</p>
@@ -181,27 +180,28 @@ export default function MarketplaceAds() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {marketplacePosts.map((post) => {
-                const product = products.find((item) => item.id === post.product_id);
-                const account = accounts.find((item) => item.platform === post.platform);
+              {listings.map((listing) => {
+                const product = products.find((item) => item.id === listing.product_id);
+                const account = accounts.find((item) => item.platform === listing.platform);
                 return (
-                  <div key={post.id} className="grid gap-4 p-4 lg:grid-cols-[1fr_180px_180px_170px] lg:items-center">
+                  <div key={listing.id} className="grid gap-4 p-4 lg:grid-cols-[1fr_180px_180px_170px] lg:items-center">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <PlatformIcon platform={post.platform} showLabel size="sm" />
-                        <StatusBadge status={post.status} />
+                        <PlatformIcon platform={listing.platform} showLabel size="sm" />
+                        <StatusBadge status={listing.status} />
                       </div>
-                      <p className="mt-2 truncate text-sm font-semibold text-foreground">{post.product_name || 'Produto sem nome'}</p>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{post.caption || 'Sem descrição comercial.'}</p>
+                      <p className="mt-2 truncate text-sm font-semibold text-foreground">{listing.title || product?.name || 'Produto sem nome'}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{listing.description || 'Sem descrição comercial.'}</p>
+                      {listing.error_message && <p className="mt-2 text-xs text-destructive">{listing.error_message}</p>}
                     </div>
-                    <Info label="Preço" value={productPrice(product) ? currency.format(productPrice(product)) : 'Não informado'} />
-                    <Info label="Estoque" value={product?.stock_quantity ?? 'Não informado'} />
+                    <Info label="Preço" value={Number(listing.price || productPrice(product)) ? currency.format(Number(listing.price || productPrice(product))) : 'Não informado'} />
+                    <Info label="Estoque" value={listing.stock_quantity ?? product?.stock_quantity ?? 'Não informado'} />
                     <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
-                      <Button size="sm" className="gap-2" onClick={() => publishAd(post)} disabled={publishingId === post.id || !isAccountReady(account)}>
+                      <Button size="sm" className="gap-2" onClick={() => publishAd(listing)} disabled={publishingId === listing.id || !isAccountReady(account)}>
                         <Send className="h-4 w-4" />
                         Publicar
                       </Button>
-                      <Button size="sm" variant="outline" className="gap-2" disabled={!post.external_url} onClick={() => post.external_url && window.open(post.external_url, '_blank')}>
+                      <Button size="sm" variant="outline" className="gap-2" disabled={!listing.external_url} onClick={() => listing.external_url && window.open(listing.external_url, '_blank')}>
                         <ExternalLink className="h-4 w-4" />
                         Ver anúncio
                       </Button>
@@ -255,14 +255,21 @@ function AdDialog({ open, products, accounts, onOpenChange, onCreated }: {
     }
 
     try {
-      await createPost({
+      await createMarketplaceListing({
         product_id: product.id,
-        product_name: title || product.name,
         platform,
-        caption: description || product.description || `Anúncio comercial de ${product.name}`,
+        title: title || product.name,
+        description: description || product.description || `Anúncio comercial de ${product.name}`,
+        price: product.price,
+        stock_quantity: product.stock_quantity,
+        currency: product.currency || 'BRL',
+        sku: product.sku || product.internal_code,
+        category_name: product.category,
+        attributes: product.attributes,
         status: 'draft',
-        thumbnail_url: product.image_url || product.uploaded_image_url,
-        campaign_name: `Anúncio ${platform}`,
+        metadata: {
+          image_url: product.image_url || product.uploaded_image_url || '',
+        },
       });
       toast.success('Anúncio criado como rascunho.');
       onCreated();
