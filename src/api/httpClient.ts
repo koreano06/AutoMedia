@@ -12,6 +12,14 @@ type ApiEnvelope<T> = {
   records?: T;
 };
 
+type LastApiError = {
+  path: string;
+  status: number;
+  message: string;
+};
+
+let lastApiError: LastApiError | null = null;
+
 export class ApiRequestError extends Error {
   status: number;
   payload: unknown;
@@ -22,6 +30,10 @@ export class ApiRequestError extends Error {
     this.status = status;
     this.payload = payload;
   }
+}
+
+export function getLastApiError() {
+  return lastApiError;
 }
 
 export function isNotFoundError(error: unknown) {
@@ -103,18 +115,31 @@ async function request<T>(path: string, options: RequestOptions = {}) {
     requestHeaders['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(buildUrl(path, query), {
-    ...init,
-    body,
-    headers: requestHeaders,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(buildUrl(path, query), {
+      ...init,
+      body,
+      headers: requestHeaders,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Falha de conexão com a API';
+    lastApiError = { path, status: 0, message };
+    throw new ApiRequestError(message, 0, null);
+  }
 
   const contentType = response.headers.get('content-type');
   const payload = contentType?.includes('application/json') ? await response.json() : await response.text();
 
   if (!response.ok) {
     const message = typeof payload === 'object' && payload?.error?.message ? payload.error.message : 'Erro inesperado na API';
+    lastApiError = { path, status: response.status, message };
     throw new ApiRequestError(message, response.status, payload);
+  }
+
+  if (lastApiError?.path === path) {
+    lastApiError = null;
   }
 
   return unwrapPayload<T>(payload);

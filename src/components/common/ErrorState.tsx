@@ -1,5 +1,6 @@
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getLastApiError } from '@/api/httpClient';
 
 type ErrorStateProps = {
   title?: string;
@@ -12,13 +13,18 @@ export default function ErrorState({
   message = 'Verifique sua conexão e tente novamente.',
   onRetry,
 }: ErrorStateProps) {
+  const lastError = getLastApiError();
+  const resolvedMessage = lastError
+    ? `Falha em ${lastError.path}${lastError.status ? ` (status ${lastError.status})` : ''}: ${lastError.message}`
+    : message;
+
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/5 px-6 py-12 text-center">
       <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
         <AlertCircle className="h-5 w-5 text-destructive" />
       </div>
       <p className="font-syne text-sm font-bold text-foreground">{title}</p>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{message}</p>
+      <p className="mt-1 max-w-sm text-sm text-muted-foreground">{resolvedMessage}</p>
       {onRetry && (
         <Button variant="outline" size="sm" className="mt-4 gap-2" onClick={onRetry}>
           <RefreshCw className="h-3.5 w-3.5" />
