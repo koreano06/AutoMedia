@@ -4,6 +4,7 @@ import {
   BriefcaseBusiness,
   Calendar,
   CheckSquare,
+  ClipboardList,
   Film,
   Image,
   LayoutDashboard,
@@ -26,6 +27,7 @@ export type NavigationItem = {
 
 export const mainNavigation: NavigationItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/", section: "principal" },
+  { label: "Gestão ERP", icon: ClipboardList, path: "/erp", section: "vendas" },
   { label: "Produtos", icon: Package, path: "/products", section: "vendas" },
   { label: "Anúncios", icon: ShoppingBag, path: "/marketplace-ads", section: "vendas" },
   { label: "Painel Comercial", icon: BriefcaseBusiness, path: "/commercial", section: "vendas" },

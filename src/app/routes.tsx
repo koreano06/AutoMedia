@@ -5,6 +5,7 @@ import Approval from "@/pages/Approval";
 import Comments from "@/pages/Comments";
 import Commercial from "@/pages/Commercial";
 import Dashboard from "@/pages/Dashboard";
+import ERPManagement from "@/pages/ERPManagement";
 import Integrations from "@/pages/Integrations";
 import MediaLibrary from "@/pages/MediaLibrary";
 import MarketplaceAds from "@/pages/MarketplaceAds";
@@ -20,6 +21,7 @@ export const appRoutes: RouteObject[] = [
     element: <AppLayout />,
     children: [
       { path: "/", element: <Dashboard /> },
+      { path: "/erp", element: <ERPManagement /> },
       { path: "/products", element: <Products /> },
       { path: "/marketplace-ads", element: <MarketplaceAds /> },
       { path: "/media", element: <MediaLibrary /> },
