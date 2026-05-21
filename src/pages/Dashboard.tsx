@@ -67,7 +67,7 @@ export default function Dashboard() {
         {error && <ErrorState onRetry={load} />}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-          <StatCard title="Produtos Ativos" value={loading ? '—' : stats.totalProducts} icon={Package} color="primary" trendValue="+12%" trend="up" loading={loading} />
+          <StatCard title="Anúncios Base" value={loading ? '—' : stats.totalProducts} icon={Package} color="primary" trendValue="+12%" trend="up" loading={loading} />
           <StatCard title="Publicações Hoje" value={loading ? '—' : stats.published} icon={Zap} color="success" trendValue="+8%" trend="up" loading={loading} />
           <StatCard title="Aguardando Aprovação" value={loading ? '—' : stats.pending} icon={Clock} color="warning" loading={loading} />
           <StatCard title="Agendados" value={loading ? '—' : stats.scheduled} icon={CheckCircle} color="blue" loading={loading} />
@@ -132,7 +132,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="bg-card rounded-2xl border border-border p-5">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="font-syne font-bold text-foreground">Produtos Recentes</h3>
+              <h3 className="font-syne font-bold text-foreground">Anúncios Base Recentes</h3>
               <Link to="/products" className="text-xs text-primary hover:underline font-medium">Ver todos</Link>
             </div>
             {loading ? (
@@ -140,7 +140,7 @@ export default function Dashboard() {
                 {[1,2,3].map(i => <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />)}
               </div>
             ) : products.length === 0 ? (
-              <EmptyState icon={Package} message="Nenhum produto cadastrado ainda" action="/products" actionLabel="Adicionar Produto" />
+              <EmptyState icon={Package} message="Nenhum anúncio base cadastrado ainda" action="/products" actionLabel="Adicionar Anúncio" />
             ) : (
               <div className="space-y-2">
                 {products.slice(0, 5).map(product => (

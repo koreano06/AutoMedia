@@ -18,6 +18,7 @@ import {
   Clock,
   Copy,
   Film,
+  Image,
   Layers3,
   ListChecks,
   Play,
@@ -33,17 +34,17 @@ import { cn } from '@/lib/utils';
 import { SOCIAL_PLATFORMS } from '@/config/platforms';
 import { createMediaAsset, filterMediaAssets, listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
 import { listProducts, updateProduct } from '@/services/products';
-import { invokeLLM } from '@/services/ai';
+import { generateImage, invokeLLM } from '@/services/ai';
 import type { EntityId, Job, MediaAsset, Platform, Product, Status } from '@/types/entities';
 
 const templates = [
-  { id: 'product', label: 'Produto em destaque', desc: 'Close, benefício principal e CTA direto' },
+  { id: 'product', label: 'Anúncio direto', desc: 'Gancho, benefício principal e CTA direto' },
   { id: 'unboxing', label: 'Unboxing', desc: 'Abertura, detalhes e primeira impressão' },
   { id: 'before_after', label: 'Antes e depois', desc: 'Transformação visual e prova de valor' },
   { id: 'quick_review', label: 'Review rápido', desc: 'Pontos fortes em sequência curta' },
   { id: 'flash_offer', label: 'Oferta relâmpago', desc: 'Urgência, preço e chamada de compra' },
   { id: 'social_proof', label: 'Prova social', desc: 'Depoimentos, avaliações e confiança' },
-  { id: 'demo', label: 'Demonstração', desc: 'Mostra o produto em uso' },
+  { id: 'demo', label: 'Demonstração', desc: 'Mostra a oferta em uso ou contexto real' },
   { id: 'story', label: 'Story curto', desc: 'Formato leve para atenção rápida' },
 ] as const;
 
@@ -81,8 +82,8 @@ type Briefing = {
 
 const emptyBriefing: Briefing = {
   targetAudience: '',
-  tone: 'Direto e vendedor',
-  objective: 'Venda',
+  tone: 'Direto, natural e persuasivo',
+  objective: 'Divulgação',
   promise: '',
   cta: 'Comente "eu quero" para receber o link',
   restrictions: '',
@@ -107,8 +108,11 @@ export default function VideoGeneration() {
   const [platform, setPlatform] = useState<Platform>('instagram');
   const [briefing, setBriefing] = useState<Briefing>(emptyBriefing);
   const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
+  const [visualPrompt, setVisualPrompt] = useState('');
+  const [generatedVisual, setGeneratedVisual] = useState<MediaAsset | null>(null);
   const [scriptPreview, setScriptPreview] = useState('');
   const [generatingScript, setGeneratingScript] = useState(false);
+  const [generatingVisual, setGeneratingVisual] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [queue, setQueue] = useState<Job[]>([]);
   const [historyFilter, setHistoryFilter] = useState('all');
@@ -148,6 +152,8 @@ export default function VideoGeneration() {
   );
   const selectedTemplateConfig = templates.find((item) => item.id === selectedTemplate);
   const selectedFormatConfig = formats.find((item) => item.id === selectedFormat);
+  const generationSource = generatedVisual || selectedMedia[0] || null;
+  const generationPreview = generationSource ? getAssetPreview(generationSource) : '';
   const filteredVideos = videos.filter((asset) => historyFilter === 'all' || asset.status === historyFilter);
 
   const stats = {
@@ -159,8 +165,8 @@ export default function VideoGeneration() {
   };
 
   const checklist = [
-    { label: 'Produto selecionado', ok: Boolean(product), hint: product?.name || 'Escolha um produto' },
-    { label: 'Imagem ou mídia disponível', ok: Boolean(product?.image_url || selectedMedia.length > 0), hint: `${selectedMedia.length} mídias escolhidas` },
+    { label: 'Anúncio base selecionado', ok: Boolean(product), hint: product?.name || 'Escolha um anúncio' },
+    { label: 'Imagem ou mídia disponível', ok: Boolean(generatedVisual?.url || product?.image_url || selectedMedia.length > 0), hint: generatedVisual ? 'Imagem IA pronta' : `${selectedMedia.length} mídias escolhidas` },
     { label: 'CTA configurado', ok: Boolean(briefing.cta.trim()), hint: briefing.cta || 'Defina uma chamada' },
     { label: 'Plataforma definida', ok: Boolean(platform), hint: String(platform) },
     { label: 'Formato escolhido', ok: Boolean(selectedFormat), hint: selectedFormatConfig?.ratio || '' },
@@ -168,10 +174,10 @@ export default function VideoGeneration() {
   const readiness = Math.round((checklist.filter((item) => item.ok).length / checklist.length) * 100);
 
   const createPrompt = (currentProduct: Product, scriptOnly = false) => `
-Crie ${scriptOnly ? 'um roteiro estruturado' : 'um roteiro final'} para vídeo de divulgação.
-Produto: ${currentProduct.name}
-Descrição: ${currentProduct.description || 'Sem descrição'}
-Categoria: ${currentProduct.category || 'Não informada'}
+Crie ${scriptOnly ? 'um roteiro estruturado' : 'um roteiro final'} para transformar um anúncio pronto em vídeo de divulgação.
+Anúncio/oferta base: ${currentProduct.name}
+Texto/contexto do anúncio original: ${currentProduct.description || 'Sem descrição'}
+Categoria/nicho: ${currentProduct.category || 'Não informada'}
 Template: ${selectedTemplateConfig?.label}
 Formato: ${selectedFormatConfig?.label} ${selectedFormatConfig?.ratio}
 Duração: ${duration}
@@ -181,10 +187,10 @@ Plataforma: ${platform}
 Público-alvo: ${briefing.targetAudience || 'compradores interessados'}
 Tom de voz: ${briefing.tone}
 Objetivo: ${briefing.objective}
-Promessa principal: ${briefing.promise || 'benefício claro do produto'}
+Promessa principal: ${briefing.promise || 'benefício claro da oferta'}
 CTA: ${briefing.cta}
 Restrições: ${briefing.restrictions || 'evitar promessas exageradas'}
-Mídias selecionadas: ${selectedMedia.map((asset) => asset.title || asset.url).join(', ') || 'usar imagem principal do produto'}
+Mídias selecionadas: ${selectedMedia.map((asset) => asset.title || asset.url).join(', ') || 'usar imagem principal do anúncio'}
 Briefing extra: ${briefing.extra || 'sem briefing extra'}
 
 Responda em português com:
@@ -193,12 +199,26 @@ Responda em português com:
 3. Texto na tela
 4. Legenda para publicação
 5. CTA final
-6. Observação anti-spam/naturalidade
+6. Observação anti-spam/naturalidade para disparo em redes
+`;
+
+  const createImagePrompt = (currentProduct: Product) => `
+Crie um criativo vertical profissional para anúncio em vídeo curto.
+Anúncio/oferta base: ${currentProduct.name}
+Categoria: ${currentProduct.category || 'campanha de afiliado/colaborador'}
+Descrição do anúncio original: ${currentProduct.description || 'Sem descrição'}
+Formato: ${selectedFormatConfig?.label} ${selectedFormatConfig?.ratio}
+Plataforma: ${platform}
+Template: ${selectedTemplateConfig?.label}
+Promessa principal: ${briefing.promise || 'benefício claro da oferta'}
+Tom visual: moderno, premium, alto contraste, luz de estúdio, composição limpa.
+Instrução: gerar uma imagem comercial bonita para divulgação, com foco na oferta, fundo profissional, espaço para texto curto e sem marcas d'agua.
+${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
 `;
 
   const handleGenerateScript = async () => {
     if (!product) {
-      toast.error('Selecione um produto antes de gerar o roteiro.');
+      toast.error('Selecione um anúncio base antes de gerar o roteiro.');
       return;
     }
 
@@ -216,14 +236,14 @@ Responda em português com:
 
   const handleImproveBriefing = async () => {
     if (!product) {
-      toast.error('Selecione um produto para a IA sugerir a estratégia.');
+      toast.error('Selecione um anúncio base para a IA sugerir a estratégia.');
       return;
     }
 
     setGeneratingScript(true);
     try {
       const suggestion = await invokeLLM(
-        `Melhore este briefing para vender o produto "${product.name}" em vídeo curto. Retorne público-alvo, promessa, tom, CTA e restrições. Briefing atual: ${JSON.stringify(briefing)}`
+        `Melhore este briefing para transformar o anúncio/oferta "${product.name}" em vídeos curtos de divulgação. Retorne público-alvo, promessa, tom, CTA permitido, ângulo criativo e restrições. Briefing atual: ${JSON.stringify(briefing)}`
       );
       setScriptPreview(suggestion);
       toast.success('Estratégia sugerida pela IA');
@@ -234,13 +254,59 @@ Responda em português com:
     }
   };
 
+  const handleGenerateVisual = async () => {
+    if (!product) {
+      toast.error('Selecione um anúncio base antes de gerar a imagem.');
+      return;
+    }
+
+    setGeneratingVisual(true);
+    try {
+      const result = await generateImage({
+        prompt: createImagePrompt(product),
+        product_id: product.id,
+        product_name: product.name,
+        title: `Criativo IA - ${product.name}`,
+        platform,
+        format: selectedFormatConfig?.ratio,
+        size: selectedFormatConfig?.ratio === '16:9' ? '1536x1024' : selectedFormatConfig?.ratio === '1:1' ? '1024x1024' : '1024x1536',
+      });
+
+      if (result.asset) {
+        setGeneratedVisual(result.asset);
+        setMediaAssets((current) => [result.asset as MediaAsset, ...current]);
+      } else {
+        setGeneratedVisual({
+          id: `generated-visual-${Date.now()}`,
+          product_id: product.id,
+          product_name: product.name,
+          type: 'image',
+          title: `Criativo IA - ${product.name}`,
+          status: 'collected',
+          source: result.provider,
+          url: result.image_url,
+          thumbnail_url: result.image_url,
+          caption: createImagePrompt(product),
+          platforms: [platform],
+          quality_score: 88,
+        });
+      }
+
+      toast.success(result.provider === 'openai' ? 'Imagem gerada pela API de IA' : 'Imagem fallback gerada para teste');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar a imagem com IA real');
+    } finally {
+      setGeneratingVisual(false);
+    }
+  };
+
   const upsertQueue = (job: Job) => setQueue((current) => [job, ...current]);
   const updateQueue = (id: EntityId, patch: Partial<Job>) =>
     setQueue((current) => current.map((job) => (job.id === id ? { ...job, ...patch } : job)));
 
   const handleGenerate = async () => {
     if (!product) {
-      toast.error('Selecione um produto');
+      toast.error('Selecione um anúncio base');
       return;
     }
 
@@ -272,8 +338,8 @@ Responda em português com:
         title: `${selectedTemplateConfig?.label} - ${product.name} (${duration})`,
         status: 'pending_review',
         source: 'IA Gerada',
-        url: product.image_url || getAssetPreview(selectedMedia[0]) || '',
-        thumbnail_url: product.image_url || getAssetPreview(selectedMedia[0]) || '',
+        url: generationPreview || product.image_url || '',
+        thumbnail_url: generationPreview || product.image_url || '',
         caption: script,
         platforms: [platform],
         duration,
@@ -312,7 +378,7 @@ Responda em português com:
 
   return (
     <div>
-      <TopBar title="Geração de Vídeos" subtitle="Estúdio de IA para roteiros, variações e vídeos por plataforma" />
+      <TopBar title="Geração de Vídeos" subtitle="Transforme anúncios prontos em roteiros, criativos e vídeos para redes sociais" />
       <div className="space-y-5 p-4 sm:p-6">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <StudioMetric label="Vídeos" value={stats.total} icon={Film} />
@@ -327,12 +393,12 @@ Responda em português com:
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-5">
             <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-              <SectionTitle icon={Wand2} title="Configuração do vídeo" subtitle="Escolha produto, template, formato e briefing" />
+              <SectionTitle icon={Wand2} title="Configuração do vídeo" subtitle="Escolha o anúncio base, formato, plataforma e briefing" />
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
-                  <Label>Produto</Label>
+                  <Label>Anúncio base</Label>
                   <Select value={selectedProduct} onValueChange={(value) => { setSelectedProduct(value); setSelectedMediaIds([]); }}>
-                    <SelectTrigger className="mt-1.5"><SelectValue placeholder="Selecionar produto..." /></SelectTrigger>
+                    <SelectTrigger className="mt-1.5"><SelectValue placeholder="Selecionar anúncio base..." /></SelectTrigger>
                     <SelectContent>
                       {products.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
                     </SelectContent>
@@ -384,8 +450,8 @@ Responda em português com:
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <Field label="Público-alvo" value={briefing.targetAudience} onChange={(value) => setBriefing({ ...briefing, targetAudience: value })} placeholder="ex: mulheres 25-40 que compram skincare" />
                 <Field label="Tom de voz" value={briefing.tone} onChange={(value) => setBriefing({ ...briefing, tone: value })} />
-                <Field label="Objetivo" value={briefing.objective} onChange={(value) => setBriefing({ ...briefing, objective: value })} placeholder="Venda, alcance, remarketing..." />
-                <Field label="Oferta/promessa" value={briefing.promise} onChange={(value) => setBriefing({ ...briefing, promise: value })} placeholder="Principal benefício do produto" />
+                <Field label="Objetivo" value={briefing.objective} onChange={(value) => setBriefing({ ...briefing, objective: value })} placeholder="Alcance, tráfego, leads, remarketing..." />
+                <Field label="Oferta/promessa" value={briefing.promise} onChange={(value) => setBriefing({ ...briefing, promise: value })} placeholder="Principal promessa do anúncio original" />
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <Field label="CTA" value={briefing.cta} onChange={(value) => setBriefing({ ...briefing, cta: value })} />
@@ -422,7 +488,44 @@ Responda em português com:
                   </button>
                 ))}
               </div>
-              {availableMedia.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Nenhuma mídia encontrada para este produto. O gerador usará a imagem principal quando disponível.</p>}
+              {availableMedia.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Nenhuma mídia encontrada para este anúncio. O gerador usará o print/criativo principal quando disponível.</p>}
+            </section>
+
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+              <SectionTitle icon={Image} title="Imagem IA para o vídeo" subtitle="Gere um criativo visual pela API para usar como capa/base do vídeo" />
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_220px]">
+                <div>
+                  <Label>Direção visual</Label>
+                  <Textarea
+                    value={visualPrompt}
+                    onChange={(event) => setVisualPrompt(event.target.value)}
+                    className="mt-1.5 h-28 resize-none"
+                    placeholder="Ex: estilo UGC premium, fundo escuro, texto curto de promessa, cena de uso, CTA discreto..."
+                  />
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <Button variant="outline" className="gap-2" onClick={handleGenerateVisual} disabled={generatingVisual || !product}>
+                      <Image className="h-4 w-4" />
+                      {generatingVisual ? 'Gerando imagem...' : 'Gerar imagem IA'}
+                    </Button>
+                    {generatedVisual && (
+                      <Button variant="ghost" onClick={() => setGeneratedVisual(null)}>
+                        Remover imagem IA
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-border bg-muted">
+                  {generatedVisual?.url ? (
+                    <img src={generatedVisual.url} alt={generatedVisual.title || 'Imagem gerada por IA'} className="aspect-[9/16] h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex aspect-[9/16] h-full w-full flex-col items-center justify-center p-5 text-center">
+                      <Image className="mb-3 h-8 w-8 text-muted-foreground/50" />
+                      <p className="text-sm font-medium text-foreground">Prévia da imagem</p>
+                      <p className="mt-1 text-xs text-muted-foreground">A imagem gerada aparecerá aqui e será usada no vídeo.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </section>
           </div>
 
@@ -652,7 +755,7 @@ function VideoDetailsDialog({ asset, open, onOpenChange, onStatus }: { asset: Me
               <p className="mb-3 text-sm font-semibold text-foreground">Score de qualidade</p>
               <div className="space-y-3">
                 <QualityLine label="Qualidade visual" value={score} />
-                <QualityLine label="Clareza do produto" value={Math.min(score + 4, 100)} />
+                <QualityLine label="Clareza da oferta" value={Math.min(score + 4, 100)} />
                 <QualityLine label="Força do CTA" value={Math.min(score + 6, 100)} />
                 <QualityLine label="Adequação à plataforma" value={Math.min(score + 2, 100)} />
                 <QualityLine label="Risco de parecer spam" value={Math.max(100 - score, 8)} invert />

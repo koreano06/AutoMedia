@@ -15,7 +15,7 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
 
   const sectionLabels = {
     principal: "Principal",
-    vendas: "Vendas e anúncios",
+    vendas: "Anúncios base",
     conteudo: "Conteúdo e mídias",
     operacao: "Operação",
   };

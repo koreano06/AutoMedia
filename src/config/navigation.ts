@@ -1,16 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart2,
-  BriefcaseBusiness,
   Calendar,
   CheckSquare,
-  ClipboardList,
   Film,
   Image,
   LayoutDashboard,
   Link2,
   MessageSquare,
-  Package,
   ShoppingBag,
   Zap,
 } from "lucide-react";
@@ -27,10 +24,7 @@ export type NavigationItem = {
 
 export const mainNavigation: NavigationItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/", section: "principal" },
-  { label: "Gestão ERP", icon: ClipboardList, path: "/erp", section: "vendas" },
-  { label: "Produtos", icon: Package, path: "/products", section: "vendas" },
-  { label: "Anúncios", icon: ShoppingBag, path: "/marketplace-ads", section: "vendas" },
-  { label: "Painel Comercial", icon: BriefcaseBusiness, path: "/commercial", section: "vendas" },
+  { label: "Anúncios Base", icon: ShoppingBag, path: "/products", section: "vendas" },
   { label: "Biblioteca de Mídia", icon: Image, path: "/media", section: "conteudo" },
   { label: "Geração de Vídeos", icon: Film, path: "/videos", section: "conteudo" },
   { label: "Aprovação", icon: CheckSquare, path: "/approval", section: "conteudo", badgeKey: "approvals" },

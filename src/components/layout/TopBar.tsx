@@ -36,7 +36,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
           <div className="relative hidden items-center md:flex">
             <Search className="absolute left-3 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Buscar produtos, mídias..."
+              placeholder="Buscar anúncios, mídias..."
               className="h-9 w-72 rounded-2xl border-border/60 bg-muted/60 pl-9 pr-12 text-sm shadow-inner shadow-black/[0.02] focus-visible:ring-1"
             />
             <span className="pointer-events-none absolute right-2 rounded-lg border border-border bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -153,7 +153,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder="Buscar produtos, mídias..."
+              placeholder="Buscar anúncios, mídias..."
               className="h-10 rounded-2xl border-border/70 bg-muted/60 pl-9 text-sm"
             />
           </div>

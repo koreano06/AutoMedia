@@ -23,6 +23,7 @@ import {
   Package,
   Plus,
   Search,
+  ShoppingBag,
   Sparkles,
   Trash2,
   UploadCloud,
@@ -33,6 +34,7 @@ import { toast } from 'sonner';
 import { analyzeProduct, createProduct, deleteProduct, listProducts, updateProduct } from '@/services/products';
 import { collectMedia } from '@/services/mediaAssets';
 import { generateVideo } from '@/services/videos';
+import { searchMarketplaceOffers, type MarketplaceSearchItem, type MarketplaceSearchPlatform } from '@/services/marketplaceSearch';
 import type { EntityId, Product, Status } from '@/types/entities';
 import { cn } from '@/lib/utils';
 import { fileToDataUrl } from '@/lib/fileToDataUrl';
@@ -152,6 +154,11 @@ export default function Products() {
   const [showModal, setShowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
+  const [marketplacePlatform, setMarketplacePlatform] = useState<MarketplaceSearchPlatform>('mercadolivre');
+  const [marketplaceQuery, setMarketplaceQuery] = useState('');
+  const [marketplaceResults, setMarketplaceResults] = useState<MarketplaceSearchItem[]>([]);
+  const [marketplaceMessage, setMarketplaceMessage] = useState('');
+  const [searchingMarketplace, setSearchingMarketplace] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [saving, setSaving] = useState(false);
@@ -237,7 +244,7 @@ export default function Products() {
 
   const handleSave = async () => {
     if (!form.name.trim()) {
-      toast.error('Nome do produto é obrigatório');
+      toast.error('Nome do anúncio base é obrigatório');
       return;
     }
 
@@ -273,12 +280,12 @@ export default function Products() {
         min_stock: form.min_stock ? Number(form.min_stock) : undefined,
         status: 'analyzing',
       });
-      toast.success('Produto adicionado e enviado para análise!');
+      toast.success('Anúncio base adicionado e enviado para análise!');
       setShowModal(false);
       resetForm();
       load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Não foi possível adicionar o produto');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível adicionar o anúncio base');
     } finally {
       setSaving(false);
     }
@@ -287,13 +294,13 @@ export default function Products() {
   const handleDelete = async (id: EntityId) => {
     try {
       await deleteProduct(id);
-      toast.success('Produto removido');
+      toast.success('Anúncio base removido');
       if (selectedProduct?.id === id) {
         setSelectedProduct(null);
       }
       load();
     } catch {
-      toast.error('Não foi possível remover o produto');
+      toast.error('Não foi possível remover o anúncio base');
     }
   };
 
@@ -351,6 +358,60 @@ export default function Products() {
     }
   };
 
+  const handleMarketplaceSearch = async () => {
+    if (marketplaceQuery.trim().length < 2) {
+      toast.error('Digite o que deseja pesquisar.');
+      return;
+    }
+
+    setSearchingMarketplace(true);
+    setMarketplaceMessage('');
+    try {
+      const result = await searchMarketplaceOffers(marketplacePlatform, marketplaceQuery.trim(), 8);
+      setMarketplaceResults(result.items || []);
+      setMarketplaceMessage(result.message || '');
+      if (!result.items?.length) {
+        toast.info(result.message || 'Nenhuma oferta encontrada.');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível pesquisar ofertas.');
+    } finally {
+      setSearchingMarketplace(false);
+    }
+  };
+
+  const importMarketplaceOffer = async (item: MarketplaceSearchItem) => {
+    setSaving(true);
+    try {
+      await createProduct({
+        name: item.title,
+        source_url: item.url,
+        image_url: item.image_url,
+        category: item.category_id || 'Oferta importada',
+        description: [
+          `Oferta importada de ${item.platform === 'mercadolivre' ? 'Mercado Livre' : 'Shopee'}.`,
+          item.description,
+          item.url ? `Link original: ${item.url}` : '',
+          item.seller_name ? `Parceiro/vendedor: ${item.seller_name}` : '',
+        ].filter(Boolean).join('\n'),
+        price: item.price,
+        currency: item.currency || 'BRL',
+        marketplace_origin: item.platform,
+        supplier_name: item.seller_name,
+        input_source: 'product_url',
+        status: 'analyzing',
+      });
+      toast.success('Oferta importada como anúncio base.');
+      setMarketplaceResults([]);
+      setMarketplaceQuery('');
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível importar a oferta.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDuplicate = async (product: Product) => {
     try {
       await createProduct({
@@ -375,16 +436,16 @@ export default function Products() {
         input_source: product.input_source || 'manual',
         status: 'draft',
       });
-      toast.success('Produto duplicado');
+      toast.success('Anúncio base duplicado');
       load();
     } catch {
-      toast.error('Não foi possível duplicar o produto');
+      toast.error('Não foi possível duplicar o anúncio base');
     }
   };
 
   return (
     <div>
-      <TopBar title="Produtos" subtitle="Central de entrada, análise e criação de conteúdo" />
+      <TopBar title="Anúncios Base" subtitle="Cole o anúncio pronto do parceiro e transforme em roteiros, criativos e vídeos para divulgação" />
       <div className="space-y-5 p-4 sm:p-6">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <ProductMetric label="Total" value={stats.total} icon={Package} />
@@ -395,6 +456,55 @@ export default function Products() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="mb-4 rounded-2xl border border-primary/15 bg-primary/5 p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+              <div className="flex-1">
+                <div className="mb-2 flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-semibold text-foreground">Pesquisar ofertas para transformar em vídeo</p>
+                </div>
+                <Input
+                  value={marketplaceQuery}
+                  onChange={(event) => setMarketplaceQuery(event.target.value)}
+                  onKeyDown={(event) => event.key === 'Enter' && handleMarketplaceSearch()}
+                  placeholder="Ex: garrafa térmica, ring light, fone bluetooth..."
+                />
+              </div>
+              <Select value={marketplacePlatform} onValueChange={(value) => setMarketplacePlatform(value as MarketplaceSearchPlatform)}>
+                <SelectTrigger className="lg:w-44"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mercadolivre">Mercado Livre</SelectItem>
+                  <SelectItem value="shopee">Shopee</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button className="gap-2" onClick={handleMarketplaceSearch} disabled={searchingMarketplace}>
+                <Search className="h-4 w-4" />
+                {searchingMarketplace ? 'Pesquisando...' : 'Pesquisar'}
+              </Button>
+            </div>
+
+            {marketplaceMessage && <p className="mt-3 text-xs text-muted-foreground">{marketplaceMessage}</p>}
+            {marketplaceResults.length > 0 && (
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {marketplaceResults.map((item) => (
+                  <div key={item.id} className="overflow-hidden rounded-2xl border border-border bg-card">
+                    <div className="aspect-video bg-muted">
+                      {item.image_url ? <img src={item.image_url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ShoppingBag className="h-6 w-6 text-muted-foreground" /></div>}
+                    </div>
+                    <div className="p-3">
+                      <p className="line-clamp-2 text-sm font-semibold text-foreground">{item.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{item.seller_name || item.platform}</p>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className="text-sm font-bold text-primary">{item.price ? `R$ ${Number(item.price).toFixed(2)}` : 'Sem preço'}</span>
+                        <Button size="sm" className="h-8" onClick={() => importMarketplaceOffer(item)} disabled={saving}>Importar</Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -457,7 +567,7 @@ export default function Products() {
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Filter className="h-3.5 w-3.5" />
-              {filtered.length} de {products.length} produtos encontrados
+              {filtered.length} de {products.length} anúncios encontrados
             </div>
             <div className="flex gap-2">
               <div className="flex rounded-xl border border-border bg-muted p-1">
@@ -479,7 +589,7 @@ export default function Products() {
                 </button>
               </div>
               <Button className="gap-2" onClick={() => setShowModal(true)}>
-                <Plus className="h-4 w-4" /> Novo Produto
+                <Plus className="h-4 w-4" /> Novo Anúncio
               </Button>
             </div>
           </div>
@@ -529,19 +639,19 @@ export default function Products() {
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-syne">Novo Produto</DialogTitle>
+            <DialogTitle className="font-syne">Novo Anúncio Base</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-              <p className="text-sm font-semibold text-foreground">Entrada inteligente</p>
+              <p className="text-sm font-semibold text-foreground">Entrada do anúncio pronto</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Informe um link, uma imagem ou dados manuais. O produto já entra no fluxo de análise.
+                Cole o link do anúncio, envie um print/criativo ou descreva a oferta recebida do parceiro. A IA usa isso para criar roteiro e vídeo.
               </p>
             </div>
 
             <div>
-              <Label>Nome do Produto *</Label>
-              <Input placeholder="ex: Tênis Nike Air Max 270" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="mt-1" />
+              <Label>Nome do anúncio/oferta *</Label>
+              <Input placeholder="ex: Oferta HydraMax - Garrafa Térmica" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="mt-1" />
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div>
@@ -549,7 +659,7 @@ export default function Products() {
                 <Input placeholder="ex: Nike" value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} className="mt-1" />
               </div>
               <div>
-                <Label>Preço (R$)</Label>
+                <Label>Valor/oferta (R$)</Label>
                 <Input type="number" min="0" step="0.01" placeholder="299.90" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} className="mt-1" />
               </div>
               <div>
@@ -565,54 +675,54 @@ export default function Products() {
               </div>
             </div>
             <div className="rounded-2xl border border-border bg-muted/25 p-4">
-              <p className="text-sm font-semibold text-foreground">Dados comerciais</p>
-              <p className="mt-1 text-xs text-muted-foreground">Campos leves de ERP para estoque, margem, fornecedor e marketplace.</p>
+              <p className="text-sm font-semibold text-foreground">Dados de colaboração</p>
+              <p className="mt-1 text-xs text-muted-foreground">Campos opcionais para rastrear parceiro, campanha, comissão e origem do anúncio.</p>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div>
-                  <Label>SKU</Label>
-                  <Input placeholder="SKU-001" value={form.sku} onChange={(event) => setForm({ ...form, sku: event.target.value })} className="mt-1" />
+                  <Label>Código da campanha</Label>
+                  <Input placeholder="CAMP-HYDRAMAX-01" value={form.sku} onChange={(event) => setForm({ ...form, sku: event.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <Label>Código interno</Label>
-                  <Input placeholder="INT-001" value={form.internal_code} onChange={(event) => setForm({ ...form, internal_code: event.target.value })} className="mt-1" />
+                  <Label>Seu código interno</Label>
+                  <Input placeholder="COLAB-001" value={form.internal_code} onChange={(event) => setForm({ ...form, internal_code: event.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <Label>Marketplace origem</Label>
-                  <Input placeholder="Shopee, Mercado Livre..." value={form.marketplace_origin} onChange={(event) => setForm({ ...form, marketplace_origin: event.target.value })} className="mt-1" />
+                  <Label>Origem do anúncio</Label>
+                  <Input placeholder="Link do parceiro, Meta Ads, TikTok, loja..." value={form.marketplace_origin} onChange={(event) => setForm({ ...form, marketplace_origin: event.target.value })} className="mt-1" />
                 </div>
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div>
-                  <Label>Custo (R$)</Label>
-                  <Input type="number" min="0" step="0.01" placeholder="120.00" value={form.cost_price} onChange={(event) => setForm({ ...form, cost_price: event.target.value })} className="mt-1" />
+                  <Label>Comissão estimada (R$)</Label>
+                  <Input type="number" min="0" step="0.01" placeholder="30.00" value={form.cost_price} onChange={(event) => setForm({ ...form, cost_price: event.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <Label>Estoque</Label>
-                  <Input type="number" min="0" placeholder="50" value={form.stock_quantity} onChange={(event) => setForm({ ...form, stock_quantity: event.target.value })} className="mt-1" />
+                  <Label>Prioridade</Label>
+                  <Input type="number" min="0" placeholder="1" value={form.stock_quantity} onChange={(event) => setForm({ ...form, stock_quantity: event.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <Label>Estoque mínimo</Label>
+                  <Label>Meta de posts</Label>
                   <Input type="number" min="0" placeholder="5" value={form.min_stock} onChange={(event) => setForm({ ...form, min_stock: event.target.value })} className="mt-1" />
                 </div>
               </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <div>
-                  <Label>Fornecedor</Label>
-                  <Input placeholder="Nome do fornecedor" value={form.supplier_name} onChange={(event) => setForm({ ...form, supplier_name: event.target.value })} className="mt-1" />
+                  <Label>Parceiro/empresa</Label>
+                  <Input placeholder="Nome do parceiro" value={form.supplier_name} onChange={(event) => setForm({ ...form, supplier_name: event.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <Label>Contato fornecedor</Label>
+                  <Label>Contato do parceiro</Label>
                   <Input placeholder="WhatsApp, email..." value={form.supplier_contact} onChange={(event) => setForm({ ...form, supplier_contact: event.target.value })} className="mt-1" />
                 </div>
                 <div>
-                  <Label>Prazo médio (dias)</Label>
+                  <Label>Prazo da campanha (dias)</Label>
                   <Input type="number" min="0" placeholder="7" value={form.supplier_lead_time_days} onChange={(event) => setForm({ ...form, supplier_lead_time_days: event.target.value })} className="mt-1" />
                 </div>
               </div>
             </div>
             <div>
-              <Label className="flex items-center gap-2"><Link2 className="h-3.5 w-3.5" />Link do Produto</Label>
-              <Input placeholder="https://loja.com/produto" value={form.source_url} onChange={(event) => setForm({ ...form, source_url: event.target.value })} className="mt-1" />
+              <Label className="flex items-center gap-2"><Link2 className="h-3.5 w-3.5" />Link do anúncio pronto</Label>
+              <Input placeholder="https://site-do-parceiro.com/anuncio-ou-oferta" value={form.source_url} onChange={(event) => setForm({ ...form, source_url: event.target.value })} className="mt-1" />
             </div>
             <div>
               <Label className="flex items-center gap-2"><Image className="h-3.5 w-3.5" />URL da Imagem</Label>
@@ -621,12 +731,12 @@ export default function Products() {
             <div>
               <Label className="flex items-center gap-2">
                 <UploadCloud className="h-3.5 w-3.5" />
-                Imagem do Produto
+                Print/criativo do anúncio
               </Label>
               <div className="mt-1.5 rounded-xl border border-dashed border-border bg-muted/30 p-3">
                 {imagePreview ? (
                   <div className="flex items-center gap-3">
-                    <img src={imagePreview} alt="Preview do produto" className="h-16 w-16 rounded-lg object-cover" />
+                    <img src={imagePreview} alt="Preview do anúncio" className="h-16 w-16 rounded-lg object-cover" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{imageFile?.name}</p>
                       <p className="text-xs text-muted-foreground">Pronta para envio ao backend de upload</p>
@@ -639,7 +749,7 @@ export default function Products() {
                   <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg px-4 py-5 text-center hover:bg-background">
                     <UploadCloud className="mb-2 h-6 w-6 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">Selecionar imagem</span>
-                    <span className="mt-1 text-xs text-muted-foreground">PNG, JPG ou WEBP para análise do produto</span>
+                    <span className="mt-1 text-xs text-muted-foreground">PNG, JPG ou WEBP do anúncio recebido</span>
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
@@ -652,13 +762,13 @@ export default function Products() {
             </div>
             <div>
               <Label>Descrição</Label>
-              <Textarea placeholder="Descreva o produto, público, diferenciais ou observações..." value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="mt-1 h-24" />
+              <Textarea placeholder="Cole aqui o texto do anúncio original, promessa, público, regras do parceiro, CTA permitido e observações..." value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="mt-1 h-24" />
             </div>
             <div className="flex flex-col gap-3 pt-2 sm:flex-row">
               <Button variant="outline" className="flex-1" onClick={() => setShowModal(false)}>Cancelar</Button>
               <Button className="flex-1 gap-2" onClick={handleSave} disabled={saving}>
                 <Sparkles className="h-4 w-4" />
-                {saving ? 'Salvando...' : 'Adicionar e Analisar'}
+                {saving ? 'Salvando...' : 'Adicionar e Analisar Anúncio'}
               </Button>
             </div>
           </div>
@@ -749,7 +859,7 @@ function ProductActions({
         <DropdownMenuItem onClick={() => onGenerateVideo(product)} className="h-9 gap-2 rounded-lg text-sm">
           <Film className="h-3.5 w-3.5 shrink-0" /> Gerar vídeo
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onStatusChange(product.id, 'review', 'Produto enviado para aprovação')} className="h-9 gap-2 rounded-lg text-sm">
+        <DropdownMenuItem onClick={() => onStatusChange(product.id, 'review', 'Anúncio enviado para aprovação')} className="h-9 gap-2 rounded-lg text-sm">
           <CheckCircle className="h-3.5 w-3.5 shrink-0" /> Enviar p/ aprovação
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onDuplicate(product)} className="h-9 gap-2 rounded-lg text-sm">
@@ -933,7 +1043,7 @@ function ProductDetailsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-syne">Detalhes do Produto</DialogTitle>
+          <DialogTitle className="font-syne">Detalhes do Anúncio Base</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
@@ -963,21 +1073,21 @@ function ProductDetailsDialog({
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DetailBox label="Preço" value={product.price ? `R$ ${Number(product.price).toFixed(2)}` : 'Sem preço'} />
-              <DetailBox label="Categoria" value={product.category || 'Sem categoria'} />
-              <DetailBox label="Marca" value={product.brand || 'Sem marca'} />
+              <DetailBox label="Valor/oferta" value={product.price ? `R$ ${Number(product.price).toFixed(2)}` : 'Sem valor'} />
+              <DetailBox label="Nicho" value={product.category || 'Sem nicho'} />
+              <DetailBox label="Marca/parceiro" value={product.brand || 'Sem marca'} />
               <DetailBox label="Origem" value={product.input_source || 'manual'} />
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DetailBox label="SKU" value={product.sku || 'Sem SKU'} />
-              <DetailBox label="Custo" value={product.cost_price ? `R$ ${Number(product.cost_price).toFixed(2)}` : 'Sem custo'} />
-              <DetailBox label="Margem" value={product.margin_percent ? `${product.margin_percent}%` : 'N/A'} />
-              <DetailBox label="Estoque" value={`${product.stock_quantity ?? 0} un.`} />
+              <DetailBox label="Campanha" value={product.sku || 'Sem campanha'} />
+              <DetailBox label="Comissão" value={product.cost_price ? `R$ ${Number(product.cost_price).toFixed(2)}` : 'Não informada'} />
+              <DetailBox label="Potencial" value={product.margin_percent ? `${product.margin_percent}%` : 'N/A'} />
+              <DetailBox label="Prioridade" value={`${product.stock_quantity ?? 0}`} />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
-              <DetailBox label="Fornecedor" value={product.supplier_name || 'Sem fornecedor'} />
+              <DetailBox label="Parceiro" value={product.supplier_name || 'Sem parceiro'} />
               <DetailBox label="Contato" value={product.supplier_contact || 'Não informado'} />
               <DetailBox label="Prazo" value={product.supplier_lead_time_days ? `${product.supplier_lead_time_days} dias` : 'N/A'} />
             </div>
@@ -1000,7 +1110,7 @@ function ProductDetailsDialog({
                 <Button variant="outline" className="justify-start gap-2" onClick={() => onGenerateVideo(product)}>
                   <Film className="h-4 w-4" /> Gerar vídeo
                 </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatusChange(product.id, 'review', 'Produto enviado para aprovação')}>
+                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatusChange(product.id, 'review', 'Anúncio enviado para aprovação')}>
                   <CheckCircle className="h-4 w-4" /> Enviar para aprovação
                 </Button>
               </div>
@@ -1009,7 +1119,7 @@ function ProductDetailsDialog({
             <div className="rounded-2xl border border-border p-4">
               <p className="mb-3 text-sm font-semibold text-foreground">Links e histórico</p>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <InfoLine label="Link do produto" value={product.source_url || product.product_url || 'Não informado'} />
+                <InfoLine label="Link do anúncio" value={product.source_url || product.product_url || 'Não informado'} />
                 <InfoLine label="Resumo da análise" value={product.analysis_summary || 'Aguardando análise do backend'} />
                 <InfoLine label="Criado em" value={product.created_at ? new Date(product.created_at).toLocaleString('pt-BR') : 'Sem data'} />
               </div>
@@ -1020,7 +1130,7 @@ function ProductDetailsDialog({
                 <Copy className="h-4 w-4" /> Duplicar
               </Button>
               <Button variant="destructive" className="flex-1 gap-2" onClick={() => onDelete(product.id)}>
-                <Trash2 className="h-4 w-4" /> Excluir produto
+                <Trash2 className="h-4 w-4" /> Excluir anúncio
               </Button>
             </div>
           </div>
@@ -1074,12 +1184,12 @@ function EmptyProducts({ onAdd }: { onAdd: () => void }) {
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
         <Package className="h-7 w-7 text-muted-foreground" />
       </div>
-      <p className="mb-1 font-syne font-bold text-foreground">Nenhum produto encontrado</p>
+      <p className="mb-1 font-syne font-bold text-foreground">Nenhum anúncio base encontrado</p>
       <p className="mb-4 max-w-sm text-sm text-muted-foreground">
-        Ajuste os filtros ou adicione um produto para iniciar análise, coleta de mídia e geração de conteúdo.
+        Ajuste os filtros ou adicione um anúncio pronto para iniciar análise, roteiro e geração de conteúdo.
       </p>
       <Button size="sm" onClick={onAdd} className="gap-2">
-        <Plus className="h-4 w-4" /> Adicionar Produto
+        <Plus className="h-4 w-4" /> Adicionar Anúncio
       </Button>
     </div>
   );
