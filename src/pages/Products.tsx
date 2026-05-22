@@ -1041,97 +1041,106 @@ function ProductDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-syne">Detalhes do Anúncio Base</DialogTitle>
-        </DialogHeader>
-
-        <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-          <div>
-            <div className="aspect-square overflow-hidden rounded-2xl bg-muted">
-              {productImage(product) ? (
-                <img src={productImage(product)} alt={product.name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Package className="h-12 w-12 text-muted-foreground/30" />
-                </div>
-              )}
+      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-7xl overflow-hidden rounded-3xl border-border/80 bg-background p-0 shadow-2xl sm:w-[calc(100vw-2rem)]">
+        <DialogHeader className="border-b border-border bg-card/85 px-4 py-4 backdrop-blur sm:px-6">
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <DialogTitle className="break-words font-syne text-xl leading-tight sm:text-2xl">{product.name}</DialogTitle>
+              <p className="mt-1 text-sm text-muted-foreground">Detalhes do anúncio base para roteiro, mídia e distribuição</p>
             </div>
-            <div className="mt-3 rounded-2xl border border-border bg-muted/30 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Etapa atual</p>
-              <p className="mt-1 font-syne text-xl font-bold text-foreground">{getPipelineStage(product)}</p>
-              <div className="mt-3">
-                <StatusBadge status={product.status} />
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={product.status} />
+              <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">{getPipelineStage(product)}</span>
             </div>
           </div>
+        </DialogHeader>
 
-          <div className="space-y-5">
-            <div>
-              <h2 className="font-syne text-2xl font-bold text-foreground">{product.name}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{product.description || 'Sem descrição cadastrada.'}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DetailBox label="Valor/oferta" value={product.price ? `R$ ${Number(product.price).toFixed(2)}` : 'Sem valor'} />
-              <DetailBox label="Nicho" value={product.category || 'Sem nicho'} />
-              <DetailBox label="Marca/parceiro" value={product.brand || 'Sem marca'} />
-              <DetailBox label="Origem" value={product.input_source || 'manual'} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DetailBox label="Campanha" value={product.sku || 'Sem campanha'} />
-              <DetailBox label="Comissão" value={product.cost_price ? `R$ ${Number(product.cost_price).toFixed(2)}` : 'Não informada'} />
-              <DetailBox label="Potencial" value={product.margin_percent ? `${product.margin_percent}%` : 'N/A'} />
-              <DetailBox label="Prioridade" value={`${product.stock_quantity ?? 0}`} />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <DetailBox label="Parceiro" value={product.supplier_name || 'Sem parceiro'} />
-              <DetailBox label="Contato" value={product.supplier_contact || 'Não informado'} />
-              <DetailBox label="Prazo" value={product.supplier_lead_time_days ? `${product.supplier_lead_time_days} dias` : 'N/A'} />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <DetailBox label="Mídias" value={`${product.media_count || 0}`} />
-              <DetailBox label="Vídeos" value={`${product.videos_generated || 0}`} />
-              <DetailBox label="Posts publicados" value={`${product.posts_published || 0}`} />
-            </div>
-
-            <div className="rounded-2xl border border-border p-4">
-              <p className="mb-3 text-sm font-semibold text-foreground">Ações rápidas</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onAnalyze(product)}>
-                  <Bot className="h-4 w-4" /> Analisar com IA
-                </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onCollectMedia(product)}>
-                  <Image className="h-4 w-4" /> Buscar mídias
-                </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onGenerateVideo(product)}>
-                  <Film className="h-4 w-4" /> Gerar vídeo
-                </Button>
-                <Button variant="outline" className="justify-start gap-2" onClick={() => onStatusChange(product.id, 'review', 'Anúncio enviado para aprovação')}>
-                  <CheckCircle className="h-4 w-4" /> Enviar para aprovação
-                </Button>
+        <div className="max-h-[calc(94vh-88px)] overflow-y-auto overflow-x-hidden">
+          <div className="grid min-w-0 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]">
+            <div className="min-w-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.16),transparent_34%),linear-gradient(135deg,hsl(var(--muted)),hsl(var(--background)))] p-4 sm:p-6 xl:sticky xl:top-0 xl:self-start">
+              <div className="overflow-hidden rounded-[2rem] border border-border/70 bg-card shadow-xl shadow-black/[0.06]">
+                <div className="relative min-h-[360px] bg-muted">
+                  {productImage(product) ? (
+                    <img src={productImage(product)} alt={product.name} className="h-full max-h-[68vh] min-h-[360px] w-full object-cover" />
+                  ) : (
+                    <div className="flex min-h-[420px] items-center justify-center">
+                      <Package className="h-14 w-14 text-muted-foreground/30" />
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent p-5 text-white">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Etapa atual</p>
+                    <p className="mt-1 font-syne text-2xl font-bold">{getPipelineStage(product)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <MetricTile label="Mídias" value={product.media_count || 0} />
+                <MetricTile label="Vídeos" value={product.videos_generated || 0} />
+                <MetricTile label="Posts" value={product.posts_published || 0} />
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border p-4">
-              <p className="mb-3 text-sm font-semibold text-foreground">Links e histórico</p>
-              <div className="space-y-2 text-sm text-muted-foreground">
+            <div className="min-w-0 space-y-5 border-t border-border bg-card p-4 sm:p-6 xl:border-l xl:border-t-0">
+              <section className="rounded-3xl border border-border bg-background p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Resumo do anúncio</p>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-foreground">
+                  {product.description || 'Sem descrição cadastrada.'}
+                </p>
+              </section>
+
+              <section className="grid gap-3 sm:grid-cols-2">
+                <DetailBox label="Valor/oferta" value={product.price ? `R$ ${Number(product.price).toFixed(2)}` : 'Sem valor'} />
+                <DetailBox label="Nicho" value={product.category || 'Sem nicho'} />
+                <DetailBox label="Marca/parceiro" value={product.brand || product.supplier_name || 'Sem marca'} />
+                <DetailBox label="Origem" value={product.marketplace_origin || product.input_source || 'manual'} />
+              </section>
+
+              <section className="grid gap-3 sm:grid-cols-2">
+                <DetailBox label="Campanha" value={product.sku || 'Sem campanha'} />
+                <DetailBox label="Comissão" value={product.cost_price ? `R$ ${Number(product.cost_price).toFixed(2)}` : 'Não informada'} />
+                <DetailBox label="Potencial" value={product.margin_percent ? `${product.margin_percent}%` : 'N/A'} />
+                <DetailBox label="Prioridade" value={`${product.stock_quantity ?? 0}`} />
+              </section>
+
+              <section className="grid gap-3 sm:grid-cols-3">
+                <DetailBox label="Parceiro" value={product.supplier_name || 'Sem parceiro'} />
+                <DetailBox label="Contato" value={product.supplier_contact || 'Não informado'} />
+                <DetailBox label="Prazo" value={product.supplier_lead_time_days ? `${product.supplier_lead_time_days} dias` : 'N/A'} />
+              </section>
+
+              <section className="rounded-3xl border border-border bg-background p-5">
+                <p className="mb-3 text-sm font-semibold text-foreground">Ações rápidas</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button variant="outline" className="h-11 justify-start gap-2 rounded-2xl" onClick={() => onAnalyze(product)}>
+                    <Bot className="h-4 w-4" /> Analisar com IA
+                  </Button>
+                  <Button variant="outline" className="h-11 justify-start gap-2 rounded-2xl" onClick={() => onCollectMedia(product)}>
+                    <Image className="h-4 w-4" /> Buscar mídias
+                  </Button>
+                  <Button variant="outline" className="h-11 justify-start gap-2 rounded-2xl" onClick={() => onGenerateVideo(product)}>
+                    <Film className="h-4 w-4" /> Gerar vídeo
+                  </Button>
+                  <Button variant="outline" className="h-11 justify-start gap-2 rounded-2xl" onClick={() => onStatusChange(product.id, 'review', 'Anúncio enviado para aprovação')}>
+                    <CheckCircle className="h-4 w-4" /> Enviar para aprovação
+                  </Button>
+                </div>
+              </section>
+
+              <section className="rounded-3xl border border-border bg-background p-5">
+                <p className="mb-3 text-sm font-semibold text-foreground">Links e histórico</p>
                 <InfoLine label="Link do anúncio" value={product.source_url || product.product_url || 'Não informado'} />
                 <InfoLine label="Resumo da análise" value={product.analysis_summary || 'Aguardando análise do backend'} />
                 <InfoLine label="Criado em" value={product.created_at ? new Date(product.created_at).toLocaleString('pt-BR') : 'Sem data'} />
-              </div>
-            </div>
+              </section>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button variant="outline" className="flex-1 gap-2" onClick={() => onDuplicate(product)}>
-                <Copy className="h-4 w-4" /> Duplicar
-              </Button>
-              <Button variant="destructive" className="flex-1 gap-2" onClick={() => onDelete(product.id)}>
-                <Trash2 className="h-4 w-4" /> Excluir anúncio
-              </Button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button variant="outline" className="h-11 gap-2 rounded-2xl" onClick={() => onDuplicate(product)}>
+                  <Copy className="h-4 w-4" /> Duplicar
+                </Button>
+                <Button variant="destructive" className="h-11 gap-2 rounded-2xl" onClick={() => onDelete(product.id)}>
+                  <Trash2 className="h-4 w-4" /> Excluir anúncio
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -1142,9 +1151,9 @@ function ProductDetailsDialog({
 
 function DetailBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border bg-muted/25 p-3">
+    <div className="min-w-0 rounded-2xl border border-border bg-muted/25 p-4">
       <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-sm font-semibold text-foreground">{value}</p>
+      <p className="mt-1 break-words text-sm font-semibold leading-5 text-foreground">{value}</p>
     </div>
   );
 }
@@ -1153,7 +1162,16 @@ function InfoLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5 border-b border-border pb-2 last:border-b-0 last:pb-0">
       <span className="text-xs font-medium text-foreground">{label}</span>
-      <span className="break-words text-xs text-muted-foreground">{value}</span>
+      <span className="whitespace-pre-wrap break-all text-xs leading-5 text-muted-foreground">{value}</span>
+    </div>
+  );
+}
+
+function MetricTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-background/85 p-4 text-center shadow-sm backdrop-blur">
+      <p className="font-syne text-2xl font-bold text-foreground">{value}</p>
+      <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
     </div>
   );
 }
