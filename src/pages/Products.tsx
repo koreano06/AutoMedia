@@ -1041,8 +1041,8 @@ function ProductDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-7xl overflow-hidden rounded-3xl border-border/80 bg-background p-0 shadow-2xl sm:w-[calc(100vw-2rem)]">
-        <DialogHeader className="border-b border-border bg-card/85 px-4 py-4 backdrop-blur sm:px-6">
+      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-6xl overflow-hidden rounded-3xl p-0 sm:w-[calc(100vw-2rem)]">
+        <DialogHeader className="border-b border-border bg-card px-5 py-5 sm:px-6">
           <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <DialogTitle className="break-words font-syne text-xl leading-tight sm:text-2xl">{product.name}</DialogTitle>
@@ -1055,33 +1055,34 @@ function ProductDetailsDialog({
           </div>
         </DialogHeader>
 
-        <div className="max-h-[calc(94vh-88px)] overflow-y-auto overflow-x-hidden">
-          <div className="grid min-w-0 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]">
-            <div className="min-w-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.16),transparent_34%),linear-gradient(135deg,hsl(var(--muted)),hsl(var(--background)))] p-4 sm:p-6 xl:sticky xl:top-0 xl:self-start">
-              <div className="overflow-hidden rounded-[2rem] border border-border/70 bg-card shadow-xl shadow-black/[0.06]">
-                <div className="relative min-h-[360px] bg-muted">
+        <div className="max-h-[calc(94vh-90px)] overflow-y-auto overflow-x-hidden p-5 sm:p-6">
+          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,0.92fr)_minmax(0,1.08fr)]">
+            <div className="min-w-0 xl:sticky xl:top-0 xl:self-start">
+              <div className="overflow-hidden rounded-3xl border border-border bg-muted">
+                <div className="relative bg-muted">
                   {productImage(product) ? (
-                    <img src={productImage(product)} alt={product.name} className="h-full max-h-[68vh] min-h-[360px] w-full object-cover" />
+                    <img src={productImage(product)} alt={product.name} className="max-h-[62vh] min-h-[320px] w-full object-cover" />
                   ) : (
-                    <div className="flex min-h-[420px] items-center justify-center">
+                    <div className="flex min-h-[360px] items-center justify-center">
                       <Package className="h-14 w-14 text-muted-foreground/30" />
                     </div>
                   )}
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent p-5 text-white">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Etapa atual</p>
-                    <p className="mt-1 font-syne text-2xl font-bold">{getPipelineStage(product)}</p>
-                  </div>
                 </div>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-3">
+              <div className="mt-4 rounded-3xl border border-border bg-card p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Etapa atual</p>
+                <p className="mt-1 font-syne text-xl font-bold text-foreground">{getPipelineStage(product)}</p>
+                <div className="mt-3"><StatusBadge status={product.status} /></div>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
                 <MetricTile label="Mídias" value={product.media_count || 0} />
                 <MetricTile label="Vídeos" value={product.videos_generated || 0} />
                 <MetricTile label="Posts" value={product.posts_published || 0} />
               </div>
             </div>
 
-            <div className="min-w-0 space-y-5 border-t border-border bg-card p-4 sm:p-6 xl:border-l xl:border-t-0">
-              <section className="rounded-3xl border border-border bg-background p-5">
+            <div className="min-w-0 space-y-5">
+              <section className="rounded-3xl border border-border bg-card p-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Resumo do anúncio</p>
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-foreground">
                   {product.description || 'Sem descrição cadastrada.'}
@@ -1108,7 +1109,7 @@ function ProductDetailsDialog({
                 <DetailBox label="Prazo" value={product.supplier_lead_time_days ? `${product.supplier_lead_time_days} dias` : 'N/A'} />
               </section>
 
-              <section className="rounded-3xl border border-border bg-background p-5">
+              <section className="rounded-3xl border border-border bg-card p-5">
                 <p className="mb-3 text-sm font-semibold text-foreground">Ações rápidas</p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Button variant="outline" className="h-11 justify-start gap-2 rounded-2xl" onClick={() => onAnalyze(product)}>
@@ -1126,7 +1127,7 @@ function ProductDetailsDialog({
                 </div>
               </section>
 
-              <section className="rounded-3xl border border-border bg-background p-5">
+              <section className="rounded-3xl border border-border bg-card p-5">
                 <p className="mb-3 text-sm font-semibold text-foreground">Links e histórico</p>
                 <InfoLine label="Link do anúncio" value={product.source_url || product.product_url || 'Não informado'} />
                 <InfoLine label="Resumo da análise" value={product.analysis_summary || 'Aguardando análise do backend'} />

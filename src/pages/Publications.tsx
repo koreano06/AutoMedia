@@ -411,20 +411,20 @@ function PublicationDialog({ post, open, onOpenChange, onStatus, onSave }: { pos
   if (!post) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-syne">Detalhes da publicação</DialogTitle></DialogHeader>
-        <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
-          <div className="overflow-hidden rounded-2xl bg-muted">{post.thumbnail_url ? <img src={post.thumbnail_url} alt="" className="aspect-square w-full object-cover" /> : <div className="flex aspect-square items-center justify-center"><ExternalLink className="h-10 w-10 text-muted-foreground/40" /></div>}</div>
+      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-6xl overflow-y-auto rounded-3xl p-5 sm:w-[calc(100vw-2rem)] sm:p-6">
+        <DialogHeader><DialogTitle className="break-words font-syne text-xl sm:text-2xl">Detalhes da publicação</DialogTitle></DialogHeader>
+        <div className="grid gap-6 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.2fr)]">
+          <div className="overflow-hidden rounded-3xl border border-border bg-muted">{post.thumbnail_url ? <img src={post.thumbnail_url} alt="" className="max-h-[62vh] min-h-[300px] w-full object-cover" /> : <div className="flex min-h-[320px] items-center justify-center"><ExternalLink className="h-10 w-10 text-muted-foreground/40" /></div>}</div>
           <div className="space-y-4">
-            <div><h2 className="font-syne text-2xl font-bold text-foreground">{post.product_name || 'Produto'}</h2><div className="mt-2 flex flex-wrap gap-2"><PlatformIcon platform={post.platform} showLabel size="sm" /><StatusBadge status={post.status} /></div></div>
+            <div><h2 className="break-words font-syne text-2xl font-bold text-foreground">{post.product_name || 'Produto'}</h2><div className="mt-2 flex flex-wrap gap-2"><PlatformIcon platform={post.platform} showLabel size="sm" /><StatusBadge status={post.status} /></div></div>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Info label="Alcance" value={displayNumber(post.engagement_reach || 0)} /><Info label="Likes" value={post.engagement_likes || 0} /><Info label="Comentários" value={post.engagement_comments || 0} /><Info label="Engaj." value={`${engagementRate(post)}%`} /></div>
-            <div><Label>Legenda</Label><Textarea value={caption} onChange={(event) => setCaption(event.target.value)} className="mt-1.5 h-32" /></div>
-            <div className="rounded-2xl border border-border p-4"><p className="font-semibold text-foreground">Histórico/logs</p><div className="mt-2 space-y-1 text-sm text-muted-foreground"><p>Criado e enviado para fluxo de publicação.</p>{post.published_at && <p>Publicado em {format(new Date(post.published_at), 'dd/MM/yyyy HH:mm')}</p>}{post.error_message && <p className="text-destructive">Erro API: {post.error_message}</p>}<p>Retries: {post.retry_count || 0}</p><p>Última sincronização: {post.last_sync_at ? format(new Date(post.last_sync_at), 'dd/MM/yyyy HH:mm') : 'Nunca'}</p></div></div>
+            <div><Label>Legenda</Label><Textarea value={caption} onChange={(event) => setCaption(event.target.value)} className="mt-1.5 h-40 rounded-2xl" /></div>
+            <div className="rounded-3xl border border-border bg-card p-4"><p className="font-semibold text-foreground">Histórico/logs</p><div className="mt-2 space-y-1 text-sm text-muted-foreground"><p>Criado e enviado para fluxo de publicação.</p>{post.published_at && <p>Publicado em {format(new Date(post.published_at), 'dd/MM/yyyy HH:mm')}</p>}{post.error_message && <p className="text-destructive">Erro API: {post.error_message}</p>}<p>Retries: {post.retry_count || 0}</p><p>Última sincronização: {post.last_sync_at ? format(new Date(post.last_sync_at), 'dd/MM/yyyy HH:mm') : 'Nunca'}</p></div></div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button variant="outline" className="flex-1" onClick={() => onSave(post, { caption })}>Salvar legenda</Button>
-              <Button variant="outline" className="flex-1" onClick={() => navigator.clipboard.writeText(post.external_url || '')}>Copiar link</Button>
-              <Button variant="outline" className="flex-1" onClick={() => post.external_url && window.open(post.external_url, '_blank')}>Ver externa</Button>
-              <Button className="flex-1" onClick={() => onStatus(post, 'publishing', 'Retry iniciado')}>Retry</Button>
+              <Button variant="outline" className="h-11 flex-1 rounded-2xl" onClick={() => onSave(post, { caption })}>Salvar legenda</Button>
+              <Button variant="outline" className="h-11 flex-1 rounded-2xl" onClick={() => navigator.clipboard.writeText(post.external_url || '')}>Copiar link</Button>
+              <Button variant="outline" className="h-11 flex-1 rounded-2xl" onClick={() => post.external_url && window.open(post.external_url, '_blank')}>Ver externa</Button>
+              <Button className="h-11 flex-1 rounded-2xl" onClick={() => onStatus(post, 'publishing', 'Retry iniciado')}>Retry</Button>
             </div>
           </div>
         </div>

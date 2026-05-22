@@ -739,19 +739,21 @@ function VideoDetailsDialog({ asset, open, onOpenChange, onStatus }: { asset: Me
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-syne">Detalhes do vídeo gerado</DialogTitle></DialogHeader>
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="overflow-hidden rounded-2xl bg-muted">
-            {asset.url ? <video src={asset.url} poster={asset.thumbnail_url} controls className="aspect-video w-full bg-black object-contain" /> : asset.thumbnail_url ? <img src={asset.thumbnail_url} alt="" className="aspect-video w-full object-cover" /> : <div className="flex aspect-video items-center justify-center"><Film className="h-10 w-10 text-muted-foreground/40" /></div>}
+      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-6xl overflow-y-auto rounded-3xl p-5 sm:w-[calc(100vw-2rem)] sm:p-6">
+        <DialogHeader>
+          <DialogTitle className="break-words font-syne text-xl sm:text-2xl">Detalhes do vídeo gerado</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-6 xl:grid-cols-[minmax(360px,1fr)_minmax(360px,0.8fr)]">
+          <div className="overflow-hidden rounded-3xl border border-border bg-muted">
+            {asset.url ? <video src={asset.url} poster={asset.thumbnail_url} controls className="max-h-[66vh] min-h-[300px] w-full bg-black object-contain" /> : asset.thumbnail_url ? <img src={asset.thumbnail_url} alt="" className="max-h-[66vh] min-h-[300px] w-full object-contain" /> : <div className="flex min-h-[340px] items-center justify-center"><Film className="h-10 w-10 text-muted-foreground/40" /></div>}
           </div>
           <div className="space-y-4">
             <div>
-        <h2 className="font-syne text-xl font-bold text-foreground sm:text-2xl">{asset.title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{asset.product_name}</p>
+              <h2 className="break-words font-syne text-xl font-bold text-foreground sm:text-2xl">{asset.title}</h2>
+              <p className="mt-1 break-words text-sm text-muted-foreground">{asset.product_name}</p>
             </div>
             <div className="flex flex-wrap gap-2"><StatusBadge status={asset.status} /><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">Score {score}%</span></div>
-            <div className="rounded-2xl border border-border p-4">
+            <div className="rounded-3xl border border-border bg-card p-4">
               <p className="mb-3 text-sm font-semibold text-foreground">Score de qualidade</p>
               <div className="space-y-3">
                 <QualityLine label="Qualidade visual" value={score} />
@@ -761,15 +763,15 @@ function VideoDetailsDialog({ asset, open, onOpenChange, onStatus }: { asset: Me
                 <QualityLine label="Risco de parecer spam" value={Math.max(100 - score, 8)} invert />
               </div>
             </div>
-            <div className="rounded-2xl border border-border p-4">
+            <div className="rounded-3xl border border-border bg-card p-4">
               <p className="mb-2 text-sm font-semibold text-foreground">Roteiro e legenda</p>
               <p className="whitespace-pre-wrap text-xs leading-5 text-muted-foreground">{asset.caption || 'Sem roteiro salvo.'}</p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              <Button variant="outline" className="gap-2" onClick={() => onStatus(asset, 'approved', 'Vídeo aprovado')}><CheckCircle className="h-4 w-4" /> Aprovar</Button>
-              <Button variant="outline" className="gap-2" onClick={() => onStatus(asset, 'rejected', 'Vídeo rejeitado')}><XCircle className="h-4 w-4" /> Rejeitar</Button>
-              <Button variant="outline" className="gap-2" onClick={() => onStatus(asset, 'generating', 'Variação enviada para geração')}><RefreshCw className="h-4 w-4" /> Criar variação</Button>
-              <Button className="gap-2" onClick={() => onStatus(asset, 'scheduled', 'Vídeo enviado para agendamento')}><Clock className="h-4 w-4" /> Agendar publicação</Button>
+              <Button variant="outline" className="h-11 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'approved', 'Vídeo aprovado')}><CheckCircle className="h-4 w-4" /> Aprovar</Button>
+              <Button variant="outline" className="h-11 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'rejected', 'Vídeo rejeitado')}><XCircle className="h-4 w-4" /> Rejeitar</Button>
+              <Button variant="outline" className="h-11 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'generating', 'Variação enviada para geração')}><RefreshCw className="h-4 w-4" /> Criar variação</Button>
+              <Button className="h-11 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'scheduled', 'Vídeo enviado para agendamento')}><Clock className="h-4 w-4" /> Agendar publicação</Button>
             </div>
           </div>
         </div>

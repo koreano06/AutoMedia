@@ -865,8 +865,8 @@ function MediaDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-7xl overflow-hidden rounded-3xl border-border/80 bg-background p-0 shadow-2xl sm:w-[calc(100vw-2rem)]">
-        <DialogHeader className="border-b border-border/80 bg-card/80 px-4 py-4 backdrop-blur sm:px-6">
+      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-6xl overflow-hidden rounded-3xl p-0 sm:w-[calc(100vw-2rem)]">
+        <DialogHeader className="border-b border-border bg-card px-5 py-5 sm:px-6">
           <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <DialogTitle className="font-syne text-xl leading-tight sm:text-2xl">{asset.title || 'Preview da mídia'}</DialogTitle>
@@ -884,18 +884,18 @@ function MediaDetailsDialog({
             Visualize a mídia selecionada, revise qualidade, detalhes técnicos e ações rápidas.
           </DialogDescription>
         </DialogHeader>
-        <div className="max-h-[calc(94vh-88px)] overflow-y-auto overflow-x-hidden">
-          <div className="grid min-w-0 xl:grid-cols-[minmax(0,1.55fr)_minmax(380px,0.45fr)]">
-            <div className="min-w-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.18),transparent_34%),linear-gradient(135deg,hsl(var(--muted)),hsl(var(--background)))] p-4 sm:p-6 xl:sticky xl:top-0 xl:self-start">
-              <div className="flex min-h-[58vh] items-center justify-center rounded-[2rem] border border-border/70 bg-black/90 p-2 shadow-inner shadow-black/30 sm:p-4">
+        <div className="max-h-[calc(94vh-90px)] overflow-y-auto overflow-x-hidden p-5 sm:p-6">
+          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,1fr)_minmax(360px,0.72fr)]">
+            <div className="min-w-0 xl:sticky xl:top-0 xl:self-start">
+              <div className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-3xl border border-border bg-muted p-2">
                 {assetPreview(asset) ? (
                   isVideoAsset(asset) && asset.url ? (
-                    <video src={asset.url} controls poster={asset.thumbnail_url} className="max-h-[72vh] min-h-[320px] w-full rounded-3xl bg-black object-contain" />
+                    <video src={asset.url} controls poster={asset.thumbnail_url} className="max-h-[66vh] min-h-[300px] w-full rounded-2xl bg-black object-contain" />
                   ) : (
-                    <img src={assetPreview(asset)} alt={asset.title || ''} className="max-h-[72vh] min-h-[320px] w-full rounded-3xl object-contain" />
+                    <img src={assetPreview(asset)} alt={asset.title || ''} className="max-h-[66vh] min-h-[300px] w-full rounded-2xl object-contain" />
                   )
                 ) : (
-                  <div className="flex min-h-[420px] items-center justify-center">
+                  <div className="flex min-h-[360px] items-center justify-center">
                     {isVideoAsset(asset) ? <Film className="h-12 w-12 text-muted-foreground/30" /> : <Image className="h-12 w-12 text-muted-foreground/30" />}
                   </div>
                 )}
@@ -909,8 +909,8 @@ function MediaDetailsDialog({
                 </Button>
               </div>
             </div>
-            <aside className="min-w-0 space-y-4 border-t border-border bg-card p-4 sm:p-6 xl:border-l xl:border-t-0">
-              <div className="rounded-3xl border border-border bg-background p-4">
+            <aside className="min-w-0 space-y-4">
+              <div className="rounded-3xl border border-border bg-card p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-foreground">Qualidade do ativo</p>
@@ -931,7 +931,7 @@ function MediaDetailsDialog({
                 <DetailBox label="Tamanho" value={asset.file_size ? `${Math.round(asset.file_size / 1024)} KB` : 'Não informado'} />
               </div>
 
-              <div className="rounded-3xl border border-border bg-background p-4">
+              <div className="rounded-3xl border border-border bg-card p-4">
                 <p className="mb-3 text-sm font-semibold text-foreground">Ações rápidas</p>
                 <div className="grid gap-2">
                   <Button size="sm" variant="outline" className="h-10 justify-start gap-2 rounded-xl" onClick={() => onStatus(asset.id, 'approved', 'Mídia aprovada')}>
@@ -955,7 +955,7 @@ function MediaDetailsDialog({
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-border bg-background p-4">
+              <div className="rounded-3xl border border-border bg-card p-4">
                 <p className="mb-3 text-sm font-semibold text-foreground">Informações e links</p>
                 <InfoLine label="Link original" value={asset.source_url || asset.url || 'Não informado'} />
                 <InfoLine label="Uso" value={asset.status === 'published' ? 'Já usada em publicação' : asset.media_asset_id ? 'Vinculada a vídeo' : 'Ainda disponível'} />
