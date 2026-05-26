@@ -899,14 +899,14 @@ function MediaDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] w-[calc(100vw-0.75rem)] max-w-4xl overflow-hidden rounded-[1.35rem] border-border bg-card p-0 text-foreground shadow-2xl sm:w-[calc(100vw-2rem)]">
-        <DialogHeader className="border-b border-border bg-[radial-gradient(circle_at_8%_0%,hsl(var(--primary)/0.18),transparent_38%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))] px-5 py-4 pr-12">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20">
+      <DialogContent className="flex !h-[94dvh] !w-[calc(100vw-0.75rem)] !max-w-none flex-col overflow-hidden rounded-t-[1.5rem] border-border bg-card p-0 text-foreground shadow-2xl sm:!h-[90dvh] sm:!w-[calc(100vw-2rem)] sm:rounded-[1.5rem] lg:!h-[min(88dvh,860px)] lg:!w-[min(92vw,1280px)] xl:!h-[min(86dvh,900px)] xl:!w-[min(88vw,1380px)]">
+        <DialogHeader className="shrink-0 border-b border-border bg-[radial-gradient(circle_at_8%_0%,hsl(var(--primary)/0.18),transparent_38%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))] px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-12">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
               {isVideoAsset(asset) ? <Film className="h-4 w-4" /> : <Image className="h-4 w-4" />}
             </div>
             <div className="min-w-0 flex-1">
-              <DialogTitle className="line-clamp-1 font-syne text-lg font-bold text-foreground">
+              <DialogTitle className="line-clamp-2 font-syne text-base font-bold leading-tight text-foreground sm:line-clamp-1 sm:text-lg">
                 {asset.title || 'Preview da mídia'}
               </DialogTitle>
               <DialogDescription className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
@@ -924,9 +924,9 @@ function MediaDetailsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid max-h-[calc(92vh-128px)] overflow-y-auto md:grid-cols-[240px_1fr] md:overflow-hidden">
-          <section className="flex flex-col items-center gap-3 border-b border-border bg-muted/35 p-5 md:border-b-0 md:border-r">
-            <div className="relative flex h-[270px] w-[190px] items-center justify-center overflow-hidden rounded-2xl border border-border bg-background shadow-xl shadow-black/10">
+        <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(560px,1.2fr)_minmax(480px,0.8fr)] lg:overflow-hidden">
+          <section className="flex min-h-[52dvh] flex-col items-center gap-3 border-b border-border bg-muted/35 p-3 sm:min-h-[620px] sm:gap-4 sm:p-5 md:p-6 lg:min-h-0 lg:border-b-0 lg:border-r">
+            <div className="relative flex min-h-[320px] w-full max-w-[720px] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background shadow-xl shadow-black/10 sm:rounded-3xl lg:min-h-0">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,hsl(var(--primary)/0.12),transparent_38%)]" />
               {preview ? (
                 isVideoAsset(asset) && asset.url ? (
@@ -940,10 +940,15 @@ function MediaDetailsDialog({
                 </div>
               )}
             </div>
-            <span className="font-syne text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-              {preview ? 'Prévia da mídia' : 'Prévia indisponível'}
-            </span>
-            <div className={cn('w-full rounded-2xl border p-3', score >= 80 ? 'border-success/20 bg-success/10' : score >= 50 ? 'border-warning/20 bg-warning/10' : 'border-destructive/20 bg-destructive/10')}>
+            <div className="flex w-full max-w-[720px] shrink-0 items-center justify-between gap-3 px-1">
+              <span className="font-syne text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                {preview ? 'Prévia da mídia' : 'Prévia indisponível'}
+              </span>
+              <span className="rounded-full bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+                {isVideoAsset(asset) ? 'Vídeo' : 'Imagem'}
+              </span>
+            </div>
+            <div className={cn('w-full max-w-[720px] shrink-0 rounded-2xl border p-3', score >= 80 ? 'border-success/20 bg-success/10' : score >= 50 ? 'border-warning/20 bg-warning/10' : 'border-destructive/20 bg-destructive/10')}>
               <div className="mb-2 flex items-center justify-between">
                 <span className={cn('text-[10px] font-semibold', score >= 80 ? 'text-success' : score >= 50 ? 'text-warning' : 'text-destructive')}>Qualidade</span>
                 <span className="font-syne text-xs font-bold text-foreground">{normalizedScore}%</span>
@@ -957,10 +962,29 @@ function MediaDetailsDialog({
             </div>
           </section>
 
-          <section className="flex min-w-0 flex-col gap-5 p-5 sm:p-6">
-            <div>
-              <p className="mb-2 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Metadados</p>
-              <div className="grid grid-cols-2 gap-2">
+          <section className="flex min-h-0 min-w-0 flex-col gap-4 p-4 sm:gap-5 sm:p-6 lg:overflow-hidden">
+            <div className={cn('shrink-0 rounded-2xl border p-4 sm:rounded-3xl', score >= 80 ? 'border-success/20 bg-success/10' : score >= 50 ? 'border-warning/20 bg-warning/10' : 'border-destructive/20 bg-destructive/10')}>
+              <div className="flex items-center justify-between gap-3 sm:gap-4">
+                <div className="min-w-0">
+                  <p className="font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Qualidade do ativo</p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{getQualityLabel(score)}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{reviewMessage}</p>
+                </div>
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-background/80 font-syne text-lg font-bold text-foreground shadow-sm sm:h-16 sm:w-16 sm:text-xl">
+                  {normalizedScore}%
+                </div>
+              </div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-background/70">
+                <div
+                  className={cn('h-full rounded-full transition-all', score >= 80 ? 'bg-success' : score >= 50 ? 'bg-warning' : 'bg-gradient-to-r from-destructive to-primary')}
+                  style={{ width: `${normalizedScore}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="shrink-0">
+              <p className="mb-3 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Metadados</p>
+              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:gap-3">
                 <PreviewMetaBox label="Tipo" value={asset.type?.replace('_', ' ') || 'mídia'} />
                 <PreviewMetaBox label="Origem" value={asset.source || 'Não informada'} />
                 <PreviewMetaBox label="Duração" value={asset.duration ? `${asset.duration}s` : 'Não informada'} muted={!asset.duration} />
@@ -968,34 +992,34 @@ function MediaDetailsDialog({
               </div>
             </div>
 
-            <div>
-              <p className="mb-2 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Ações</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Button className="h-10 gap-2 rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20" onClick={() => asset.url && window.open(asset.url, '_blank')}>
+            <div className="shrink-0">
+              <p className="mb-3 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Ações</p>
+              <div className="grid gap-2 min-[420px]:grid-cols-2 sm:gap-3">
+                <Button className="h-12 gap-2 rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20" onClick={() => asset.url && window.open(asset.url, '_blank')}>
                   <Download className="h-3.5 w-3.5" /> Abrir mídia
                 </Button>
-                <Button variant="outline" className="h-10 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset.id, 'approved', 'Mídia aprovada')}>
+                <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset.id, 'approved', 'Mídia aprovada')}>
                   <CheckCircle className="h-3.5 w-3.5" /> Aprovar
                 </Button>
-                <Button variant="outline" className="h-10 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset.id, 'generating', 'Mídia enviada para vídeo')}>
+                <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset.id, 'generating', 'Mídia enviada para vídeo')}>
                   <Film className="h-3.5 w-3.5" /> Usar em vídeo
                 </Button>
-                <Button variant="outline" className="h-10 gap-2 rounded-2xl bg-card" onClick={() => onCopyLink(asset)}>
+                <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => onCopyLink(asset)}>
                   <Copy className="h-3.5 w-3.5" /> Copiar link
                 </Button>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-muted/25 p-4">
+            <div className="min-h-[150px] rounded-2xl border border-border bg-muted/25 p-4 sm:min-h-[170px] sm:rounded-3xl lg:flex-1">
               <p className="font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Legenda</p>
-              <p className="mt-2 line-clamp-4 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+              <p className="mt-2 line-clamp-7 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
                 {asset.caption || 'Sem legenda gerada'}
               </p>
             </div>
           </section>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/30 px-5 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-3 sm:px-5">
           <span className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
             <XCircle className={cn('h-3.5 w-3.5 shrink-0', score < 50 ? 'text-destructive' : score < 80 ? 'text-warning' : 'text-success')} />
             <span className="truncate">{reviewMessage}</span>
