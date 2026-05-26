@@ -245,7 +245,7 @@ export default function Schedule() {
   return (
     <div>
       <TopBar title="Agendamento" subtitle="Calendário editorial automático e controle de publicações" />
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Metric label="Hoje" value={stats.today} icon={CalendarClock} tone="primary" />
           <Metric label="Semana" value={stats.week} icon={Calendar} />

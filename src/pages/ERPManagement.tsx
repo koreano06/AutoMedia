@@ -133,7 +133,7 @@ export default function ERPManagement() {
   return (
     <div>
       <TopBar title="Gestão ERP" subtitle="Controle comercial, publicações, estoque e finanças dos produtos" />
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         {error && <ErrorState onRetry={load} />}
 
         <section className="rounded-3xl border border-border bg-card p-5 sm:p-6">

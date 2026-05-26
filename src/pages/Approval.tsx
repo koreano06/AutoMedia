@@ -381,7 +381,7 @@ export default function Approval() {
   return (
     <div>
       <TopBar title="Aprovação" subtitle={`${stats.pending} conteúdo(s) aguardando revisão`} />
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Metric label="Pendentes" value={stats.pending} icon={Clock} tone="primary" />
           <Metric label="Aprovados hoje" value={stats.approvedToday} icon={CheckCircle} tone="success" />

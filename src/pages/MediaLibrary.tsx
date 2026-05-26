@@ -25,7 +25,6 @@ import {
   MoreHorizontal,
   Play,
   Search,
-  Sparkles,
   Tags,
   Trash2,
   Upload,
@@ -318,57 +317,83 @@ export default function MediaLibrary() {
   return (
     <div>
       <TopBar title="Biblioteca de Mídia" subtitle="Central de ativos criativos, revisão e preparação para IA" />
-      <div className="space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-          <MediaMetric label="Total" value={stats.total} icon={Layers3} />
-          <MediaMetric label="Imagens" value={stats.images} icon={Image} tone="primary" />
-          <MediaMetric label="Vídeos" value={stats.videos} icon={Film} tone="accent" />
-          <MediaMetric label="Em revisão" value={stats.review} icon={Eye} tone="warning" />
-          <MediaMetric label="Aprovadas" value={stats.approved} icon={CheckCircle} tone="success" />
-          <MediaMetric label="Rejeitadas" value={stats.rejected} icon={XCircle} tone="destructive" />
-        </div>
+      <div className="mobile-page-pad page-stack">
+        <section className="responsive-card overflow-hidden">
+          <div className="grid gap-0 xl:grid-cols-[1fr_420px]">
+            <div className="relative overflow-hidden p-4 sm:p-5 lg:p-6">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,hsl(var(--primary)/0.14),transparent_32%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))]" />
+              <div className="relative">
+                <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  Central criativa
+                </span>
+                <h2 className="balanced-title mt-4 max-w-2xl font-syne text-xl font-bold leading-tight text-foreground sm:text-2xl lg:text-3xl">
+                  Organize, revise e escolha os melhores ativos para seus vídeos.
+                </h2>
+                <p className="pretty-copy mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  Esta biblioteca junta imagens, vídeos coletados e criativos gerados por IA. Use filtros, seleção em massa e preview para preparar o material antes da publicação.
+                </p>
+                <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+                  <Button className="gap-2 rounded-2xl" onClick={() => setShowUpload(true)}>
+                    <Upload className="h-4 w-4" /> Importar mídia
+                  </Button>
+                  <Button variant="outline" className="gap-2 rounded-2xl" onClick={() => setView('grouped')}>
+                    <FolderKanban className="h-4 w-4" /> Ver por anúncio
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-px bg-border xl:grid-cols-2">
+              <MediaMetric label="Total" value={stats.total} icon={Layers3} />
+              <MediaMetric label="Imagens" value={stats.images} icon={Image} tone="primary" />
+              <MediaMetric label="Vídeos" value={stats.videos} icon={Film} tone="accent" />
+              <MediaMetric label="Em revisão" value={stats.review} icon={Eye} tone="warning" />
+              <MediaMetric label="Aprovadas" value={stats.approved} icon={CheckCircle} tone="success" />
+              <MediaMetric label="Rejeitadas" value={stats.rejected} icon={XCircle} tone="destructive" />
+            </div>
+          </div>
+        </section>
 
-        <div className="rounded-2xl border border-border bg-card p-4">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="relative w-full xl:max-w-sm">
+        <div className="responsive-card responsive-card-pad">
+          <div className="grid gap-3 xl:grid-cols-[minmax(260px,1fr)_auto] xl:items-start">
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por produto, título, origem, status..."
-                className="pl-9"
+                placeholder="Buscar por anúncio, título, origem, status..."
+                className="h-11 rounded-2xl pl-9"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 xl:flex">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:flex">
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="h-10 xl:w-44"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl xl:w-44"><SelectValue /></SelectTrigger>
                 <SelectContent>{typeOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-10 xl:w-44"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl xl:w-44"><SelectValue /></SelectTrigger>
                 <SelectContent>{statusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
               <Select value={productFilter} onValueChange={setProductFilter}>
-                <SelectTrigger className="h-10 xl:w-44"><SelectValue placeholder="Produto" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl xl:w-44"><SelectValue placeholder="Anúncio" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos produtos</SelectItem>
+                  <SelectItem value="all">Todos anúncios</SelectItem>
                   {productOptions.map((product) => <SelectItem key={product} value={product}>{product}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="h-10 xl:w-40"><SelectValue placeholder="Origem" /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl xl:w-40"><SelectValue placeholder="Origem" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas origens</SelectItem>
                   {sourceOptions.map((source) => <SelectItem key={source} value={source}>{source}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={qualityFilter} onValueChange={setQualityFilter}>
-                <SelectTrigger className="h-10 xl:w-36"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl xl:w-36"><SelectValue /></SelectTrigger>
                 <SelectContent>{qualityOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-10 xl:w-40"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-11 rounded-2xl xl:w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>{sortOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -387,19 +412,19 @@ export default function MediaLibrary() {
             <div className="flex flex-wrap items-center gap-2">
               {selectedIds.length > 0 && (
                 <>
-                  <Button size="sm" variant="outline" className="gap-2" onClick={() => handleBulkStatus('approved', 'Mídias aprovadas')}>
+                  <Button size="sm" variant="outline" className="min-w-0 gap-2 rounded-xl" onClick={() => handleBulkStatus('approved', 'Mídias aprovadas')}>
                     <CheckCircle className="h-4 w-4" /> Aprovar
                   </Button>
-                  <Button size="sm" variant="outline" className="gap-2" onClick={() => handleBulkStatus('rejected', 'Mídias rejeitadas')}>
+                  <Button size="sm" variant="outline" className="min-w-0 gap-2 rounded-xl" onClick={() => handleBulkStatus('rejected', 'Mídias rejeitadas')}>
                     <XCircle className="h-4 w-4" /> Rejeitar
                   </Button>
-                  <Button size="sm" variant="outline" className="gap-2" onClick={() => handleBulkStatus('generating', 'Mídias enviadas para geração de vídeo')}>
+                  <Button size="sm" variant="outline" className="min-w-0 gap-2 rounded-xl" onClick={() => handleBulkStatus('generating', 'Mídias enviadas para geração de vídeo')}>
                     <Film className="h-4 w-4" /> Enviar para vídeo
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])}>Limpar</Button>
                 </>
               )}
-              <div className="flex rounded-xl border border-border bg-muted p-1">
+              <div className="flex rounded-2xl border border-border bg-muted p-1">
                 {[
                   { key: 'grid', icon: Grid2X2, label: 'Grade' },
                   { key: 'list', icon: LayoutList, label: 'Lista' },
@@ -416,7 +441,7 @@ export default function MediaLibrary() {
                   </button>
                 ))}
               </div>
-              <Button size="sm" className="gap-2" onClick={() => setShowUpload(true)}>
+              <Button size="sm" className="gap-2 rounded-xl" onClick={() => setShowUpload(true)}>
                 <Upload className="h-4 w-4" /> Importar mídia
               </Button>
             </div>
@@ -430,7 +455,7 @@ export default function MediaLibrary() {
         ) : filtered.length === 0 ? (
           <EmptyLibrary onUpload={() => setShowUpload(true)} />
         ) : view === 'grid' ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="responsive-grid">
             {filtered.map((asset) => (
               <MediaCard
                 key={asset.id}
@@ -583,7 +608,7 @@ function MediaMetric({
   }[tone];
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="bg-card p-4">
       <div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}>
         <Icon className="h-4 w-4" />
       </div>
@@ -611,8 +636,8 @@ function MediaCard({
   const score = getQualityScore(asset);
 
   return (
-    <div className={cn('group overflow-hidden rounded-2xl border bg-card transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/[0.06]', selected ? 'border-primary ring-2 ring-primary/15' : 'border-border')}>
-      <div className="relative aspect-square overflow-hidden bg-muted">
+    <div className={cn('group overflow-hidden rounded-3xl border bg-card shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/[0.07]', selected ? 'border-primary ring-2 ring-primary/15' : 'border-border')}>
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {assetPreview(asset) ? (
           <img src={assetPreview(asset)} alt={asset.title || ''} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
         ) : (
@@ -633,14 +658,14 @@ function MediaCard({
         {asset.type === 'generated_video' && (
           <span className="absolute right-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">IA</span>
         )}
-        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-          <Button size="sm" className="h-8 flex-1 gap-1" onClick={() => onOpen(asset)}>
+        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+          <Button size="sm" className="h-8 flex-1 gap-1 rounded-xl" onClick={() => onOpen(asset)}>
             <Eye className="h-3.5 w-3.5" /> Ver
           </Button>
           <AssetMenu asset={asset} onCopyLink={onCopyLink} onOpen={onOpen} onStatus={onStatus} />
         </div>
       </div>
-      <div className="p-3">
+      <div className="p-4">
         <div className="flex items-start justify-between gap-2">
           <button type="button" onClick={() => onOpen(asset)} className="min-w-0 flex-1 text-left">
             <p className="truncate text-sm font-semibold text-foreground">{asset.title || 'Sem título'}</p>
@@ -648,7 +673,7 @@ function MediaCard({
           </button>
           <StatusBadge status={asset.status} className="text-[10px]" />
         </div>
-        <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3">
           <span className={cn('rounded-full px-2 py-1 text-[10px] font-medium', getQualityTone(score))}>{getQualityLabel(score)}</span>
           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{asset.type?.replace('_', ' ') || 'mídia'}</span>
         </div>
@@ -670,7 +695,7 @@ function AssetMenu({
 }) {
   return (
     <div className="relative">
-      <Button size="icon" variant="secondary" className="h-8 w-8" onClick={(event) => event.stopPropagation()}>
+      <Button size="icon" variant="secondary" className="h-8 w-8 rounded-xl" onClick={(event) => event.stopPropagation()}>
         <MoreHorizontal className="h-4 w-4" />
       </Button>
       <div className="absolute bottom-9 right-0 z-20 hidden w-52 overflow-hidden rounded-xl border border-border bg-popover p-1 shadow-lg group-hover:block">
@@ -815,7 +840,7 @@ function GroupedMedia(props: {
   return (
     <div className="space-y-4">
       {Object.entries(props.groups).map(([productName, assets]) => (
-        <section key={productName} className="rounded-2xl border border-border bg-card p-4">
+        <section key={productName} className="rounded-3xl border border-border bg-card p-4 sm:p-5">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="font-syne font-bold text-foreground">{productName}</h3>
@@ -827,7 +852,7 @@ function GroupedMedia(props: {
               <Tags className="h-4 w-4" /> Selecionar grupo
             </Button>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {assets.map((asset) => (
               <MediaCard
                 key={asset.id}
@@ -862,107 +887,122 @@ function MediaDetailsDialog({
   if (!asset) return null;
 
   const score = getQualityScore(asset);
+  const preview = assetPreview(asset);
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
+  const shortId = String(asset.id || '').slice(0, 10) || 'sem_id';
+  const reviewMessage =
+    score < 50
+      ? 'Revisar antes de publicar - qualidade baixa detectada'
+      : score < 80
+        ? 'Bom para testes - vale revisar antes do disparo'
+        : 'Pronto para divulgação - ativo com boa qualidade';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-6xl overflow-hidden rounded-3xl p-0 sm:w-[calc(100vw-2rem)]">
-        <DialogHeader className="border-b border-border bg-card px-5 py-5 sm:px-6">
-          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <DialogTitle className="font-syne text-xl leading-tight sm:text-2xl">{asset.title || 'Preview da mídia'}</DialogTitle>
-              <DialogDescription className="mt-1 break-words text-sm text-muted-foreground">
+      <DialogContent className="max-h-[92vh] w-[calc(100vw-0.75rem)] max-w-4xl overflow-hidden rounded-[1.35rem] border-border bg-card p-0 text-foreground shadow-2xl sm:w-[calc(100vw-2rem)]">
+        <DialogHeader className="border-b border-border bg-[radial-gradient(circle_at_8%_0%,hsl(var(--primary)/0.18),transparent_38%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))] px-5 py-4 pr-12">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20">
+              {isVideoAsset(asset) ? <Film className="h-4 w-4" /> : <Image className="h-4 w-4" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="line-clamp-1 font-syne text-lg font-bold text-foreground">
+                {asset.title || 'Preview da mídia'}
+              </DialogTitle>
+              <DialogDescription className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                 {asset.product_name || 'Sem anúncio vinculado'}
               </DialogDescription>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
               <StatusBadge status={asset.status} />
-              <span className={cn('rounded-full px-3 py-1.5 text-xs font-semibold', getQualityTone(score))}>{getQualityLabel(score)} · {score}%</span>
-              {asset.type === 'generated_video' && <span className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">Gerado com IA</span>}
+              <span className={cn('rounded-full px-2.5 py-1 text-[10px] font-semibold', getQualityTone(score))}>{getQualityLabel(score)} · {normalizedScore}%</span>
+              {asset.type === 'generated_video' && <span className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-semibold text-primary">IA</span>}
             </div>
           </div>
           <DialogDescription className="sr-only">
             Visualize a mídia selecionada, revise qualidade, detalhes técnicos e ações rápidas.
           </DialogDescription>
         </DialogHeader>
-        <div className="max-h-[calc(94vh-90px)] overflow-y-auto overflow-x-hidden p-5 sm:p-6">
-          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,1fr)_minmax(360px,0.72fr)]">
-            <div className="min-w-0 xl:sticky xl:top-0 xl:self-start">
-              <div className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-3xl border border-border bg-muted p-2">
-                {assetPreview(asset) ? (
-                  isVideoAsset(asset) && asset.url ? (
-                    <video src={asset.url} controls poster={asset.thumbnail_url} className="max-h-[66vh] min-h-[300px] w-full rounded-2xl bg-black object-contain" />
-                  ) : (
-                    <img src={assetPreview(asset)} alt={asset.title || ''} className="max-h-[66vh] min-h-[300px] w-full rounded-2xl object-contain" />
-                  )
+
+        <div className="grid max-h-[calc(92vh-128px)] overflow-y-auto md:grid-cols-[240px_1fr] md:overflow-hidden">
+          <section className="flex flex-col items-center gap-3 border-b border-border bg-muted/35 p-5 md:border-b-0 md:border-r">
+            <div className="relative flex h-[270px] w-[190px] items-center justify-center overflow-hidden rounded-2xl border border-border bg-background shadow-xl shadow-black/10">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,hsl(var(--primary)/0.12),transparent_38%)]" />
+              {preview ? (
+                isVideoAsset(asset) && asset.url ? (
+                  <video src={asset.url} controls poster={asset.thumbnail_url} className="relative h-full w-full bg-black object-contain" />
                 ) : (
-                  <div className="flex min-h-[360px] items-center justify-center">
-                    {isVideoAsset(asset) ? <Film className="h-12 w-12 text-muted-foreground/30" /> : <Image className="h-12 w-12 text-muted-foreground/30" />}
-                  </div>
-                )}
+                  <img src={preview} alt={asset.title || ''} className="relative h-full w-full object-cover" />
+                )
+              ) : (
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-border bg-muted">
+                  <Play className="ml-0.5 h-5 w-5 fill-muted-foreground/25 text-muted-foreground/25" />
+                </div>
+              )}
+            </div>
+            <span className="font-syne text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+              {preview ? 'Prévia da mídia' : 'Prévia indisponível'}
+            </span>
+            <div className={cn('w-full rounded-2xl border p-3', score >= 80 ? 'border-success/20 bg-success/10' : score >= 50 ? 'border-warning/20 bg-warning/10' : 'border-destructive/20 bg-destructive/10')}>
+              <div className="mb-2 flex items-center justify-between">
+                <span className={cn('text-[10px] font-semibold', score >= 80 ? 'text-success' : score >= 50 ? 'text-warning' : 'text-destructive')}>Qualidade</span>
+                <span className="font-syne text-xs font-bold text-foreground">{normalizedScore}%</span>
               </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                <Button variant="outline" className="h-11 gap-2 rounded-2xl bg-background/90" onClick={() => onCopyLink(asset)}>
-                  <Copy className="h-4 w-4" /> Copiar link
+              <div className="h-1.5 overflow-hidden rounded-full bg-background/70">
+                <div
+                  className={cn('h-full rounded-full transition-all', score >= 80 ? 'bg-success' : score >= 50 ? 'bg-warning' : 'bg-gradient-to-r from-destructive to-primary')}
+                  style={{ width: `${normalizedScore}%` }}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="flex min-w-0 flex-col gap-5 p-5 sm:p-6">
+            <div>
+              <p className="mb-2 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Metadados</p>
+              <div className="grid grid-cols-2 gap-2">
+                <PreviewMetaBox label="Tipo" value={asset.type?.replace('_', ' ') || 'mídia'} />
+                <PreviewMetaBox label="Origem" value={asset.source || 'Não informada'} />
+                <PreviewMetaBox label="Duração" value={asset.duration ? `${asset.duration}s` : 'Não informada'} muted={!asset.duration} />
+                <PreviewMetaBox label="Tamanho" value={asset.file_size ? `${Math.round(asset.file_size / 1024)} KB` : 'Não informado'} muted={!asset.file_size} />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Ações</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button className="h-10 gap-2 rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20" onClick={() => asset.url && window.open(asset.url, '_blank')}>
+                  <Download className="h-3.5 w-3.5" /> Abrir mídia
                 </Button>
-                <Button className="h-11 gap-2 rounded-2xl" onClick={() => asset.url && window.open(asset.url, '_blank')}>
-                  <Download className="h-4 w-4" /> Abrir mídia
+                <Button variant="outline" className="h-10 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset.id, 'approved', 'Mídia aprovada')}>
+                  <CheckCircle className="h-3.5 w-3.5" /> Aprovar
+                </Button>
+                <Button variant="outline" className="h-10 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset.id, 'generating', 'Mídia enviada para vídeo')}>
+                  <Film className="h-3.5 w-3.5" /> Usar em vídeo
+                </Button>
+                <Button variant="outline" className="h-10 gap-2 rounded-2xl bg-card" onClick={() => onCopyLink(asset)}>
+                  <Copy className="h-3.5 w-3.5" /> Copiar link
                 </Button>
               </div>
             </div>
-            <aside className="min-w-0 space-y-4">
-              <div className="rounded-3xl border border-border bg-card p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Qualidade do ativo</p>
-                    <p className="text-xs text-muted-foreground">Leitura rápida para decidir uso</p>
-                  </div>
-                  <span className="font-syne text-2xl font-bold text-foreground">{score}%</span>
-                </div>
-                <Progress value={score} className="h-2" />
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                  {score < 50 ? 'Recomendado revisar resolução, enquadramento ou nitidez.' : score < 80 ? 'Boa para testes, mas pode melhorar antes de publicar.' : 'Ativo forte para criativos e publicações.'}
-                </p>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <DetailBox label="Tipo" value={asset.type?.replace('_', ' ') || 'mídia'} />
-                <DetailBox label="Origem" value={asset.source || 'Não informada'} />
-                <DetailBox label="Duração" value={asset.duration ? `${asset.duration}s` : 'Não informada'} />
-                <DetailBox label="Tamanho" value={asset.file_size ? `${Math.round(asset.file_size / 1024)} KB` : 'Não informado'} />
-              </div>
+            <div className="rounded-2xl border border-border bg-muted/25 p-4">
+              <p className="font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Legenda</p>
+              <p className="mt-2 line-clamp-4 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
+                {asset.caption || 'Sem legenda gerada'}
+              </p>
+            </div>
+          </section>
+        </div>
 
-              <div className="rounded-3xl border border-border bg-card p-4">
-                <p className="mb-3 text-sm font-semibold text-foreground">Ações rápidas</p>
-                <div className="grid gap-2">
-                  <Button size="sm" variant="outline" className="h-10 justify-start gap-2 rounded-xl" onClick={() => onStatus(asset.id, 'approved', 'Mídia aprovada')}>
-                    <CheckCircle className="h-4 w-4" /> Aprovar
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-10 justify-start gap-2 rounded-xl" onClick={() => onStatus(asset.id, 'rejected', 'Mídia rejeitada')}>
-                    <XCircle className="h-4 w-4" /> Rejeitar
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-10 justify-start gap-2 rounded-xl" onClick={() => onStatus(asset.id, 'generating', 'Mídia enviada para vídeo')}>
-                    <Film className="h-4 w-4" /> Usar para vídeo
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-10 justify-start gap-2 rounded-xl" onClick={() => onStatus(asset.id, 'processing', 'Legenda enviada para geração')}>
-                    <Sparkles className="h-4 w-4" /> Criar legenda
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-10 justify-start gap-2 rounded-xl" onClick={() => onStatus(asset.id, 'processing', 'Remoção de fundo preparada')}>
-                    <Wand2 className="h-4 w-4" /> Remover fundo
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-10 justify-start gap-2 rounded-xl" onClick={() => onStatus(asset.id, 'processing', 'Variações enviadas para IA')}>
-                    <Bot className="h-4 w-4" /> Gerar variações
-                  </Button>
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-border bg-card p-4">
-                <p className="mb-3 text-sm font-semibold text-foreground">Informações e links</p>
-                <InfoLine label="Link original" value={asset.source_url || asset.url || 'Não informado'} />
-                <InfoLine label="Uso" value={asset.status === 'published' ? 'Já usada em publicação' : asset.media_asset_id ? 'Vinculada a vídeo' : 'Ainda disponível'} />
-                <InfoLine label="Legenda" value={asset.caption || 'Sem legenda gerada'} />
-              </div>
-            </aside>
-          </div>
+        <div className="flex items-center justify-between gap-3 border-t border-border bg-muted/30 px-5 py-3">
+          <span className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
+            <XCircle className={cn('h-3.5 w-3.5 shrink-0', score < 50 ? 'text-destructive' : score < 80 ? 'text-warning' : 'text-success')} />
+            <span className="truncate">{reviewMessage}</span>
+          </span>
+          <span className="shrink-0 rounded-lg border border-border bg-background px-2 py-1 font-mono text-[10px] text-muted-foreground">
+            {shortId}
+          </span>
         </div>
       </DialogContent>
     </Dialog>
@@ -995,20 +1035,55 @@ function QualityScore({ score }: { score: number }) {
   );
 }
 
-function DetailBox({ label, value }: { label: string; value: string }) {
+function QualityRing({ score }: { score: number }) {
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
+  const visibleScore = normalizedScore === 0 ? 3 : normalizedScore;
+  const color = normalizedScore >= 80 ? 'hsl(var(--success))' : normalizedScore >= 50 ? 'hsl(var(--warning))' : 'hsl(var(--destructive))';
+
   return (
-    <div className="min-w-0 rounded-2xl border border-border bg-muted/25 p-3">
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 break-words text-sm font-semibold text-foreground">{value}</p>
+    <div
+      className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full p-[3px] shadow-sm"
+      style={{
+        background: `conic-gradient(${color} ${visibleScore * 3.6}deg, hsl(var(--border)) ${visibleScore * 3.6}deg)`,
+      }}
+    >
+      <div className="flex h-full w-full items-center justify-center rounded-full bg-card shadow-inner">
+        <div className="text-center">
+          <p className="font-syne text-lg font-bold leading-none text-foreground">{normalizedScore}%</p>
+          <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">score</p>
+        </div>
+      </div>
+      <span
+        className="absolute inset-0 rounded-full opacity-20 blur-md"
+        style={{ backgroundColor: color }}
+      />
     </div>
   );
 }
 
-function InfoLine({ label, value }: { label: string; value: string }) {
+function PreviewMetaBox({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className="border-b border-border py-2 first:pt-0 last:border-b-0 last:pb-0">
+    <div className="min-w-0 rounded-2xl border border-border bg-muted/25 px-3 py-3 transition-colors hover:border-primary/30 hover:bg-muted/40">
+      <p className="font-syne text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+      <p className={cn('mt-1 line-clamp-1 font-syne text-xs font-semibold', muted ? 'text-muted-foreground' : 'text-foreground')}>{value}</p>
+    </div>
+  );
+}
+
+function DetailBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-border bg-muted/20 p-3">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 line-clamp-2 break-words text-sm font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function InfoLine({ label, value, compact }: { label: string; value: string; compact?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-border bg-background/70 p-3">
       <p className="text-xs font-medium text-foreground">{label}</p>
-      <p className="mt-0.5 whitespace-pre-wrap break-all text-xs leading-5 text-muted-foreground">{value}</p>
+      <p className={cn('mt-1 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground', compact && 'line-clamp-2')}>{value}</p>
     </div>
   );
 }

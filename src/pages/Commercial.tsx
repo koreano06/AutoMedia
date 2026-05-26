@@ -100,7 +100,7 @@ export default function Commercial() {
   return (
     <div>
       <TopBar title="Comercial" subtitle="ERP leve: estoque, margem, fornecedores, leads e alertas comerciais" />
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         {error && <ErrorState onRetry={load} />}
 
         <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 md:flex-row md:items-center md:justify-between">

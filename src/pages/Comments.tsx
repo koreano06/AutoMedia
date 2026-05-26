@@ -182,7 +182,7 @@ export default function Comments() {
   return (
     <div>
       <TopBar title="Comentários" subtitle="Central de engajamento, intenção de compra e respostas automáticas" />
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Metric label="Total" value={stats.total} icon={MessageCircle} tone="primary" />
           <Metric label="Intenção" value={stats.purchase} icon={ShoppingBag} tone="warning" />

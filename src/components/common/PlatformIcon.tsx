@@ -27,7 +27,7 @@ export default function PlatformIcon({ platform = "", size = "md", showLabel = f
       <div className={cn("rounded-lg flex items-center justify-center font-bold text-white flex-shrink-0", config.color, sizeClass)}>
         {config.char}
       </div>
-      {showLabel && <span className="text-sm font-medium text-foreground">{config.label}</span>}
+      {showLabel && <span className="min-w-0 truncate text-sm font-medium text-foreground">{config.label}</span>}
     </div>
   );
 }

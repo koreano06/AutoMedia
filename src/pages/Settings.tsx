@@ -109,7 +109,7 @@ export default function Settings() {
   return (
     <div>
       <TopBar title="Configurações" subtitle="Preferências de automação e operação" />
-      <div className="max-w-3xl space-y-6 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack max-w-3xl">
         <section className="rounded-3xl border border-border bg-card p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">

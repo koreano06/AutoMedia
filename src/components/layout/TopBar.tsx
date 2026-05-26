@@ -26,10 +26,10 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
   return (
     <>
     <header className="fixed left-0 right-0 top-0 z-50 border-b border-border/80 bg-card/90 shadow-sm shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 md:left-64">
-      <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 sm:min-h-16 sm:gap-4 sm:px-6 sm:py-3">
+      <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 sm:min-h-16 sm:gap-4 sm:px-5 sm:py-3 lg:px-6">
         <div className="min-w-0 flex-1">
-          <h1 className="truncate font-syne text-[15px] font-bold leading-tight text-foreground sm:text-lg">{title}</h1>
-          {subtitle && <p className="max-w-[46vw] truncate text-[11px] text-muted-foreground sm:max-w-none sm:text-xs">{subtitle}</p>}
+          <h1 className="line-clamp-1 font-syne text-[15px] font-bold leading-tight text-foreground sm:text-lg lg:text-xl">{title}</h1>
+          {subtitle && <p className="line-clamp-1 max-w-[52vw] text-[11px] leading-4 text-muted-foreground sm:max-w-none sm:text-xs">{subtitle}</p>}
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-2 md:gap-3">

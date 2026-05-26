@@ -102,7 +102,7 @@ export default function MarketplaceAds() {
   return (
     <div>
       <TopBar title="Anúncios" subtitle="Crie e publique ofertas em marketplaces, separado das campanhas de vídeo" />
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         {error && <ErrorState onRetry={load} />}
 
         <section className="overflow-hidden rounded-3xl border border-border bg-card">

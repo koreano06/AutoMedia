@@ -379,7 +379,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
   return (
     <div>
       <TopBar title="Geração de Vídeos" subtitle="Transforme anúncios prontos em roteiros, criativos e vídeos para redes sociais" />
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <StudioMetric label="Vídeos" value={stats.total} icon={Film} />
           <StudioMetric label="Em geração" value={stats.generating} icon={Clock} tone="primary" />

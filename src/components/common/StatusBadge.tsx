@@ -29,9 +29,9 @@ type StatusBadgeProps = {
 export default function StatusBadge({ status = "draft", className }: StatusBadgeProps) {
   const config = statusConfig[status] || { label: status, class: "bg-muted text-muted-foreground border-border" };
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border", config.class, className)}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-      {config.label}
+    <span className={cn("inline-flex max-w-full shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium leading-none", config.class, className)}>
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current opacity-70" />
+      <span className="truncate">{config.label}</span>
     </span>
   );
 }

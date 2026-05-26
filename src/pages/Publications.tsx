@@ -222,7 +222,7 @@ export default function Publications() {
   return (
     <div>
       <TopBar title="Publicações" subtitle="Centro de controle pós-publicação e performance" />
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <Metric label="Publicados" value={stats.published} icon={ExternalLink} tone="primary" />
           <Metric label="Agendados" value={stats.scheduled} icon={Calendar} />

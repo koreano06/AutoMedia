@@ -261,7 +261,7 @@ export default function Integrations() {
   return (
     <div>
       <TopBar title="Integrações" subtitle="Conecte suas redes para publicar e responder automaticamente" />
-      <div className="space-y-6 p-4 sm:p-6">
+      <div className="mobile-page-pad page-stack">
         <section className="rounded-3xl border border-border bg-card p-5 sm:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
