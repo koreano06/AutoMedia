@@ -739,21 +739,23 @@ function VideoDetailsDialog({ asset, open, onOpenChange, onStatus }: { asset: Me
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-6xl overflow-y-auto rounded-3xl p-5 sm:w-[calc(100vw-2rem)] sm:p-6">
+      <DialogContent className="max-h-[90vh] w-[calc(100vw-1rem)] max-w-5xl overflow-hidden rounded-3xl p-0 sm:w-[calc(100vw-2rem)]">
         <DialogHeader>
-          <DialogTitle className="break-words font-syne text-xl sm:text-2xl">Detalhes do vídeo gerado</DialogTitle>
+          <DialogTitle className="border-b border-border px-5 py-4 font-syne text-lg sm:px-6 sm:text-xl">Detalhes do vídeo gerado</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-6 xl:grid-cols-[minmax(360px,1fr)_minmax(360px,0.8fr)]">
-          <div className="overflow-hidden rounded-3xl border border-border bg-muted">
-            {asset.url ? <video src={asset.url} poster={asset.thumbnail_url} controls className="max-h-[66vh] min-h-[300px] w-full bg-black object-contain" /> : asset.thumbnail_url ? <img src={asset.thumbnail_url} alt="" className="max-h-[66vh] min-h-[300px] w-full object-contain" /> : <div className="flex min-h-[340px] items-center justify-center"><Film className="h-10 w-10 text-muted-foreground/40" /></div>}
+        <div className="grid max-h-[calc(90vh-72px)] min-w-0 gap-0 overflow-y-auto overflow-x-hidden lg:grid-cols-[minmax(0,0.95fr)_minmax(340px,0.75fr)]">
+          <div className="min-w-0 border-b border-border bg-muted/40 p-4 sm:p-5 lg:border-b-0 lg:border-r">
+            <div className="mx-auto max-w-xl overflow-hidden rounded-2xl border border-border bg-background">
+              {asset.url ? <video src={asset.url} poster={asset.thumbnail_url} controls className="max-h-[62vh] min-h-[260px] w-full bg-black object-contain" /> : asset.thumbnail_url ? <img src={asset.thumbnail_url} alt="" className="max-h-[62vh] min-h-[260px] w-full object-contain" /> : <div className="flex min-h-[300px] items-center justify-center"><Film className="h-10 w-10 text-muted-foreground/40" /></div>}
+            </div>
           </div>
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4 p-4 sm:p-5">
             <div>
-              <h2 className="break-words font-syne text-xl font-bold text-foreground sm:text-2xl">{asset.title}</h2>
+              <h2 className="break-words font-syne text-lg font-bold leading-tight text-foreground sm:text-xl">{asset.title}</h2>
               <p className="mt-1 break-words text-sm text-muted-foreground">{asset.product_name}</p>
             </div>
             <div className="flex flex-wrap gap-2"><StatusBadge status={asset.status} /><span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">Score {score}%</span></div>
-            <div className="rounded-3xl border border-border bg-card p-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
               <p className="mb-3 text-sm font-semibold text-foreground">Score de qualidade</p>
               <div className="space-y-3">
                 <QualityLine label="Qualidade visual" value={score} />
@@ -763,15 +765,17 @@ function VideoDetailsDialog({ asset, open, onOpenChange, onStatus }: { asset: Me
                 <QualityLine label="Risco de parecer spam" value={Math.max(100 - score, 8)} invert />
               </div>
             </div>
-            <div className="rounded-3xl border border-border bg-card p-4">
+            <div className="rounded-2xl border border-border bg-card p-4">
               <p className="mb-2 text-sm font-semibold text-foreground">Roteiro e legenda</p>
-              <p className="whitespace-pre-wrap text-xs leading-5 text-muted-foreground">{asset.caption || 'Sem roteiro salvo.'}</p>
+              <div className="max-h-40 overflow-y-auto pr-1">
+                <p className="whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">{asset.caption || 'Sem roteiro salvo.'}</p>
+              </div>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              <Button variant="outline" className="h-11 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'approved', 'Vídeo aprovado')}><CheckCircle className="h-4 w-4" /> Aprovar</Button>
-              <Button variant="outline" className="h-11 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'rejected', 'Vídeo rejeitado')}><XCircle className="h-4 w-4" /> Rejeitar</Button>
-              <Button variant="outline" className="h-11 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'generating', 'Variação enviada para geração')}><RefreshCw className="h-4 w-4" /> Criar variação</Button>
-              <Button className="h-11 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'scheduled', 'Vídeo enviado para agendamento')}><Clock className="h-4 w-4" /> Agendar publicação</Button>
+              <Button variant="outline" className="h-10 gap-2 rounded-xl" onClick={() => onStatus(asset, 'approved', 'Vídeo aprovado')}><CheckCircle className="h-4 w-4" /> Aprovar</Button>
+              <Button variant="outline" className="h-10 gap-2 rounded-xl" onClick={() => onStatus(asset, 'rejected', 'Vídeo rejeitado')}><XCircle className="h-4 w-4" /> Rejeitar</Button>
+              <Button variant="outline" className="h-10 gap-2 rounded-xl" onClick={() => onStatus(asset, 'generating', 'Variação enviada para geração')}><RefreshCw className="h-4 w-4" /> Criar variação</Button>
+              <Button className="h-10 gap-2 rounded-xl" onClick={() => onStatus(asset, 'scheduled', 'Vídeo enviado para agendamento')}><Clock className="h-4 w-4" /> Agendar publicação</Button>
             </div>
           </div>
         </div>
