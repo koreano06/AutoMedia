@@ -4,7 +4,7 @@ import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -1041,48 +1041,52 @@ function ProductDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[94vh] w-[calc(100vw-0.75rem)] max-w-6xl overflow-hidden rounded-3xl p-0 sm:w-[calc(100vw-2rem)]">
-        <DialogHeader className="border-b border-border bg-card px-5 py-5 sm:px-6">
-          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0">
-              <DialogTitle className="break-words font-syne text-xl leading-tight sm:text-2xl">{product.name}</DialogTitle>
-              <p className="mt-1 text-sm text-muted-foreground">Detalhes do anúncio base para roteiro, mídia e distribuição</p>
+      <DialogContent className="flex !h-[94dvh] !w-[calc(100vw-0.75rem)] !max-w-none flex-col overflow-hidden rounded-t-[1.5rem] border-border bg-card p-0 text-foreground shadow-2xl sm:!h-[90dvh] sm:!w-[calc(100vw-2rem)] sm:rounded-[1.5rem] lg:!h-[min(88dvh,860px)] lg:!w-[min(92vw,1280px)] xl:!h-[min(86dvh,900px)] xl:!w-[min(88vw,1380px)]">
+        <DialogHeader className="shrink-0 border-b border-border bg-[radial-gradient(circle_at_8%_0%,hsl(var(--primary)/0.18),transparent_38%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))] px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-12">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
+              <Package className="h-4 w-4" />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="line-clamp-2 font-syne text-base font-bold leading-tight text-foreground sm:line-clamp-1 sm:text-lg">{product.name}</DialogTitle>
+              <DialogDescription className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">Detalhes do anúncio base para roteiro, mídia e distribuição</DialogDescription>
+            </div>
+            <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
               <StatusBadge status={product.status} />
-              <span className="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">{getPipelineStage(product)}</span>
+              <span className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-semibold text-primary">{getPipelineStage(product)}</span>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="max-h-[calc(94vh-90px)] overflow-y-auto overflow-x-hidden p-5 sm:p-6">
-          <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(360px,0.92fr)_minmax(0,1.08fr)]">
-            <div className="min-w-0 xl:sticky xl:top-0 xl:self-start">
-              <div className="overflow-hidden rounded-3xl border border-border bg-muted">
-                <div className="relative bg-muted">
-                  {productImage(product) ? (
-                    <img src={productImage(product)} alt={product.name} className="max-h-[62vh] min-h-[320px] w-full object-cover" />
-                  ) : (
-                    <div className="flex min-h-[360px] items-center justify-center">
-                      <Package className="h-14 w-14 text-muted-foreground/30" />
-                    </div>
-                  )}
+        <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(560px,1.05fr)_minmax(500px,0.95fr)] lg:overflow-hidden">
+          <section className="flex min-h-[52dvh] flex-col items-center gap-3 border-b border-border bg-muted/35 p-3 sm:min-h-[620px] sm:gap-4 sm:p-5 md:p-6 lg:min-h-0 lg:border-b-0 lg:border-r">
+            <div className="relative flex min-h-[320px] w-full max-w-[720px] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background shadow-xl shadow-black/10 sm:rounded-3xl lg:min-h-0">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,hsl(var(--primary)/0.12),transparent_38%)]" />
+              {productImage(product) ? (
+                <img src={productImage(product)} alt={product.name} className="relative h-full w-full object-cover" />
+              ) : (
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-muted">
+                  <Package className="h-7 w-7 text-muted-foreground/35" />
                 </div>
-              </div>
-              <div className="mt-4 rounded-3xl border border-border bg-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Etapa atual</p>
-                <p className="mt-1 font-syne text-xl font-bold text-foreground">{getPipelineStage(product)}</p>
-                <div className="mt-3"><StatusBadge status={product.status} /></div>
-              </div>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <MetricTile label="Mídias" value={product.media_count || 0} />
-                <MetricTile label="Vídeos" value={product.videos_generated || 0} />
-                <MetricTile label="Posts" value={product.posts_published || 0} />
-              </div>
+              )}
             </div>
+            <div className="flex w-full max-w-[720px] shrink-0 items-center justify-between gap-3 px-1">
+              <span className="font-syne text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Preview do anúncio</span>
+              <span className="rounded-full bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">{product.category || 'Sem nicho'}</span>
+            </div>
+            <div className="grid w-full max-w-[720px] shrink-0 grid-cols-3 gap-2">
+              <MetricTile label="Mídias" value={product.media_count || 0} />
+              <MetricTile label="Vídeos" value={product.videos_generated || 0} />
+              <MetricTile label="Posts" value={product.posts_published || 0} />
+            </div>
+          </section>
 
-            <div className="min-w-0 space-y-5">
-              <section className="rounded-3xl border border-border bg-card p-5">
+          <section className="flex min-h-0 min-w-0 flex-col gap-4 p-4 sm:gap-5 sm:p-6 lg:overflow-y-auto">
+              <section className="rounded-3xl border border-border bg-muted/25 p-5">
+                <div className="mb-3 flex flex-wrap items-center gap-2 sm:hidden">
+                  <StatusBadge status={product.status} />
+                  <span className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-semibold text-primary">{getPipelineStage(product)}</span>
+                </div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Resumo do anúncio</p>
                 <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-foreground">
                   {product.description || 'Sem descrição cadastrada.'}
@@ -1134,16 +1138,15 @@ function ProductDetailsDialog({
                 <InfoLine label="Criado em" value={product.created_at ? new Date(product.created_at).toLocaleString('pt-BR') : 'Sem data'} />
               </section>
 
-              <div className="grid gap-2 sm:grid-cols-2">
-                <Button variant="outline" className="h-11 gap-2 rounded-2xl" onClick={() => onDuplicate(product)}>
+              <div className="grid shrink-0 gap-2 sm:grid-cols-2">
+                <Button variant="outline" className="h-12 gap-2 rounded-2xl" onClick={() => onDuplicate(product)}>
                   <Copy className="h-4 w-4" /> Duplicar
                 </Button>
-                <Button variant="destructive" className="h-11 gap-2 rounded-2xl" onClick={() => onDelete(product.id)}>
+                <Button variant="destructive" className="h-12 gap-2 rounded-2xl" onClick={() => onDelete(product.id)}>
                   <Trash2 className="h-4 w-4" /> Excluir anúncio
                 </Button>
               </div>
-            </div>
-          </div>
+          </section>
         </div>
       </DialogContent>
     </Dialog>

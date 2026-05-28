@@ -30,7 +30,7 @@ import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
@@ -599,24 +599,56 @@ function PostDialog({ post, open, onOpenChange, onSave, onDelete, onPublish }: {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader><DialogTitle className="font-syne">Prévia e edição do post</DialogTitle></DialogHeader>
-        <div className="grid gap-5 lg:grid-cols-[260px_1fr]">
-          <div className="overflow-hidden rounded-2xl bg-muted">{getPreview(post) ? <img src={getPreview(post)} alt="" className="aspect-square w-full object-cover" /> : <div className="flex aspect-square items-center justify-center"><Calendar className="h-10 w-10 text-muted-foreground/40" /></div>}</div>
-          <div className="space-y-4">
-            <div><h2 className="font-syne text-xl font-bold text-foreground">{post.product_name || 'Produto'}</h2><StatusBadge status={post.status} className="mt-2" /></div>
+      <DialogContent className="flex !h-[94dvh] !w-[calc(100vw-0.75rem)] !max-w-none flex-col overflow-hidden rounded-t-[1.5rem] border-border bg-card p-0 text-foreground shadow-2xl sm:!h-[90dvh] sm:!w-[calc(100vw-2rem)] sm:rounded-[1.5rem] lg:!h-[min(88dvh,820px)] lg:!w-[min(92vw,1180px)] xl:!w-[min(86vw,1280px)]">
+        <DialogHeader className="shrink-0 border-b border-border bg-[radial-gradient(circle_at_8%_0%,hsl(var(--primary)/0.18),transparent_38%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))] px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-12">
+          <div className="flex min-w-0 items-start gap-3 sm:items-center">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
+              <CalendarClock className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="line-clamp-2 font-syne text-base font-bold leading-tight text-foreground sm:line-clamp-1 sm:text-lg">Prévia e edição do post</DialogTitle>
+              <DialogDescription className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{post.product_name || 'Produto sem nome'}</DialogDescription>
+            </div>
+            <div className="hidden flex-wrap items-center gap-1.5 sm:flex"><PlatformIcon platform={platform} showLabel size="sm" /><StatusBadge status={post.status} /></div>
+          </div>
+        </DialogHeader>
+
+        <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(480px,0.95fr)_minmax(500px,1.05fr)] lg:overflow-hidden">
+          <section className="flex min-h-[48dvh] flex-col items-center gap-3 border-b border-border bg-muted/35 p-3 sm:min-h-[560px] sm:gap-4 sm:p-5 md:p-6 lg:min-h-0 lg:border-b-0 lg:border-r">
+            <div className="relative flex min-h-[300px] w-full max-w-[680px] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background shadow-xl shadow-black/10 sm:rounded-3xl lg:min-h-0">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,hsl(var(--primary)/0.12),transparent_38%)]" />
+              {getPreview(post) ? (
+                <img src={getPreview(post)} alt="" className="relative h-full w-full object-cover" />
+              ) : (
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-muted">
+                  <Calendar className="h-7 w-7 text-muted-foreground/35" />
+                </div>
+              )}
+            </div>
+            <div className="flex w-full max-w-[680px] shrink-0 items-center justify-between gap-3 px-1">
+              <span className="font-syne text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Preview do post</span>
+              <span className="rounded-full bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">{scheduledAt ? format(new Date(scheduledAt), 'dd/MM HH:mm') : 'Sem horário'}</span>
+            </div>
+          </section>
+
+          <section className="flex min-h-0 min-w-0 flex-col gap-4 p-4 sm:gap-5 sm:p-6 lg:overflow-y-auto">
+            <div className="rounded-3xl border border-border bg-muted/25 p-5">
+              <div className="mb-3 flex flex-wrap gap-2 sm:hidden"><PlatformIcon platform={platform} showLabel size="sm" /><StatusBadge status={post.status} /></div>
+              <p className="font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Agendamento</p>
+              <h2 className="mt-2 break-words font-syne text-xl font-bold leading-tight text-foreground">{post.product_name || 'Produto'}</h2>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div><Label>Plataforma</Label><Select value={platform} onValueChange={setPlatform}><SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger><SelectContent>{PLATFORMS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></div>
               <div><Label>Data e hora</Label><Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} className="mt-1.5" /></div>
             </div>
-            <div><Label>Legenda</Label><Textarea value={caption} onChange={(event) => setCaption(event.target.value)} className="mt-1.5 h-32" /></div>
-            <div className="rounded-2xl border border-border p-3 text-sm text-muted-foreground"><p className="font-semibold text-foreground">Logs</p><p className="mt-1">Criado, agendado e aguardando execução da API de publicação.</p>{post.error_message && <p className="mt-1 text-destructive">Erro: {post.error_message}</p>}</div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button variant="outline" className="flex-1" onClick={() => onSave({ caption, platform, scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : post.scheduled_at })}>Salvar</Button>
-              <Button variant="outline" className="flex-1" onClick={() => onPublish(post)}>Publicar agora</Button>
-              <Button variant="destructive" className="flex-1" onClick={() => onDelete(post.id)}>Cancelar</Button>
+            <div><Label>Legenda</Label><Textarea value={caption} onChange={(event) => setCaption(event.target.value)} className="mt-1.5 min-h-44 rounded-2xl" /></div>
+            <div className="rounded-3xl border border-border bg-muted/25 p-4 text-sm text-muted-foreground"><p className="font-semibold text-foreground">Logs</p><p className="mt-1">Criado, agendado e aguardando execução da API de publicação.</p>{post.error_message && <p className="mt-1 text-destructive">Erro: {post.error_message}</p>}</div>
+            <div className="grid gap-2 min-[420px]:grid-cols-2 sm:gap-3">
+              <Button variant="outline" className="h-12 rounded-2xl bg-card" onClick={() => onSave({ caption, platform, scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : post.scheduled_at })}>Salvar</Button>
+              <Button variant="outline" className="h-12 rounded-2xl bg-card" onClick={() => onPublish(post)}>Publicar agora</Button>
+              <Button variant="destructive" className="h-12 rounded-2xl min-[420px]:col-span-2" onClick={() => onDelete(post.id)}>Cancelar agendamento</Button>
             </div>
-          </div>
+          </section>
         </div>
       </DialogContent>
     </Dialog>
