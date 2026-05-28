@@ -32,9 +32,10 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SOCIAL_PLATFORMS } from '@/config/platforms';
-import { createMediaAsset, filterMediaAssets, listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
-import { listProducts, updateProduct } from '@/services/products';
+import { filterMediaAssets, listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
+import { listProducts } from '@/services/products';
 import { generateImage, invokeLLM } from '@/services/ai';
+import { generateVideo } from '@/services/videos';
 import type { EntityId, Job, MediaAsset, Platform, Product, Status } from '@/types/entities';
 
 const templates = [
@@ -158,7 +159,7 @@ export default function VideoGeneration() {
 
   const stats = {
     total: videos.length,
-    generating: queue.filter((job) => ['queued', 'processing'].includes(job.status)).length,
+    generating: queue.filter((job) => ['queued', 'processing', 'rendering', 'uploading'].includes(job.status)).length,
     review: videos.filter((asset) => asset.status === 'pending_review').length,
     approved: videos.filter((asset) => asset.status === 'approved').length,
     rejected: videos.filter((asset) => asset.status === 'rejected').length,
@@ -331,29 +332,30 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       const script = scriptPreview || (await invokeLLM(createPrompt(product)));
       updateQueue(jobId, { progress: 72 });
 
-      await createMediaAsset({
+      const result = await generateVideo({
         product_id: product.id,
-        product_name: product.name,
-        type: 'generated_video',
-        title: `${selectedTemplateConfig?.label} - ${product.name} (${duration})`,
-        status: 'pending_review',
-        source: 'IA Gerada',
-        url: generationPreview || product.image_url || '',
-        thumbnail_url: generationPreview || product.image_url || '',
-        caption: script,
-        platforms: [platform],
+        media_asset_ids: selectedMediaIds,
+        style: selectedTemplate,
+        template: selectedTemplateConfig?.label || selectedTemplate,
+        format: selectedFormat,
+        ratio: selectedFormatConfig?.ratio,
         duration,
-        quality_score: 84,
+        platform,
+        platforms: [platform],
+        briefing: briefing.extra,
+        briefing_fields: briefing,
+        visual_prompt: visualPrompt,
+        script,
+        rhythm,
+        audio,
       });
 
-      await updateProduct(product.id, {
-        status: 'review',
-        videos_generated: (product.videos_generated || 0) + 1,
-      });
-
-      updateQueue(jobId, { status: 'completed', progress: 100, completed_at: new Date().toISOString() });
-      toast.success('Vídeo gerado e enviado para aprovação!');
-      setScriptPreview(script);
+      setQueue((current) => [
+        result.job,
+        ...current.filter((job) => job.id !== jobId && job.id !== result.job.id),
+      ]);
+      toast.success('Vídeo enviado para a fila de renderização!');
+      setScriptPreview(result.script || script);
       const updatedVideos = await filterMediaAssets({ type: 'generated_video' }, '-created_date', 50);
       setVideos(updatedVideos);
     } catch {
@@ -574,7 +576,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                       <Progress value={job.progress || 0} className="mt-3" />
                       <div className="mt-2 flex justify-end gap-2">
                         {job.status === 'failed' && <Button size="sm" variant="outline" className="h-8 gap-1"><RefreshCw className="h-3.5 w-3.5" /> Repetir</Button>}
-                        {['queued', 'processing'].includes(job.status) && <Button size="sm" variant="ghost" className="h-8" onClick={() => updateQueue(job.id, { status: 'cancelled', progress: 100 })}>Cancelar</Button>}
+                        {['queued', 'processing', 'rendering', 'uploading'].includes(job.status) && <Button size="sm" variant="ghost" className="h-8" onClick={() => updateQueue(job.id, { status: 'cancelled', progress: 100 })}>Cancelar</Button>}
                       </div>
                     </div>
                   ))

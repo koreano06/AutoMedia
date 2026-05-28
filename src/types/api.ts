@@ -59,14 +59,35 @@ export type MediaCollectResponse = {
 export type VideoGenerateRequest = {
   product_id: EntityId;
   media_asset_ids?: EntityId[];
-  style: 'product' | 'lifestyle' | 'unboxing' | 'review';
+  style: string;
+  template?: string;
+  format?: string;
+  ratio?: string;
   duration: '15s' | '30s' | '60s';
   briefing?: string;
+  briefing_fields?: {
+    targetAudience?: string;
+    tone?: string;
+    objective?: string;
+    promise?: string;
+    cta?: string;
+    restrictions?: string;
+    extra?: string;
+  };
+  visual_prompt?: string;
+  script?: string;
+  rhythm?: string;
+  audio?: string;
   platform?: Platform;
+  platforms?: Platform[];
 };
 
 export type VideoGenerateResponse = {
   job: Job;
+  asset?: MediaAsset;
+  script?: string;
+  render_plan?: unknown;
+  provider?: string;
 };
 
 export type ApproveMediaRequest = {

@@ -5,7 +5,7 @@ import { createMediaAsset } from './mediaAssets';
 
 export async function generateVideo(payload: VideoGenerateRequest) {
   try {
-    return await apiClient.post<VideoGenerateResponse & { asset?: unknown }>('/video-generate', payload);
+    return await apiClient.post<VideoGenerateResponse>('/videos/generate', payload);
   } catch (error) {
     if (!isNotFoundError(error)) {
       throw error;
@@ -14,10 +14,10 @@ export async function generateVideo(payload: VideoGenerateRequest) {
     const asset = await createMediaAsset({
       product_id: payload.product_id,
       type: 'generated_video',
-      title: `Video ${payload.style} (${payload.duration})`,
+      title: `Video ${payload.template || payload.style} (${payload.duration})`,
       status: 'pending_review',
       source: 'fallback-frontend',
-      caption: payload.briefing || 'Video solicitado pelo painel. Aguardando processamento definitivo no backend.',
+      caption: payload.script || payload.briefing || 'Video solicitado pelo painel. Aguardando processamento definitivo no backend.',
       duration: payload.duration,
     } as Omit<MediaAsset, 'id'>);
 
@@ -25,13 +25,13 @@ export async function generateVideo(payload: VideoGenerateRequest) {
       id: `local_video_generation_${Date.now()}`,
       type: 'video_generation',
       status: 'queued',
-      title: `Gerar video ${payload.style}`,
+      title: `Gerar video ${payload.template || payload.style}`,
       product_id: payload.product_id,
       media_asset_id: asset.id,
       progress: 0,
       created_at: new Date().toISOString(),
     };
 
-    return { job, asset };
+    return { job, asset, script: asset.caption, provider: 'frontend-fallback' };
   }
 }

@@ -32,7 +32,7 @@ export type Status =
 export type ProductInputSource = 'manual' | 'image_upload' | 'product_url';
 export type MediaAssetType = 'image' | 'video' | 'generated_video';
 export type JobType = 'product_analysis' | 'media_collection' | 'video_generation' | 'post_publishing' | 'comment_reply';
-export type JobStatus = 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
+export type JobStatus = 'queued' | 'processing' | 'rendering' | 'uploading' | 'completed' | 'failed' | 'cancelled';
 
 export type Product = {
   id: EntityId;
@@ -145,6 +145,7 @@ export type MediaAsset = {
   reviewed_by?: string;
   previous_status?: Status;
   rejection_reason?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type Comment = {

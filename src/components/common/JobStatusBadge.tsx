@@ -13,6 +13,16 @@ const jobStatusConfig = {
     className: 'border-primary/20 bg-primary/10 text-primary',
     icon: Loader2,
   },
+  rendering: {
+    label: 'Renderizando',
+    className: 'border-orange-500/20 bg-orange-500/10 text-orange-500',
+    icon: Loader2,
+  },
+  uploading: {
+    label: 'Enviando',
+    className: 'border-cyan-500/20 bg-cyan-500/10 text-cyan-500',
+    icon: Loader2,
+  },
   completed: {
     label: 'Concluído',
     className: 'border-success/20 bg-success/10 text-success',
@@ -41,7 +51,7 @@ export default function JobStatusBadge({ status, className }: JobStatusBadgeProp
 
   return (
     <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium', config.className, className)}>
-      <Icon className={cn('h-3 w-3', status === 'processing' && 'animate-spin')} />
+      <Icon className={cn('h-3 w-3', ['processing', 'rendering', 'uploading'].includes(status) && 'animate-spin')} />
       {config.label}
     </span>
   );
