@@ -13,6 +13,22 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - Telas de anúncios, publicações e agendamento com visual profissional e responsivo.
 - Integrações sociais exibidas na interface, com backend preparado para modo `mock` e `live`.
 
+## Status das Funcionalidades
+
+✅ Frontend responsivo para desktop, tablet e mobile  
+✅ Navegação com sidebar desktop e menu inferior mobile  
+✅ Dashboard, anúncios base, mídia, vídeos, aprovação e agenda  
+✅ Biblioteca de mídia com previews grandes e padronizados  
+✅ Tela de geração de vídeos com briefing, template, formato e plataformas  
+✅ Comunicação com backend próprio via `VITE_API_BASE_URL`  
+✅ Fluxo visual de integrações sociais e marketplaces  
+✅ Telas comerciais/ERP leve para operação e finanças  
+🟡 Feedback em tempo real dos jobs de vídeo ainda em evolução  
+🟡 Autenticação visual local aguardando endurecimento completo no backend  
+🔜 Publicação real em redes sociais via APIs oficiais  
+🔜 Monitoramento automático de comentários em tempo real  
+🔜 Dashboard financeiro com métricas reais de vendas e ROI  
+
 ## Principais Módulos
 
 - `Dashboard`: visão geral da operação.
