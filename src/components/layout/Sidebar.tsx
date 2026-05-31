@@ -2,6 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { Settings, Zap, ChevronRight, X } from "lucide-react";
 import { mainNavigation } from "@/config/navigation";
 import { cn } from "@/lib/utils";
+import { hasPermission } from "@/lib/permissions";
+import { useAuth } from "@/lib/AuthContext";
 
 type SidebarProps = {
   counts?: Record<string, number>;
@@ -11,6 +13,7 @@ type SidebarProps = {
 
 export default function Sidebar({ counts = {}, open = false, onNavigate }: SidebarProps) {
   const location = useLocation();
+  const { user } = useAuth();
   let currentSection = "";
 
   const sectionLabels = {
@@ -50,7 +53,7 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
       </div>
 
       <nav className="scrollbar-thin flex-1 overflow-y-auto px-3 py-4">
-        {mainNavigation.map(({ label, icon: Icon, path, section, badgeKey }) => {
+        {mainNavigation.filter((item) => !item.permission || hasPermission(user?.role, item.permission)).map(({ label, icon: Icon, path, section, badgeKey }) => {
           const isActive = location.pathname === path;
           const badgeCount = badgeKey ? counts[badgeKey] || 0 : 0;
           const showSection = section !== currentSection;

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import TopBar from '@/components/layout/TopBar';
+import Can from '@/components/auth/Can';
 import PlatformIcon from '@/components/common/PlatformIcon';
 import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
@@ -288,7 +289,9 @@ export default function Schedule() {
                     <>
                       <Button size="sm" variant="outline" onClick={() => handleBulk('paused')}><PauseCircle className="mr-1 h-4 w-4" /> Pausar</Button>
                       <Button size="sm" variant="outline" onClick={() => handleBulk('scheduled')}><RefreshCw className="mr-1 h-4 w-4" /> Reagendar</Button>
-                      <Button size="sm" variant="outline" onClick={() => handleBulk('published')}><Send className="mr-1 h-4 w-4" /> Publicar</Button>
+                      <Can permission="post:publish">
+                        <Button size="sm" variant="outline" onClick={() => handleBulk('published')}><Send className="mr-1 h-4 w-4" /> Publicar</Button>
+                      </Can>
                     </>
                   )}
                   {(['week', 'month', 'day'] as ViewMode[]).map((mode) => (
@@ -576,9 +579,13 @@ function PostRow({ post, selected, onToggle, onOpen, onPublish, onDelete, compac
       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <span className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{post.scheduled_at ? format(new Date(post.scheduled_at), 'dd/MM HH:mm') : '—'}</span>
         <StatusBadge status={post.status} />
-        <Button size="icon" variant="ghost" className="h-8 w-8 text-success hover:text-success" onClick={() => onPublish(post)}><Send className="h-3.5 w-3.5" /></Button>
+        <Can permission="post:publish">
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-success hover:text-success" onClick={() => onPublish(post)}><Send className="h-3.5 w-3.5" /></Button>
+        </Can>
         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onOpen(post)}><Eye className="h-3.5 w-3.5" /></Button>
-        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(post.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+        <Can permission="post:delete">
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(post.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+        </Can>
       </div>
     </div>
   );
@@ -645,8 +652,12 @@ function PostDialog({ post, open, onOpenChange, onSave, onDelete, onPublish }: {
             <div className="rounded-3xl border border-border bg-muted/25 p-4 text-sm text-muted-foreground"><p className="font-semibold text-foreground">Logs</p><p className="mt-1">Criado, agendado e aguardando execução da API de publicação.</p>{post.error_message && <p className="mt-1 text-destructive">Erro: {post.error_message}</p>}</div>
             <div className="grid gap-2 min-[420px]:grid-cols-2 sm:gap-3">
               <Button variant="outline" className="h-12 rounded-2xl bg-card" onClick={() => onSave({ caption, platform, scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : post.scheduled_at })}>Salvar</Button>
-              <Button variant="outline" className="h-12 rounded-2xl bg-card" onClick={() => onPublish(post)}>Publicar agora</Button>
-              <Button variant="destructive" className="h-12 rounded-2xl min-[420px]:col-span-2" onClick={() => onDelete(post.id)}>Cancelar agendamento</Button>
+              <Can permission="post:publish">
+                <Button variant="outline" className="h-12 rounded-2xl bg-card" onClick={() => onPublish(post)}>Publicar agora</Button>
+              </Can>
+              <Can permission="post:delete">
+                <Button variant="destructive" className="h-12 rounded-2xl min-[420px]:col-span-2" onClick={() => onDelete(post.id)}>Cancelar agendamento</Button>
+              </Can>
             </div>
           </section>
         </div>

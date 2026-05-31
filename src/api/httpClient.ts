@@ -3,6 +3,8 @@ type RequestOptions = RequestInit & {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://auto-media-backend.vercel.app/api';
+export const API_TOKEN_STORAGE_KEY = 'automedia_api_token';
+export const API_REFRESH_TOKEN_STORAGE_KEY = 'automedia_api_refresh_token';
 
 type ApiEnvelope<T> = {
   data?: T;
@@ -104,12 +106,41 @@ function buildUrl(path: string, query?: RequestOptions['query']) {
   return url.toString();
 }
 
-async function request<T>(path: string, options: RequestOptions = {}) {
+async function refreshAccessToken() {
+  const refreshToken = typeof window !== 'undefined' ? window.localStorage.getItem(API_REFRESH_TOKEN_STORAGE_KEY) : null;
+  if (!refreshToken) return false;
+
+  const response = await fetch(buildUrl('/auth/refresh'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+
+  if (!response.ok) {
+    window.localStorage.removeItem(API_TOKEN_STORAGE_KEY);
+    window.localStorage.removeItem(API_REFRESH_TOKEN_STORAGE_KEY);
+    return false;
+  }
+
+  const payload = await response.json() as { token?: string; refresh_token?: string };
+  if (!payload.token || !payload.refresh_token) return false;
+
+  window.localStorage.setItem(API_TOKEN_STORAGE_KEY, payload.token);
+  window.localStorage.setItem(API_REFRESH_TOKEN_STORAGE_KEY, payload.refresh_token);
+  return true;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}, didRefresh = false): Promise<T> {
   const { query, headers, body, ...init } = options;
   const isFormData = body instanceof FormData;
   const requestHeaders: HeadersInit = {
     ...headers,
   };
+  const token = typeof window !== 'undefined' ? window.localStorage.getItem(API_TOKEN_STORAGE_KEY) : null;
+
+  if (token) {
+    requestHeaders.Authorization = `Bearer ${token}`;
+  }
 
   if (body !== undefined && !isFormData) {
     requestHeaders['Content-Type'] = 'application/json';
@@ -133,6 +164,11 @@ async function request<T>(path: string, options: RequestOptions = {}) {
   const payload = contentType?.includes('application/json') ? await response.json() : await response.text();
 
   if (!response.ok) {
+    if (response.status === 401 && !didRefresh && path !== '/auth/login' && path !== '/auth/refresh') {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) return request<T>(path, options, true);
+    }
+
     const message = typeof payload === 'object' && payload?.error?.message ? payload.error.message : 'Erro inesperado na API';
     lastApiError = { path, status: response.status, message };
     throw new ApiRequestError(message, response.status, payload);

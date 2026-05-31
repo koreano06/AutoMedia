@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import type { AppPermission } from "@/lib/permissions";
 import {
   BarChart2,
   Calendar,
@@ -20,6 +21,7 @@ export type NavigationItem = {
   path: string;
   section: "principal" | "vendas" | "conteudo" | "operacao";
   badgeKey?: NavigationBadgeKey;
+  permission?: AppPermission;
 };
 
 export const mainNavigation: NavigationItem[] = [
@@ -31,6 +33,6 @@ export const mainNavigation: NavigationItem[] = [
   { label: "Agendamento", icon: Calendar, path: "/schedule", section: "conteudo", badgeKey: "scheduled" },
   { label: "Publicações", icon: Zap, path: "/publications", section: "conteudo", badgeKey: "failures" },
   { label: "Comentários", icon: MessageSquare, path: "/comments", section: "conteudo", badgeKey: "comments" },
-  { label: "Integrações", icon: Link2, path: "/integrations", section: "operacao" },
+  { label: "Integrações", icon: Link2, path: "/integrations", section: "operacao", permission: "platform:manage" },
   { label: "Relatórios", icon: BarChart2, path: "/reports", section: "operacao" },
 ];

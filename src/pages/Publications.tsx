@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import TopBar from '@/components/layout/TopBar';
+import Can from '@/components/auth/Can';
 import StatusBadge from '@/components/common/StatusBadge';
 import PlatformIcon from '@/components/common/PlatformIcon';
 import ErrorState from '@/components/common/ErrorState';
@@ -465,7 +466,9 @@ function PublicationDialog({ post, open, onOpenChange, onStatus, onSave }: { pos
               <Button variant="outline" className="h-12 rounded-2xl bg-card" onClick={() => onSave(post, { caption })}>Salvar legenda</Button>
               <Button variant="outline" className="h-12 rounded-2xl bg-card" onClick={() => navigator.clipboard.writeText(post.external_url || '')}>Copiar link</Button>
               <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => post.external_url && window.open(post.external_url, '_blank')}><ExternalLink className="h-3.5 w-3.5" /> Ver externa</Button>
-              <Button className="h-12 gap-2 rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20" onClick={() => onStatus(post, 'publishing', 'Retry iniciado')}><RefreshCw className="h-3.5 w-3.5" /> Retry</Button>
+              <Can permission="post:publish">
+                <Button className="h-12 gap-2 rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20" onClick={() => onStatus(post, 'publishing', 'Retry iniciado')}><RefreshCw className="h-3.5 w-3.5" /> Retry</Button>
+              </Can>
             </div>
           </section>
         </div>
@@ -475,7 +478,7 @@ function PublicationDialog({ post, open, onOpenChange, onStatus, onSave }: { pos
 }
 
 function Actions({ post, onOpen, onStatus, onDelete }: { post: Post; onOpen: (post: Post) => void; onStatus: (post: Post, status: Status, message: string) => void; onDelete: (id: EntityId) => void }) {
-  return <div className="flex justify-end gap-1"><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onOpen(post)}><Eye className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => post.external_url && window.open(post.external_url, '_blank')}><ExternalLink className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onStatus(post, 'publishing', 'Retry iniciado')}><RefreshCw className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(post.id)}><Trash2 className="h-4 w-4" /></Button></div>;
+  return <div className="flex justify-end gap-1"><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onOpen(post)}><Eye className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => post.external_url && window.open(post.external_url, '_blank')}><ExternalLink className="h-4 w-4" /></Button><Can permission="post:publish"><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onStatus(post, 'publishing', 'Retry iniciado')}><RefreshCw className="h-4 w-4" /></Button></Can><Can permission="post:delete"><Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => onDelete(post.id)}><Trash2 className="h-4 w-4" /></Button></Can></div>;
 }
 
 function Thumb({ post }: { post: Post }) {

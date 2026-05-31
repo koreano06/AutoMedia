@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
+import Can from '@/components/auth/Can';
 import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
 import { Button } from '@/components/ui/button';
@@ -865,9 +866,11 @@ function ProductActions({
         <DropdownMenuItem onClick={() => onDuplicate(product)} className="h-9 gap-2 rounded-lg text-sm">
           <Copy className="h-3.5 w-3.5 shrink-0" /> Duplicar
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => onDelete(product.id)} className="h-9 gap-2 rounded-lg text-sm text-destructive">
-          <Trash2 className="h-3.5 w-3.5 shrink-0" /> Excluir
-        </DropdownMenuItem>
+        <Can permission="product:delete">
+          <DropdownMenuItem onClick={() => onDelete(product.id)} className="h-9 gap-2 rounded-lg text-sm text-destructive">
+            <Trash2 className="h-3.5 w-3.5 shrink-0" /> Excluir
+          </DropdownMenuItem>
+        </Can>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -1142,9 +1145,11 @@ function ProductDetailsDialog({
                 <Button variant="outline" className="h-12 gap-2 rounded-2xl" onClick={() => onDuplicate(product)}>
                   <Copy className="h-4 w-4" /> Duplicar
                 </Button>
-                <Button variant="destructive" className="h-12 gap-2 rounded-2xl" onClick={() => onDelete(product.id)}>
-                  <Trash2 className="h-4 w-4" /> Excluir anúncio
-                </Button>
+                <Can permission="product:delete">
+                  <Button variant="destructive" className="h-12 gap-2 rounded-2xl" onClick={() => onDelete(product.id)}>
+                    <Trash2 className="h-4 w-4" /> Excluir anúncio
+                  </Button>
+                </Can>
               </div>
           </section>
         </div>

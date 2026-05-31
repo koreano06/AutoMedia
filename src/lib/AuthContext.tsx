@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { API_REFRESH_TOKEN_STORAGE_KEY, API_TOKEN_STORAGE_KEY } from '@/api/httpClient';
+import { getCurrentBackendUser, loginWithBackend } from '@/services/auth';
 
 type AuthError = {
   type: string;
@@ -9,6 +11,7 @@ export type AuthUser = {
   id: string;
   name: string;
   username: string;
+  workspace_id?: string;
   store_name?: string;
   role: 'admin' | 'user';
   created_at: string;
@@ -43,6 +46,7 @@ type AuthContextValue = {
 
 const USERS_STORAGE_KEY = 'automedia_users';
 const SESSION_STORAGE_KEY = 'automedia_session_user_id';
+const isProduction = import.meta.env.PROD;
 
 const defaultAdmin: StoredUser = {
   id: 'admin-local',
@@ -103,6 +107,10 @@ const writeUsers = (users: StoredUser[]) => {
 };
 
 const ensureDefaultAdmin = () => {
+  if (isProduction) {
+    return [];
+  }
+
   const users = readUsers();
   const hasAdmin = users.some((user) => normalizeUsername(user.username) === defaultAdmin.username);
 
@@ -136,8 +144,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         ? window.localStorage.getItem(SESSION_STORAGE_KEY)
         : null;
       const sessionUser = users.find((storedUser) => storedUser.id === sessionUserId);
+      const apiToken = canUseStorage()
+        ? window.localStorage.getItem(API_TOKEN_STORAGE_KEY)
+        : null;
 
-      if (sessionUser) {
+      if (apiToken) {
+        try {
+          const backendUser = await getCurrentBackendUser();
+          setUser(backendUser);
+          setIsAuthenticated(true);
+          return;
+        } catch {
+          window.localStorage.removeItem(API_TOKEN_STORAGE_KEY);
+          window.localStorage.removeItem(API_REFRESH_TOKEN_STORAGE_KEY);
+        }
+      }
+
+      if (!isProduction && sessionUser) {
         setUser(toPublicUser(sessionUser));
         setIsAuthenticated(true);
       } else {
@@ -170,6 +193,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (username: string, password: string) => {
+    try {
+      const result = await loginWithBackend(username, password);
+
+      if (canUseStorage()) {
+        window.localStorage.setItem(API_TOKEN_STORAGE_KEY, result.token);
+        window.localStorage.setItem(API_REFRESH_TOKEN_STORAGE_KEY, result.refresh_token);
+        window.localStorage.setItem(SESSION_STORAGE_KEY, result.user.id);
+      }
+
+      setUser(result.user);
+      setIsAuthenticated(true);
+      setAuthError(null);
+      setAuthChecked(true);
+
+      return result.user;
+    } catch {
+      if (isProduction) {
+        throw new Error('Não foi possível autenticar pela API. Verifique a conexão com o backend.');
+      }
+
+      // Fallback local mantém o desenvolvimento utilizável quando a API não está disponível.
+    }
+
     const users = ensureDefaultAdmin();
     const normalizedUsername = normalizeUsername(username);
     const foundUser = users.find(
@@ -185,6 +231,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       if (canUseStorage()) {
         window.localStorage.setItem(SESSION_STORAGE_KEY, foundUser.id);
+        window.localStorage.removeItem(API_TOKEN_STORAGE_KEY);
+        window.localStorage.removeItem(API_REFRESH_TOKEN_STORAGE_KEY);
       }
     } catch {
       // The login still succeeds even if the browser blocks persistent storage.
@@ -200,6 +248,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const register = async (payload: RegisterPayload) => {
+    if (isProduction) {
+      throw new Error('Cadastro local está desabilitado em produção.');
+    }
+
     const users = ensureDefaultAdmin();
     const normalizedUsername = normalizeUsername(payload.username);
     const usernameExists = users.some(
@@ -225,6 +277,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       if (canUseStorage()) {
         window.localStorage.setItem(SESSION_STORAGE_KEY, newUser.id);
+        window.localStorage.removeItem(API_TOKEN_STORAGE_KEY);
+        window.localStorage.removeItem(API_REFRESH_TOKEN_STORAGE_KEY);
       }
     } catch {
       // The new session remains active in memory for the current page load.
@@ -243,6 +297,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       if (canUseStorage()) {
         window.localStorage.removeItem(SESSION_STORAGE_KEY);
+        window.localStorage.removeItem(API_TOKEN_STORAGE_KEY);
+        window.localStorage.removeItem(API_REFRESH_TOKEN_STORAGE_KEY);
       }
     } catch {
       // Ignore storage cleanup failures so logout never breaks the UI.
