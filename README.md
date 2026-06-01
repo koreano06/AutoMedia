@@ -17,43 +17,43 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 
 ## Status das Funcionalidades
 
-✅ Frontend responsivo para desktop, tablet e mobile
-✅ Navegação com sidebar desktop e menu inferior mobile
-✅ Dashboard, anúncios base, mídia, vídeos, aprovação e agenda
-✅ Biblioteca de mídia com previews grandes e padronizados
-✅ Tela de geração de vídeos com briefing, template, formato e plataformas
-✅ Comunicação com backend próprio via `VITE_API_BASE_URL`
-✅ Fluxo visual de integrações sociais e marketplaces
-✅ Telas comerciais/ERP leve para operação e finanças
-✅ Cliente HTTP envia JWT automaticamente quando há sessão da API
-✅ Tokens sensíveis de plataformas não são expostos ao frontend
-✅ Refresh token automático quando access token expira
-✅ Login de produção validado contra `https://auto-media-backend.vercel.app/api/auth/login`
-🟡 Feedback em tempo real dos jobs de vídeo ainda em evolução
-✅ Fallback local desabilitado em produção para forçar autenticação real
-✅ Permissões por papel em áreas e ações sensíveis da interface
-🔜 Publicação real em redes sociais via APIs oficiais
-🔜 Monitoramento automático de comentários em tempo real
-🔜 Dashboard financeiro com métricas reais de vendas e ROI
+- ✅ Frontend responsivo para desktop, tablet e mobile
+- ✅ Navegação com sidebar desktop e menu inferior mobile
+- ✅ Dashboard, anúncios base, mídia, vídeos, aprovação e agenda
+- ✅ Biblioteca de mídia com previews grandes e padronizados
+- ✅ Tela de geração de vídeos com briefing, template, formato e plataformas
+- ✅ Comunicação com backend próprio via `VITE_API_BASE_URL`
+- ✅ Fluxo visual de integrações sociais e marketplaces
+- ✅ Telas comerciais/ERP leve para operação e finanças
+- ✅ Cliente HTTP envia JWT automaticamente quando há sessão da API
+- ✅ Tokens sensíveis de plataformas não são expostos ao frontend
+- ✅ Refresh token automático quando access token expira
+- ✅ Login de produção validado contra `https://auto-media-backend.vercel.app/api/auth/login`
+- 🟡 Feedback em tempo real dos jobs de vídeo ainda em evolução
+- ✅ Fallback local desabilitado em produção para forçar autenticação real
+- ✅ Permissões por papel em áreas e ações sensíveis da interface
+- 🔜 Publicação real em redes sociais via APIs oficiais
+- 🔜 Monitoramento automático de comentários em tempo real
+- 🔜 Dashboard financeiro com métricas reais de vendas e ROI
 
 ## Plano de Estabilização
 
-✅ 1. Consolidar ambiente de produção
-🟡 2. Fechar Redis + Supabase Storage
-🔜 3. Melhorar acompanhamento em tempo real dos jobs
-✅ 4. Fortalecer autenticação e sessão
-🔜 5. Revisar CRUDs ponta a ponta
-🔜 6. Implementar integrações sociais live
+- ✅ 1. Consolidar ambiente de produção
+- 🟡 2. Fechar Redis + Supabase Storage
+- 🔜 3. Melhorar acompanhamento em tempo real dos jobs
+- ✅ 4. Fortalecer autenticação e sessão
+- 🔜 5. Revisar CRUDs ponta a ponta
+- 🔜 6. Implementar integrações sociais live
 
 ## Plano de Segurança
 
-✅ 1. Login integrado ao backend e envio automático de Bearer token
-✅ 2. Remover fallback local em produção
-✅ 3. Controle de sessão expirada e refresh token
-✅ 4. Permissões por papel na interface
-🟡 5. Máscara visual para dados sensíveis
-🟡 6. Alertas claros para erros 401/403
-✅ 7. Não exibir access/refresh tokens das integrações
+- ✅ 1. Login integrado ao backend e envio automático de Bearer token
+- ✅ 2. Remover fallback local em produção
+- ✅ 3. Controle de sessão expirada e refresh token
+- ✅ 4. Permissões por papel na interface
+- 🟡 5. Máscara visual para dados sensíveis
+- 🟡 6. Alertas claros para erros 401/403
+- ✅ 7. Não exibir access/refresh tokens das integrações
 
 Para validar as variáveis essenciais do frontend antes de publicar:
 
