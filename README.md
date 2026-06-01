@@ -8,6 +8,8 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 
 - Frontend em React/Vite com layout responsivo para desktop, tablet e mobile.
 - Comunicação com backend via `VITE_API_BASE_URL`.
+- Login integrado ao backend em produção usando JWT e refresh token.
+- Usuário de teste disponível para validação do painel: `admin / admin123`.
 - Fluxo de geração de vídeo preparado para enviar briefing, template, formato, duração, mídia base e plataformas.
 - Biblioteca de mídia e previews padronizados em modais amplos e legíveis.
 - Telas de anúncios, publicações e agendamento com visual profissional e responsivo.
@@ -26,6 +28,7 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 ✅ Cliente HTTP envia JWT automaticamente quando há sessão da API
 ✅ Tokens sensíveis de plataformas não são expostos ao frontend
 ✅ Refresh token automático quando access token expira
+✅ Login de produção validado contra `https://auto-media-backend.vercel.app/api/auth/login`
 🟡 Feedback em tempo real dos jobs de vídeo ainda em evolução
 ✅ Fallback local desabilitado em produção para forçar autenticação real
 ✅ Permissões por papel em áreas e ações sensíveis da interface
@@ -36,7 +39,7 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 ## Plano de Estabilização
 
 ✅ 1. Consolidar ambiente de produção
-✅ 2. Fechar Redis + Supabase Storage
+🟡 2. Fechar Redis + Supabase Storage
 🔜 3. Melhorar acompanhamento em tempo real dos jobs
 ✅ 4. Fortalecer autenticação e sessão
 🔜 5. Revisar CRUDs ponta a ponta
@@ -125,7 +128,7 @@ npm run dev
 http://localhost:5173
 ```
 
-5. Usuário local inicial:
+5. Usuário de teste inicial:
 
 ```text
 usuario: admin
@@ -190,7 +193,9 @@ src/
 
 ## Observações
 
-- O login atual ainda é local para desenvolvimento da interface.
+- Em produção, o login usa o backend real com JWT.
+- Em desenvolvimento, existe fallback local apenas para manter a interface utilizável quando a API não estiver disponível.
+- O usuário padrão de teste do backend é `admin / admin123`.
 - A geração real de vídeo depende do backend com Redis, worker e FFmpeg.
 - O frontend não deve armazenar chaves sensíveis, como OpenAI, Shopee, Meta ou TikTok.
 - Credenciais de APIs ficam somente no backend/Vercel.
