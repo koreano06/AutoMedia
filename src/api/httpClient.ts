@@ -133,17 +133,15 @@ async function refreshAccessToken() {
 async function request<T>(path: string, options: RequestOptions = {}, didRefresh = false): Promise<T> {
   const { query, headers, body, ...init } = options;
   const isFormData = body instanceof FormData;
-  const requestHeaders: HeadersInit = {
-    ...headers,
-  };
+  const requestHeaders = new Headers(headers);
   const token = typeof window !== 'undefined' ? window.localStorage.getItem(API_TOKEN_STORAGE_KEY) : null;
 
   if (token) {
-    requestHeaders.Authorization = `Bearer ${token}`;
+    requestHeaders.set('Authorization', `Bearer ${token}`);
   }
 
   if (body !== undefined && !isFormData) {
-    requestHeaders['Content-Type'] = 'application/json';
+    requestHeaders.set('Content-Type', 'application/json');
   }
 
   let response: Response;

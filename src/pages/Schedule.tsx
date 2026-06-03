@@ -39,7 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { SOCIAL_PLATFORMS } from '@/config/platforms';
-import { createPost, deletePost as deletePostById, listPosts, publishPostNow, updatePost } from '@/services/posts';
+import { createPost, deletePost as deletePostById, listPosts, publishDuePosts, publishPostNow, updatePost } from '@/services/posts';
 import { filterMediaAssets } from '@/services/mediaAssets';
 import type { EntityId, MediaAsset, Post, Status } from '@/types/entities';
 
@@ -194,6 +194,20 @@ export default function Schedule() {
     }
   };
 
+  const processDuePosts = async () => {
+    try {
+      const result = await publishDuePosts(25);
+      if (result.total === 0) {
+        toast.success('Nenhum post vencido para publicar agora.');
+      } else {
+        toast.success(`${result.published || 0} disparo(s) processado(s), ${result.failed || 0} falha(s).`);
+      }
+      load();
+    } catch {
+      toast.error('Não foi possível processar os posts agendados.');
+    }
+  };
+
   const smartSchedule = async () => {
     const candidates = readyAssets.slice(0, Number(settings.maxPerDay || 6));
     if (candidates.length === 0) {
@@ -277,6 +291,9 @@ export default function Schedule() {
                     <SelectContent><SelectItem value="today">Hoje</SelectItem><SelectItem value="week">Semana</SelectItem><SelectItem value="month">Mês</SelectItem><SelectItem value="all">Tudo</SelectItem></SelectContent>
                   </Select>
                   <Button variant="outline" className="gap-2" onClick={() => setSimulationOpen(true)}><Sparkles className="h-4 w-4" /> Simular</Button>
+                  <Can permission="post:publish">
+                    <Button className="gap-2" onClick={processDuePosts}><Send className="h-4 w-4" /> Processar vencidos</Button>
+                  </Can>
                 </div>
               </div>
               <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

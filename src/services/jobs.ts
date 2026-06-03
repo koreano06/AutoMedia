@@ -1,5 +1,5 @@
 import { apiClient } from '@/api/httpClient';
-import type { Job } from '@/types/entities';
+import type { EntityId, Job } from '@/types/entities';
 
 export async function listJobs() {
   return apiClient.getList<Job>('/jobs');
@@ -7,4 +7,12 @@ export async function listJobs() {
 
 export async function getJob(id: string) {
   return apiClient.get<Job>(`/jobs/${id}`);
+}
+
+export async function updateJob(id: EntityId, payload: Partial<Job>) {
+  return apiClient.patch<Job>(`/jobs/${id}`, payload);
+}
+
+export async function deleteJob(id: EntityId) {
+  return apiClient.delete<Job>(`/jobs/${id}`);
 }

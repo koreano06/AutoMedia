@@ -26,7 +26,7 @@ export async function createMediaAsset(payload: MediaAssetPayload) {
 
 export async function collectMedia(payload: { product_id: EntityId; query?: string; sources?: string[] }) {
   try {
-    return await apiClient.post<MediaCollectResponse>('/media-collect', payload);
+    return await apiClient.post<MediaCollectResponse>('/media-assets/collect', payload);
   } catch (error) {
     if (!isNotFoundError(error)) {
       throw error;
@@ -47,5 +47,5 @@ export async function collectMedia(payload: { product_id: EntityId; query?: stri
 }
 
 export async function updateMediaAsset(id: EntityId, payload: Partial<MediaAsset>) {
-  return apiClient.post<MediaAsset>('/media-update', { id, ...payload });
+  return apiClient.patch<MediaAsset>(`/media-assets/${id}`, payload);
 }

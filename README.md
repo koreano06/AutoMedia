@@ -29,6 +29,8 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ Tokens sensíveis de plataformas não são expostos ao frontend
 - ✅ Refresh token automático quando access token expira
 - ✅ Login de produção validado contra `https://auto-media-backend.vercel.app/api/auth/login`
+- ✅ Testes unitários para permissões, cliente HTTP e contrato dos services
+- ✅ Testes E2E com Playwright para login, shell principal, desktop e mobile
 - 🟡 Feedback em tempo real dos jobs de vídeo ainda em evolução
 - ✅ Fallback local desabilitado em produção para forçar autenticação real
 - ✅ Permissões por papel em áreas e ações sensíveis da interface
@@ -42,7 +44,7 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - 🟡 2. Fechar Redis + Supabase Storage
 - 🔜 3. Melhorar acompanhamento em tempo real dos jobs
 - ✅ 4. Fortalecer autenticação e sessão
-- 🔜 5. Revisar CRUDs ponta a ponta
+- ✅ 5. Revisar CRUDs ponta a ponta
 - 🔜 6. Implementar integrações sociais live
 
 ## Plano de Segurança
@@ -144,8 +146,30 @@ npm run preview    # preview local do build
 npm run lint       # valida ESLint
 npm run lint:fix   # corrige lint quando possível
 npm run prod:check # valida variáveis essenciais de produção
+npm run test       # testes unitários/contrato com Vitest
+npm run test:e2e   # testes E2E com Playwright
 npm run typecheck  # valida TypeScript
 ```
+
+## Testes e Qualidade
+
+Validação recomendada antes de publicar:
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+npm run build
+```
+
+Validação visual/fluxo principal:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+O E2E cobre login com `admin / admin123`, abertura do painel, rotas principais e execução em desktop e mobile.
 
 ## Deploy no Vercel
 

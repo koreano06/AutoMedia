@@ -12,13 +12,32 @@ export async function createPost(payload: PostPayload) {
 }
 
 export async function updatePost(id: EntityId, payload: Partial<Post>) {
-  return apiClient.post<Post>('/post-update', { id, ...payload });
+  return apiClient.patch<Post>(`/posts/${id}`, payload);
 }
 
 export async function publishPostNow(id: EntityId) {
-  return apiClient.post<Post>('/post-publish-now', { id });
+  return apiClient.post<Post>(`/posts/${id}/publish-now`);
+}
+
+export type PublishDueResult = {
+  dry_run: boolean;
+  total: number;
+  published?: number;
+  failed?: number;
+  results?: Array<{
+    id: EntityId;
+    platform?: string;
+    status: string;
+    external_post_id?: string;
+    external_url?: string;
+    error_message?: string;
+  }>;
+};
+
+export async function publishDuePosts(limit = 25) {
+  return apiClient.post<PublishDueResult>('/posts/publish-due', { limit });
 }
 
 export async function deletePost(id: EntityId) {
-  return apiClient.post<Post>('/post-delete', { id });
+  return apiClient.delete<Post>(`/posts/${id}`);
 }
