@@ -44,5 +44,18 @@ export async function getDiagnostics() {
 }
 
 export async function runDiagnosticChecks(checks?: string[]) {
-  return apiClient.post<RunDiagnosticChecksResponse>('/diagnostics/run-checks', { checks });
+  const payload = await apiClient.post<RunDiagnosticChecksResponse | DiagnosticCheckResult[]>('/diagnostics/run-checks', { checks });
+
+  if (Array.isArray(payload)) {
+    const status = payload.some((result) => result.status === 'error') ? 'error' : payload.some((result) => result.status === 'warning') ? 'warning' : 'ok';
+
+    return {
+      status,
+      checked_at: new Date().toISOString(),
+      results: payload,
+      available_checks: checks || payload.map((result) => result.id),
+    };
+  }
+
+  return payload;
 }
