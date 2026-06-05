@@ -32,4 +32,8 @@ test("navigates through key sections", async ({ page }) => {
 
   await page.goto("/schedule");
   await expect(page.getByText("Agendamento").first()).toBeVisible();
+
+  await page.goto("/quality");
+  await expect(page.getByText("Qualidade").first()).toBeVisible();
+  await expect(page.getByText("Central de qualidade")).toBeVisible();
 });

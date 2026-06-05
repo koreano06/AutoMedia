@@ -12,6 +12,7 @@ import MediaLibrary from "@/pages/MediaLibrary";
 import MarketplaceAds from "@/pages/MarketplaceAds";
 import Products from "@/pages/Products";
 import Publications from "@/pages/Publications";
+import Quality from "@/pages/Quality";
 import Reports from "@/pages/Reports";
 import Schedule from "@/pages/Schedule";
 import Settings from "@/pages/Settings";
@@ -32,6 +33,7 @@ export const appRoutes: RouteObject[] = [
       { path: "/publications", element: <Publications /> },
       { path: "/comments", element: <Comments /> },
       { path: "/integrations", element: <RequirePermission permission="platform:manage"><Integrations /></RequirePermission> },
+      { path: "/quality", element: <RequirePermission permission="admin:access"><Quality /></RequirePermission> },
       { path: "/commercial", element: <RequirePermission permission="finance:manage"><Commercial /></RequirePermission> },
       { path: "/reports", element: <Reports /> },
       { path: "/settings", element: <RequirePermission permission="settings:manage"><Settings /></RequirePermission> },

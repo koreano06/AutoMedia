@@ -148,6 +148,7 @@ npm run lint:fix   # corrige lint quando possível
 npm run prod:check # valida variáveis essenciais de produção
 npm run test       # testes unitários/contrato com Vitest
 npm run test:e2e   # testes E2E com Playwright
+npm run check:errors # roda validações e mostra apenas erros
 npm run typecheck  # valida TypeScript
 ```
 
@@ -160,6 +161,18 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+```
+
+Para uma saída limpa que mostra somente falhas:
+
+```bash
+npm run --silent check:errors
+```
+
+Para pular o E2E nessa validação rápida:
+
+```powershell
+$env:SKIP_E2E="true"; npm run --silent check:errors; Remove-Item Env:SKIP_E2E
 ```
 
 Validação visual/fluxo principal:

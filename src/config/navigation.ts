@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Link2,
   MessageSquare,
+  ShieldCheck,
   ShoppingBag,
   Zap,
 } from "lucide-react";
@@ -34,5 +35,6 @@ export const mainNavigation: NavigationItem[] = [
   { label: "Publicações", icon: Zap, path: "/publications", section: "conteudo", badgeKey: "failures" },
   { label: "Comentários", icon: MessageSquare, path: "/comments", section: "conteudo", badgeKey: "comments" },
   { label: "Integrações", icon: Link2, path: "/integrations", section: "operacao", permission: "platform:manage" },
+  { label: "Qualidade", icon: ShieldCheck, path: "/quality", section: "operacao", permission: "admin:access" },
   { label: "Relatórios", icon: BarChart2, path: "/reports", section: "operacao" },
 ];
