@@ -10,7 +10,7 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - Comunicação com backend via `VITE_API_BASE_URL`, incluindo presets para local, VM, túnel e URL pública.
 - Login integrado ao backend em produção usando JWT e refresh token.
 - Usuário de teste disponível para validação do painel: `admin / admin123`.
-- Fluxo de geração de vídeo preparado para enviar briefing, template, formato, duração, mídia base e plataformas.
+- Fluxo de geração de vídeo preparado para enviar briefing, template, formato, duração, mídia base e plataformas para criação orientada por IA.
 - Biblioteca de mídia e previews padronizados em modais amplos e legíveis.
 - Telas de anúncios, publicações e agendamento com visual profissional e responsivo.
 - Integrações sociais exibidas na interface, com backend preparado para modo `mock` e `live`.
@@ -73,11 +73,11 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ 1. Frontend responsivo e conectado ao backend real
 - ✅ 2. Backend rodando na VM com Postgres, Redis, MinIO e worker
 - ✅ 3. Login, JWT, refresh token e permissões básicas funcionando
-- ✅ 4. Geração de vídeo com fila, worker e FFmpeg funcionando
+- ✅ 4. Pipeline de vídeo com fila, worker e FFmpeg funcionando
 - ✅ 5. Backup completo validado com PostgreSQL + MinIO
 - ✅ 6. Scripts de troca de API para local, VM, tunnel e URL pública
 - 🟡 7. Domínio/tunnel HTTPS definitivo para API e mídia
-- 🟡 8. OpenAI real precisa estabilizar quota/billing/rate limit
+- 🟡 8. IA real precisa estabilizar quota/billing/rate limit para gerar roteiros, cenas e criativos
 - 🔜 9. Publicação real no Instagram/Meta
 - 🔜 10. Publicação real no TikTok
 - 🔜 11. Webhooks/polling para comentários e respostas automáticas
@@ -94,7 +94,7 @@ npm run prod:check
 - `Dashboard`: visão geral da operação.
 - `Anúncios Base`: cadastro e gestão dos anúncios/produtos usados como origem dos criativos.
 - `Biblioteca de Mídia`: imagens, vídeos coletados e criativos gerados por IA.
-- `Geração de Vídeos`: briefing, roteiro, imagem IA, seleção de template e envio para fila de renderização.
+- `Geração de Vídeos`: briefing, roteiro por IA, direção de cenas, imagem/clipe IA, seleção de template e envio para fila de renderização.
 - `Aprovação`: revisão manual antes de publicar.
 - `Agendamento`: calendário, horários e edição de posts.
 - `Publicações`: acompanhamento de posts publicados/agendados.
@@ -273,9 +273,9 @@ src/
 
 1. O usuário seleciona um anúncio base.
 2. Escolhe template, formato, duração, ritmo, áudio e plataforma.
-3. Pode gerar roteiro e imagem IA.
+3. A IA gera roteiro, gancho, cenas, textos de tela, CTA e direção visual com base no anúncio.
 4. O frontend envia tudo para `POST /api/videos/generate`.
-5. O backend cria job, envia para fila e renderiza com worker/FFmpeg.
+5. O backend cria job, envia para fila e o worker monta/renderiza o vídeo com FFmpeg usando o plano criativo gerado por IA.
 6. O vídeo volta para a biblioteca como mídia em revisão.
 7. O usuário aprova, agenda e publica.
 
@@ -284,7 +284,7 @@ src/
 - Em produção, o login usa o backend real com JWT.
 - Em desenvolvimento, existe fallback local apenas para manter a interface utilizável quando a API não estiver disponível.
 - O usuário padrão de teste do backend é `admin / admin123`.
-- A geração real de vídeo depende do backend com Redis, worker e FFmpeg.
+- A IA é responsável pelo roteiro, estrutura criativa, cenas, textos e assets. O FFmpeg é o motor técnico que monta e renderiza o MP4 final.
 - O frontend não deve armazenar chaves sensíveis, como OpenAI, Shopee, Meta ou TikTok.
 - Credenciais de APIs ficam somente no backend/VM ou no provedor de backend em produção.
 
