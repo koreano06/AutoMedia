@@ -35,6 +35,10 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ Feedback em tempo real dos jobs de vídeo em evolução na tela de geração
 - ✅ Fallback local desabilitado em produção para forçar autenticação real
 - ✅ Permissões por papel em áreas e ações sensíveis da interface
+- ✅ Configuração preparada para backend local, VM, túnel e URL pública HTTPS
+- ✅ Tela de qualidade/diagnóstico preparada para acompanhar saúde da plataforma
+- 🟡 Backend público definitivo com HTTPS ainda precisa de domínio/túnel estável
+- 🟡 OpenAI real em validação no backend por limite/rate limit da conta
 - 🔜 Publicação real em redes sociais via APIs oficiais
 - 🔜 Monitoramento automático de comentários em tempo real
 - 🔜 Dashboard financeiro com métricas reais de vendas e ROI
@@ -42,11 +46,15 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 ## Plano de Estabilização
 
 - ✅ 1. Consolidar ambiente de produção
-- 🟡 2. Fechar Redis + Supabase Storage
-- 🔜 3. Melhorar acompanhamento em tempo real dos jobs
+- ✅ 2. Fechar Redis + storage persistente na VM
+- ✅ 3. Melhorar acompanhamento em tempo real dos jobs
 - ✅ 4. Fortalecer autenticação e sessão
 - ✅ 5. Revisar CRUDs ponta a ponta
-- 🔜 6. Implementar integrações sociais live
+- ✅ 6. Preparar frontend para API pública do backend na VM
+- ✅ 7. Documentar operação local, VM e Vercel
+- 🟡 8. Publicar backend/MinIO com domínio ou tunnel HTTPS estável
+- 🟡 9. Validar OpenAI real sem fallback por limite de conta
+- 🔜 10. Implementar integrações sociais live
 
 ## Plano de Segurança
 
@@ -54,9 +62,26 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ 2. Remover fallback local em produção
 - ✅ 3. Controle de sessão expirada e refresh token
 - ✅ 4. Permissões por papel na interface
-- 🟡 5. Máscara visual para dados sensíveis
-- 🟡 6. Alertas claros para erros 401/403
+- ✅ 5. Máscara visual para dados sensíveis nas áreas críticas
+- ✅ 6. Alertas claros para erros 401/403 e falhas de API
 - ✅ 7. Não exibir access/refresh tokens das integrações
+- 🟡 8. Exigir HTTPS público antes de produção aberta
+- 🔜 9. Finalizar permissões visuais por papel em todas as ações sensíveis
+
+## Roadmap de Produção
+
+- ✅ 1. Frontend responsivo e conectado ao backend real
+- ✅ 2. Backend rodando na VM com Postgres, Redis, MinIO e worker
+- ✅ 3. Login, JWT, refresh token e permissões básicas funcionando
+- ✅ 4. Geração de vídeo com fila, worker e FFmpeg funcionando
+- ✅ 5. Backup completo validado com PostgreSQL + MinIO
+- ✅ 6. Scripts de troca de API para local, VM, tunnel e URL pública
+- 🟡 7. Domínio/tunnel HTTPS definitivo para API e mídia
+- 🟡 8. OpenAI real precisa estabilizar quota/billing/rate limit
+- 🔜 9. Publicação real no Instagram/Meta
+- 🔜 10. Publicação real no TikTok
+- 🔜 11. Webhooks/polling para comentários e respostas automáticas
+- 🔜 12. Monitoramento e alertas de produção
 
 Para validar as variáveis essenciais do frontend antes de publicar:
 
@@ -261,7 +286,7 @@ src/
 - O usuário padrão de teste do backend é `admin / admin123`.
 - A geração real de vídeo depende do backend com Redis, worker e FFmpeg.
 - O frontend não deve armazenar chaves sensíveis, como OpenAI, Shopee, Meta ou TikTok.
-- Credenciais de APIs ficam somente no backend/Vercel.
+- Credenciais de APIs ficam somente no backend/VM ou no provedor de backend em produção.
 
 ## Documentação Interna
 
