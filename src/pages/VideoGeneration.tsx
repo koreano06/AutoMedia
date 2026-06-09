@@ -24,10 +24,12 @@ import {
   Layers3,
   ListChecks,
   Play,
+  Plus,
   RefreshCw,
   Rocket,
   Sparkles,
   Target,
+  Trash2,
   Wand2,
   XCircle,
 } from 'lucide-react';
@@ -84,6 +86,15 @@ type Briefing = {
   extra: string;
 };
 
+type VideoScene = {
+  id: string;
+  title: string;
+  duration: string;
+  onScreenText: string;
+  narration: string;
+  visualDirection: string;
+};
+
 const emptyBriefing: Briefing = {
   targetAudience: '',
   tone: 'Direto, natural e persuasivo',
@@ -93,6 +104,43 @@ const emptyBriefing: Briefing = {
   restrictions: '',
   extra: '',
 };
+
+const createSceneId = () => `scene_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing = emptyBriefing): VideoScene[] => [
+  {
+    id: createSceneId(),
+    title: 'Gancho inicial',
+    duration: '0-3s',
+    onScreenText: `${productName}: atenção nos primeiros segundos`,
+    narration: currentBriefing.promise || `Conheça uma oferta prática para quem procura ${productName}.`,
+    visualDirection: 'Close forte no produto, fundo limpo, texto grande e contraste alto.',
+  },
+  {
+    id: createSceneId(),
+    title: 'Benefício principal',
+    duration: '3-8s',
+    onScreenText: currentBriefing.promise || 'Benefício claro em poucos segundos',
+    narration: `Mostre o principal motivo para a pessoa se interessar pela oferta.`,
+    visualDirection: 'Movimento de zoom/pan no produto, detalhe visual e ritmo rápido.',
+  },
+  {
+    id: createSceneId(),
+    title: 'Prova e contexto',
+    duration: '8-12s',
+    onScreenText: 'Veja como isso ajuda no dia a dia',
+    narration: 'Reforce a utilidade, o contexto de uso e uma prova simples sem exageros.',
+    visualDirection: 'Cena de uso, detalhe de textura/material ou comparação visual.',
+  },
+  {
+    id: createSceneId(),
+    title: 'CTA final',
+    duration: '12-15s',
+    onScreenText: currentBriefing.cta || 'Comente "eu quero"',
+    narration: currentBriefing.cta || 'Comente eu quero para receber o link.',
+    visualDirection: 'Tela final com produto, CTA visível e visual limpo para publicação.',
+  },
+];
 
 const getAssetPreview = (asset: MediaAsset) => asset.thumbnail_url || asset.url;
 const getVideoScore = (asset: MediaAsset) => Number(asset.quality_score ?? (asset.status === 'approved' ? 88 : asset.status === 'rejected' ? 38 : 72));
@@ -115,6 +163,7 @@ export default function VideoGeneration() {
   const [visualPrompt, setVisualPrompt] = useState('');
   const [generatedVisual, setGeneratedVisual] = useState<MediaAsset | null>(null);
   const [scriptPreview, setScriptPreview] = useState('');
+  const [scenes, setScenes] = useState<VideoScene[]>(createDefaultScenes());
   const [generatingScript, setGeneratingScript] = useState(false);
   const [generatingVisual, setGeneratingVisual] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -190,7 +239,7 @@ export default function VideoGeneration() {
   const stepCards = [
     { number: 1, title: 'Anúncio', desc: 'Escolha produto, destino e formato', done: Boolean(product) },
     { number: 2, title: 'Briefing', desc: 'Defina promessa, público e CTA', done: readiness >= 80 },
-    { number: 3, title: 'Roteiro & mídia', desc: 'Gere roteiro, imagem e escolha assets', done: Boolean(scriptPreview || generationPreview || selectedMedia.length) },
+    { number: 3, title: 'Roteiro & mídia', desc: 'Gere roteiro, imagem e escolha assets', done: Boolean(product && (scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration) || generationPreview || selectedMedia.length)) },
     { number: 4, title: 'Render & revisão', desc: 'Renderize, acompanhe fila e aprove', done: stats.review + stats.approved > 0 },
   ];
   const canAdvanceWizard =
@@ -199,7 +248,7 @@ export default function VideoGeneration() {
       : currentStep === 2
         ? readiness >= 60
         : currentStep === 3
-          ? Boolean(scriptPreview || generationPreview || selectedMedia.length || product?.image_url)
+          ? Boolean(product && (scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration) || generationPreview || selectedMedia.length || product.image_url))
           : readiness >= 80;
   const stageCardClass = (step: number) =>
     cn(
@@ -212,6 +261,55 @@ export default function VideoGeneration() {
   useEffect(() => {
     setActiveWizardStep((current) => (recommendedStep > current ? recommendedStep : current));
   }, [recommendedStep]);
+
+  const updateScene = (id: string, patch: Partial<VideoScene>) => {
+    setScenes((current) => current.map((scene) => (scene.id === id ? { ...scene, ...patch } : scene)));
+  };
+
+  const addScene = () => {
+    setScenes((current) => [
+      ...current,
+      {
+        id: createSceneId(),
+        title: `Cena ${current.length + 1}`,
+        duration: '',
+        onScreenText: '',
+        narration: '',
+        visualDirection: '',
+      },
+    ]);
+  };
+
+  const removeScene = (id: string) => {
+    setScenes((current) => (current.length <= 1 ? current : current.filter((scene) => scene.id !== id)));
+  };
+
+  const resetScenesFromBriefing = () => {
+    setScenes(createDefaultScenes(product?.name, briefing));
+    toast.success('Estrutura de cenas atualizada');
+  };
+
+  const buildStructuredScript = (baseScript = scriptPreview) => {
+    const filledScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection);
+    if (filledScenes.length === 0) return scriptPreview;
+
+    const sceneText = filledScenes
+      .map((scene, index) => [
+        `Cena ${index + 1}: ${scene.title || 'Sem título'}`,
+        scene.duration ? `Tempo: ${scene.duration}` : '',
+        scene.onScreenText ? `Texto na tela: ${scene.onScreenText}` : '',
+        scene.narration ? `Narração/legenda: ${scene.narration}` : '',
+        scene.visualDirection ? `Direção visual: ${scene.visualDirection}` : '',
+      ].filter(Boolean).join('\n'))
+      .join('\n\n');
+
+    return [
+      baseScript ? `Roteiro IA/base:\n${baseScript}` : '',
+      `Roteiro estruturado por cenas:\n${sceneText}`,
+      `CTA final: ${briefing.cta}`,
+      `Observações: ${briefing.restrictions || 'Evitar promessas exageradas e manter linguagem natural.'}`,
+    ].filter(Boolean).join('\n\n');
+  };
 
   useEffect(() => {
     if (activeJobs.length === 0) return;
@@ -297,6 +395,9 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
     try {
       const script = await invokeLLM(createPrompt(product, true));
       setScriptPreview(script);
+      if (!scenes.some((scene) => scene.onScreenText || scene.narration)) {
+        setScenes(createDefaultScenes(product.name, briefing));
+      }
       toast.success('Roteiro criado para revisão');
     } catch {
       toast.error('Não foi possível gerar o roteiro');
@@ -399,7 +500,9 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
     });
 
     try {
-      const script = scriptPreview || (await invokeLLM(createPrompt(product)));
+      const baseScript = scriptPreview || (await invokeLLM(createPrompt(product)));
+      if (!scriptPreview) setScriptPreview(baseScript);
+      const script = buildStructuredScript(baseScript) || baseScript;
       updateQueue(jobId, { progress: 72 });
 
       const result = await generateVideo({
@@ -541,7 +644,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
                   <Label>Anúncio base</Label>
-                  <Select value={selectedProduct} onValueChange={(value) => { setSelectedProduct(value); setSelectedMediaIds([]); }}>
+                  <Select value={selectedProduct} onValueChange={(value) => { const nextProduct = products.find((item) => item.id === value); setSelectedProduct(value); setSelectedMediaIds([]); setScenes(createDefaultScenes(nextProduct?.name, briefing)); }}>
                     <SelectTrigger className="mt-1.5"><SelectValue placeholder="Selecionar anúncio base..." /></SelectTrigger>
                     <SelectContent>
                       {products.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
@@ -730,7 +833,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
               <SectionTitle icon={AlertTriangle} title="Qualidade antes do render" subtitle="Sinais que ajudam a evitar criativos fracos" />
               <div className="mt-4 space-y-3">
                 <QualitySignal label="Base visual" ok={Boolean(generationPreview || selectedMedia.length || product?.image_url)} value={generationPreview ? 'Criativo IA' : selectedMedia.length ? `${selectedMedia.length} asset(s)` : product?.image_url ? 'Imagem do anúncio' : 'Ausente'} />
-                <QualitySignal label="Roteiro" ok={Boolean(scriptPreview)} value={scriptPreview ? 'Revisável' : 'Ainda não gerado'} />
+                <QualitySignal label="Roteiro" ok={Boolean(product && (scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration)))} value={scriptPreview ? 'IA + cenas' : product && scenes.some((scene) => scene.onScreenText || scene.narration) ? 'Cenas editáveis' : 'Ainda não gerado'} />
                 <QualitySignal label="CTA" ok={Boolean(briefing.cta.trim())} value={briefing.cta || 'Ausente'} />
                 <QualitySignal label="Risco operacional" ok={qualityWarnings.length === 0} value={qualityWarnings.length === 0 ? 'Baixo' : `${qualityWarnings.length} alerta(s)`} />
               </div>
@@ -747,13 +850,82 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
         </div>
 
         <section className={stageCardClass(3)}>
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <SectionTitle icon={ListChecks} title="Editor de roteiro por cenas" subtitle="Ajuste o que aparece, o que é narrado e a direção visual antes do render" />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button type="button" variant="outline" size="sm" className="gap-2" onClick={resetScenesFromBriefing}>
+                <Sparkles className="h-4 w-4" /> Sugerir cenas
+              </Button>
+              <Button type="button" size="sm" className="gap-2" onClick={addScene}>
+                <Plus className="h-4 w-4" /> Adicionar cena
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+            {scenes.map((scene, index) => (
+              <div key={scene.id} className="rounded-2xl border border-border bg-muted/25 p-4">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-syne text-xs font-bold uppercase tracking-[0.14em] text-primary">Cena {index + 1}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Use frases curtas para melhorar legibilidade no vídeo.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    disabled={scenes.length <= 1}
+                    onClick={() => removeScene(scene.id)}
+                    aria-label={`Remover cena ${index + 1}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
+                  <Field label="Título da cena" value={scene.title} onChange={(value) => updateScene(scene.id, { title: value })} placeholder="Gancho, benefício, prova..." />
+                  <Field label="Tempo" value={scene.duration} onChange={(value) => updateScene(scene.id, { duration: value })} placeholder="0-3s" />
+                </div>
+                <div className="mt-3">
+                  <Label>Texto na tela</Label>
+                  <Textarea
+                    value={scene.onScreenText}
+                    onChange={(event) => updateScene(scene.id, { onScreenText: event.target.value })}
+                    className="mt-1.5 h-20 resize-none"
+                    placeholder="Frase curta que aparecerá no vídeo"
+                  />
+                </div>
+                <div className="mt-3">
+                  <Label>Narração ou legenda</Label>
+                  <Textarea
+                    value={scene.narration}
+                    onChange={(event) => updateScene(scene.id, { narration: event.target.value })}
+                    className="mt-1.5 h-20 resize-none"
+                    placeholder="O que a IA/roteiro deve comunicar nesta cena"
+                  />
+                </div>
+                <div className="mt-3">
+                  <Label>Direção visual</Label>
+                  <Textarea
+                    value={scene.visualDirection}
+                    onChange={(event) => updateScene(scene.id, { visualDirection: event.target.value })}
+                    className="mt-1.5 h-20 resize-none"
+                    placeholder="Zoom, close, movimento, fundo, elementos visuais..."
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className={stageCardClass(3)}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <SectionTitle icon={Play} title="Prévia do roteiro" subtitle="Revise antes de renderizar o vídeo final" />
-            {scriptPreview && <Button variant="outline" size="sm" className="gap-2" onClick={() => navigator.clipboard.writeText(scriptPreview)}><Copy className="h-4 w-4" /> Copiar roteiro</Button>}
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => navigator.clipboard.writeText(buildStructuredScript())}><Copy className="h-4 w-4" /> Copiar roteiro</Button>
           </div>
           <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-4">
-            {scriptPreview ? (
-              <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">{scriptPreview}</pre>
+            {scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration) ? (
+              <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">{buildStructuredScript()}</pre>
             ) : (
               <p className="text-sm text-muted-foreground">Gere um roteiro para visualizar gancho, cenas, texto na tela, legenda e CTA final.</p>
             )}
