@@ -44,14 +44,14 @@ import { getJob } from '@/services/jobs';
 import type { EntityId, Job, MediaAsset, Platform, Product, Status } from '@/types/entities';
 
 const templates = [
-  { id: 'product', label: 'Anúncio direto', desc: 'Gancho, benefício principal e CTA direto' },
-  { id: 'unboxing', label: 'Unboxing', desc: 'Abertura, detalhes e primeira impressão' },
-  { id: 'before_after', label: 'Antes e depois', desc: 'Transformação visual e prova de valor' },
-  { id: 'quick_review', label: 'Review rápido', desc: 'Pontos fortes em sequência curta' },
-  { id: 'flash_offer', label: 'Oferta relâmpago', desc: 'Urgência, preço e chamada de compra' },
-  { id: 'social_proof', label: 'Prova social', desc: 'Depoimentos, avaliações e confiança' },
-  { id: 'demo', label: 'Demonstração', desc: 'Mostra a oferta em uso ou contexto real' },
-  { id: 'story', label: 'Story curto', desc: 'Formato leve para atenção rápida' },
+  { id: 'product', label: 'Anúncio direto', desc: 'Gancho, benefício principal e CTA direto', visual: 'Studio clean', motion: 'Zoom suave + texto grande', accent: 'from-orange-500 to-primary', prompt: 'fundo limpo, foco no produto, tipografia grande, CTA direto' },
+  { id: 'unboxing', label: 'Unboxing', desc: 'Abertura, detalhes e primeira impressão', visual: 'UGC premium', motion: 'Cortes rápidos + close', accent: 'from-amber-400 to-orange-500', prompt: 'mãos abrindo embalagem, detalhe do produto, sensação real de descoberta' },
+  { id: 'before_after', label: 'Antes e depois', desc: 'Transformação visual e prova de valor', visual: 'Split screen', motion: 'Comparação + transição', accent: 'from-teal-400 to-emerald-500', prompt: 'comparação antes e depois, transformação visual clara, prova de valor' },
+  { id: 'quick_review', label: 'Review rápido', desc: 'Pontos fortes em sequência curta', visual: 'Review tech', motion: 'Cards de pontos fortes', accent: 'from-sky-400 to-blue-500', prompt: 'review moderno, bullets visuais, detalhes do produto em cena' },
+  { id: 'flash_offer', label: 'Oferta relâmpago', desc: 'Urgência, preço e chamada de compra', visual: 'Sale impact', motion: 'Pulsos + contador', accent: 'from-red-500 to-orange-500', prompt: 'oferta relâmpago, urgência visual, preço e CTA destacados sem parecer spam' },
+  { id: 'social_proof', label: 'Prova social', desc: 'Depoimentos, avaliações e confiança', visual: 'Trust cards', motion: 'Depoimentos flutuantes', accent: 'from-violet-400 to-fuchsia-500', prompt: 'avaliações, prova social, elementos de confiança, visual limpo' },
+  { id: 'demo', label: 'Demonstração', desc: 'Mostra a oferta em uso ou contexto real', visual: 'Hands-on demo', motion: 'Passo a passo curto', accent: 'from-lime-400 to-emerald-500', prompt: 'produto em uso, demonstração clara, contexto cotidiano e benefício prático' },
+  { id: 'story', label: 'Story curto', desc: 'Formato leve para atenção rápida', visual: 'Creator story', motion: 'Texto falado + CTA leve', accent: 'from-pink-400 to-orange-400', prompt: 'visual espontâneo, story vertical, linguagem natural e CTA leve' },
 ] as const;
 
 const formats = [
@@ -144,6 +144,17 @@ const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing 
 
 const getAssetPreview = (asset: MediaAsset) => asset.thumbnail_url || asset.url;
 const getVideoScore = (asset: MediaAsset) => Number(asset.quality_score ?? (asset.status === 'approved' ? 88 : asset.status === 'rejected' ? 38 : 72));
+const getJobStage = (job: Job) => {
+  const progress = job.progress || 0;
+  if (job.status === 'failed') return { label: 'Falhou', detail: job.error_message || 'Verifique o erro e tente novamente.', progress: 100 };
+  if (job.status === 'cancelled') return { label: 'Cancelado', detail: 'O processamento foi interrompido.', progress: 100 };
+  if (job.status === 'completed') return { label: 'Pronto para revisão', detail: 'Render concluído. Revise antes de publicar.', progress: 100 };
+  if (job.status === 'queued' || progress < 20) return { label: 'Em fila', detail: 'Aguardando worker pegar o job.', progress };
+  if (job.status === 'processing' || progress < 55) return { label: 'Preparando roteiro e assets', detail: 'Organizando cenas, mídia e plano de render.', progress };
+  if (job.status === 'rendering' || progress < 85) return { label: 'Renderizando vídeo', detail: 'FFmpeg/worker montando o vídeo final.', progress };
+  if (job.status === 'uploading' || progress < 100) return { label: 'Salvando mídia', detail: 'Enviando arquivo para storage e criando preview.', progress };
+  return { label: 'Processando', detail: 'Acompanhando atualização do backend.', progress };
+};
 
 export default function VideoGeneration() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -310,6 +321,21 @@ export default function VideoGeneration() {
       `Observações: ${briefing.restrictions || 'Evitar promessas exageradas e manter linguagem natural.'}`,
     ].filter(Boolean).join('\n\n');
   };
+  const filledSceneCount = scenes.filter((scene) => scene.title && scene.onScreenText && scene.narration).length;
+  const hasVisualBase = Boolean(generationPreview || selectedMedia.length || product?.image_url);
+  const creativeScore = Math.min(
+    100,
+    Math.round(
+      (product ? 18 : 0)
+      + (hasVisualBase ? 18 : 0)
+      + (briefing.promise.trim() ? 14 : 0)
+      + (briefing.cta.trim() ? 12 : 0)
+      + (scriptPreview ? 14 : 0)
+      + Math.min(16, filledSceneCount * 4)
+      + (visualPrompt.trim() ? 8 : 0),
+    ),
+  );
+  const creativeScoreLabel = creativeScore >= 82 ? 'Pronto para render' : creativeScore >= 62 ? 'Bom, mas revise' : 'Precisa de ajustes';
 
   useEffect(() => {
     if (activeJobs.length === 0) return;
@@ -348,6 +374,8 @@ Anúncio/oferta base: ${currentProduct.name}
 Texto/contexto do anúncio original: ${currentProduct.description || 'Sem descrição'}
 Categoria/nicho: ${currentProduct.category || 'Não informada'}
 Template: ${selectedTemplateConfig?.label}
+Direção visual do template: ${selectedTemplateConfig?.visual} - ${selectedTemplateConfig?.motion}
+Guia criativo do template: ${selectedTemplateConfig?.prompt}
 Formato: ${selectedFormatConfig?.label} ${selectedFormatConfig?.ratio}
 Duração: ${duration}
 Ritmo: ${rhythm}
@@ -379,6 +407,9 @@ Descrição do anúncio original: ${currentProduct.description || 'Sem descriç�
 Formato: ${selectedFormatConfig?.label} ${selectedFormatConfig?.ratio}
 Plataforma: ${platform}
 Template: ${selectedTemplateConfig?.label}
+Direção visual do template: ${selectedTemplateConfig?.visual}
+Movimento esperado: ${selectedTemplateConfig?.motion}
+Guia criativo: ${selectedTemplateConfig?.prompt}
 Promessa principal: ${briefing.promise || 'benefício claro da oferta'}
 Tom visual: moderno, premium, alto contraste, luz de estúdio, composição limpa.
 Instrução: gerar uma imagem comercial bonita para divulgação, com foco na oferta, fundo profissional, espaço para texto curto e sem marcas d'agua.
@@ -668,10 +699,17 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                       key={template.id}
                       type="button"
                       onClick={() => setSelectedTemplate(template.id)}
-                      className={cn('rounded-xl border p-3 text-left transition-all', selectedTemplate === template.id ? 'border-primary bg-primary/5 shadow-sm' : 'border-border hover:bg-muted')}
+                      className={cn('group overflow-hidden rounded-2xl border text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5', selectedTemplate === template.id ? 'border-primary bg-primary/5 shadow-sm shadow-primary/10' : 'border-border hover:bg-muted')}
                     >
-                      <p className={cn('text-xs font-semibold', selectedTemplate === template.id ? 'text-primary' : 'text-foreground')}>{template.label}</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">{template.desc}</p>
+                      <div className={cn('h-1.5 bg-gradient-to-r', template.accent)} />
+                      <div className="p-3">
+                        <p className={cn('text-xs font-semibold', selectedTemplate === template.id ? 'text-primary' : 'text-foreground')}>{template.label}</p>
+                        <p className="mt-1 text-[10px] leading-4 text-muted-foreground">{template.desc}</p>
+                        <div className="mt-3 space-y-1 rounded-xl bg-background/55 p-2">
+                          <p className="truncate text-[10px] font-semibold text-foreground">{template.visual}</p>
+                          <p className="truncate text-[10px] text-muted-foreground">{template.motion}</p>
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -778,6 +816,57 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
 
           <div className="space-y-5">
             <section className={stageCardClass(4)}>
+              <SectionTitle icon={Play} title="Preview antes do render" subtitle="Resumo visual do vídeo antes de consumir fila/IA" />
+              <div className="mt-4 grid gap-4 sm:grid-cols-[180px_1fr]">
+                <div className="overflow-hidden rounded-[2rem] border border-border bg-background p-2 shadow-inner">
+                  <div className="relative aspect-[9/16] overflow-hidden rounded-[1.5rem] bg-muted">
+                    {generationPreview || product?.image_url ? (
+                      <img src={generationPreview || product?.image_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center p-5 text-center">
+                        <Image className="mb-3 h-8 w-8 text-muted-foreground/40" />
+                        <p className="text-xs text-muted-foreground">Sem imagem base</p>
+                      </div>
+                    )}
+                    <div className="absolute inset-x-3 top-3">
+                      <span className={cn('inline-flex rounded-full bg-gradient-to-r px-2.5 py-1 text-[10px] font-bold text-white shadow-lg', selectedTemplateConfig?.accent)}>
+                        {selectedTemplateConfig?.label}
+                      </span>
+                    </div>
+                    <div className="absolute inset-x-3 bottom-3 rounded-2xl bg-black/55 p-3 backdrop-blur">
+                      <p className="line-clamp-2 font-syne text-sm font-bold text-white">
+                        {scenes[0]?.onScreenText || briefing.promise || product?.name || 'Gancho do vídeo'}
+                      </p>
+                      <p className="mt-1 line-clamp-1 text-[10px] text-white/70">{briefing.cta || 'CTA final'}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-border bg-muted/25 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-syne text-sm font-bold text-foreground">{creativeScoreLabel}</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          Score calculado com base em briefing, cenas, mídia, CTA e roteiro.
+                        </p>
+                      </div>
+                      <span className={cn('rounded-2xl px-3 py-2 font-syne text-lg font-bold', creativeScore >= 82 ? 'bg-success/10 text-success' : creativeScore >= 62 ? 'bg-warning/10 text-warning' : 'bg-destructive/10 text-destructive')}>
+                        {creativeScore}%
+                      </span>
+                    </div>
+                    <Progress value={creativeScore} className="mt-4" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <InfoPill label="Cenas completas" value={`${filledSceneCount}/${scenes.length}`} />
+                    <InfoPill label="Movimento" value={selectedTemplateConfig?.motion || 'Padrão'} />
+                    <InfoPill label="Visual" value={selectedTemplateConfig?.visual || 'Padrão'} />
+                    <InfoPill label="Áudio" value={audio} />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className={stageCardClass(4)}>
               <SectionTitle icon={ListChecks} title="Checklist antes de gerar" subtitle="Reduz erro e melhora o resultado final" />
               <div className="mt-4">
                 <div className="mb-2 flex items-center justify-between text-sm">
@@ -810,20 +899,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                   <p className="rounded-xl bg-muted/35 p-4 text-sm text-muted-foreground">Nenhum job em andamento.</p>
                 ) : (
                   queue.map((job) => (
-                    <div key={job.id} className="rounded-xl border border-border p-3">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">{job.title}</p>
-                          <p className="text-xs text-muted-foreground">{job.error_message || 'Tempo estimado: 1-3 min'}</p>
-                        </div>
-                        <JobStatusBadge status={job.status} />
-                      </div>
-                      <Progress value={job.progress || 0} className="mt-3" />
-                      <div className="mt-2 flex justify-end gap-2">
-                        {job.status === 'failed' && <Button size="sm" variant="outline" className="h-8 gap-1"><RefreshCw className="h-3.5 w-3.5" /> Repetir</Button>}
-                        {['queued', 'processing', 'rendering', 'uploading'].includes(job.status) && <Button size="sm" variant="ghost" className="h-8" onClick={() => updateQueue(job.id, { status: 'cancelled', progress: 100 })}>Cancelar</Button>}
-                      </div>
-                    </div>
+                    <JobQueueCard key={job.id} job={job} onCancel={() => updateQueue(job.id, { status: 'cancelled', progress: 100 })} />
                   ))
                 )}
               </div>
@@ -835,6 +911,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                 <QualitySignal label="Base visual" ok={Boolean(generationPreview || selectedMedia.length || product?.image_url)} value={generationPreview ? 'Criativo IA' : selectedMedia.length ? `${selectedMedia.length} asset(s)` : product?.image_url ? 'Imagem do anúncio' : 'Ausente'} />
                 <QualitySignal label="Roteiro" ok={Boolean(product && (scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration)))} value={scriptPreview ? 'IA + cenas' : product && scenes.some((scene) => scene.onScreenText || scene.narration) ? 'Cenas editáveis' : 'Ainda não gerado'} />
                 <QualitySignal label="CTA" ok={Boolean(briefing.cta.trim())} value={briefing.cta || 'Ausente'} />
+                <QualitySignal label="Score criativo" ok={creativeScore >= 62} value={`${creativeScore}% · ${creativeScoreLabel}`} />
                 <QualitySignal label="Risco operacional" ok={qualityWarnings.length === 0} value={qualityWarnings.length === 0 ? 'Baixo' : `${qualityWarnings.length} alerta(s)`} />
               </div>
               {qualityWarnings.length > 0 && (
@@ -1044,6 +1121,42 @@ function QualitySignal({ label, value, ok }: { label: string; value: string; ok:
       <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', ok ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
         {ok ? 'OK' : 'Ajustar'}
       </span>
+    </div>
+  );
+}
+
+function JobQueueCard({ job, onCancel }: { job: Job; onCancel: () => void }) {
+  const stage = getJobStage(job);
+  const isActive = ['queued', 'processing', 'rendering', 'uploading'].includes(job.status);
+  const stageSteps = [
+    { label: 'Fila', active: stage.progress >= 1 },
+    { label: 'Preparação', active: stage.progress >= 25 },
+    { label: 'Render', active: stage.progress >= 55 },
+    { label: 'Storage', active: stage.progress >= 85 },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-border bg-muted/20 p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">{job.title}</p>
+          <p className="mt-1 text-xs font-medium text-primary">{stage.label}</p>
+          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{stage.detail}</p>
+        </div>
+        <JobStatusBadge status={job.status} />
+      </div>
+      <Progress value={stage.progress} className="mt-3" />
+      <div className="mt-3 grid grid-cols-4 gap-1">
+        {stageSteps.map((step) => (
+          <div key={step.label} className={cn('rounded-full px-2 py-1 text-center text-[9px] font-semibold', step.active ? 'bg-primary/15 text-primary' : 'bg-background text-muted-foreground')}>
+            {step.label}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        {job.status === 'failed' && <Button size="sm" variant="outline" className="h-8 gap-1"><RefreshCw className="h-3.5 w-3.5" /> Repetir</Button>}
+        {isActive && <Button size="sm" variant="ghost" className="h-8" onClick={onCancel}>Cancelar</Button>}
+      </div>
     </div>
   );
 }
