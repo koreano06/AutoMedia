@@ -40,7 +40,7 @@ import { filterMediaAssets, listMediaAssets, updateMediaAsset } from '@/services
 import { listProducts } from '@/services/products';
 import { generateImage, invokeLLM } from '@/services/ai';
 import { generateVideo } from '@/services/videos';
-import { getJob } from '@/services/jobs';
+import { getJob, retryJob } from '@/services/jobs';
 import type { EntityId, Job, MediaAsset, Platform, Product, Status } from '@/types/entities';
 
 const templates = [
@@ -582,6 +582,16 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
     }
   };
 
+  const handleRetryJob = async (job: Job) => {
+    try {
+      const retried = await retryJob(job.id);
+      updateQueue(job.id, retried);
+      toast.success('Job reenviado para a fila de renderização');
+    } catch {
+      toast.error('Não foi possível repetir o job agora');
+    }
+  };
+
   return (
     <div>
       <TopBar title="Geração de Vídeos" subtitle="Transforme anúncios prontos em roteiros, criativos e vídeos para redes sociais" />
@@ -899,7 +909,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                   <p className="rounded-xl bg-muted/35 p-4 text-sm text-muted-foreground">Nenhum job em andamento.</p>
                 ) : (
                   queue.map((job) => (
-                    <JobQueueCard key={job.id} job={job} onCancel={() => updateQueue(job.id, { status: 'cancelled', progress: 100 })} />
+                    <JobQueueCard key={job.id} job={job} onRetry={() => handleRetryJob(job)} onCancel={() => updateQueue(job.id, { status: 'cancelled', progress: 100 })} />
                   ))
                 )}
               </div>
@@ -1125,7 +1135,7 @@ function QualitySignal({ label, value, ok }: { label: string; value: string; ok:
   );
 }
 
-function JobQueueCard({ job, onCancel }: { job: Job; onCancel: () => void }) {
+function JobQueueCard({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; onRetry: () => void }) {
   const stage = getJobStage(job);
   const isActive = ['queued', 'processing', 'rendering', 'uploading'].includes(job.status);
   const stageSteps = [
@@ -1154,7 +1164,7 @@ function JobQueueCard({ job, onCancel }: { job: Job; onCancel: () => void }) {
         ))}
       </div>
       <div className="mt-3 flex justify-end gap-2">
-        {job.status === 'failed' && <Button size="sm" variant="outline" className="h-8 gap-1"><RefreshCw className="h-3.5 w-3.5" /> Repetir</Button>}
+        {job.status === 'failed' && <Button size="sm" variant="outline" className="h-8 gap-1" onClick={onRetry}><RefreshCw className="h-3.5 w-3.5" /> Repetir</Button>}
         {isActive && <Button size="sm" variant="ghost" className="h-8" onClick={onCancel}>Cancelar</Button>}
       </div>
     </div>

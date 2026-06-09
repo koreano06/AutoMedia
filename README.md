@@ -39,6 +39,9 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ Tela de qualidade/diagnóstico preparada para acompanhar saúde da plataforma
 - ✅ Sessão expirada limpa tokens inválidos e retorna para login de forma controlada
 - ✅ Central de Qualidade acompanha pipeline de vídeo, jobs ativos, travados e falhas recentes
+- ✅ Central de Qualidade exibe checklist de produção e logs operacionais da VM
+- ✅ Tela de geração de vídeos permite repetir jobs falhos direto pela interface
+- ✅ Backend cacheia mídia externa no storage próprio antes do render, reduzindo falhas por hotlink/429
 - 🟡 Backend público definitivo com HTTPS ainda precisa de domínio/túnel estável
 - 🟡 OpenAI real em validação no backend por limite/rate limit da conta
 - 🔜 Publicação real em redes sociais via APIs oficiais
@@ -56,9 +59,12 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ 7. Documentar operação local, VM e Vercel
 - ✅ 8. Tratar sessão expirada e falhas de API com mensagens operacionais
 - ✅ 9. Exibir saúde do pipeline de vídeo na aba Qualidade
-- 🟡 10. Publicar backend/MinIO com domínio ou tunnel HTTPS estável
-- 🟡 11. Validar OpenAI real sem fallback por limite de conta
-- 🔜 12. Implementar integrações sociais live
+- ✅ 10. Exibir checklist de produção e logs operacionais na aba Qualidade
+- ✅ 11. Adicionar retry visual para jobs de vídeo falhos
+- ✅ 12. Preparar uso de mídia cacheada no storage antes do render
+- 🟡 13. Publicar backend/MinIO com domínio ou tunnel HTTPS estável
+- 🟡 14. Validar OpenAI real sem fallback por limite de conta
+- 🔜 15. Implementar integrações sociais live
 
 ## Plano de Segurança
 
@@ -80,12 +86,14 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ 4. Pipeline de vídeo com fila, worker e FFmpeg funcionando
 - ✅ 5. Backup completo validado com PostgreSQL + MinIO
 - ✅ 6. Scripts de troca de API para local, VM, tunnel e URL pública
-- 🟡 7. Domínio/tunnel HTTPS definitivo para API e mídia
-- 🟡 8. IA real precisa estabilizar quota/billing/rate limit para gerar roteiros, cenas e criativos
-- 🔜 9. Publicação real no Instagram/Meta
-- 🔜 10. Publicação real no TikTok
-- 🔜 11. Webhooks/polling para comentários e respostas automáticas
-- 🔜 12. Monitoramento e alertas de produção
+- ✅ 7. Checklist de produção e logs da VM visíveis na interface
+- ✅ 8. Retry de jobs falhos de vídeo pela interface
+- 🟡 9. Domínio/tunnel HTTPS definitivo para API e mídia
+- 🟡 10. IA real precisa estabilizar quota/billing/rate limit para gerar roteiros, cenas e criativos
+- 🔜 11. Publicação real no Instagram/Meta
+- 🔜 12. Publicação real no TikTok
+- 🔜 13. Webhooks/polling para comentários e respostas automáticas
+- 🔜 14. Monitoramento e alertas de produção
 
 Para validar as variáveis essenciais do frontend antes de publicar:
 
@@ -288,8 +296,10 @@ src/
 3. A IA gera roteiro, gancho, cenas, textos de tela, CTA e direção visual com base no anúncio.
 4. O frontend envia tudo para `POST /api/videos/generate`.
 5. O backend cria job, envia para fila e o worker monta/renderiza o vídeo com FFmpeg usando o plano criativo gerado por IA.
-6. O vídeo volta para a biblioteca como mídia em revisão.
-7. O usuário aprova, agenda e publica.
+6. O backend tenta cachear a mídia externa no storage próprio antes do render para evitar bloqueios de origem.
+7. O vídeo volta para a biblioteca como mídia em revisão.
+8. Se o job falhar, o usuário pode clicar em **Repetir** na fila de geração.
+9. O usuário aprova, agenda e publica.
 
 ## Observações
 

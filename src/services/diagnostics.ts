@@ -42,8 +42,42 @@ export type RunDiagnosticChecksResponse = {
   available_checks: string[];
 };
 
+export type ProductionChecklistItem = {
+  id: string;
+  title: string;
+  status: 'ok' | 'warning' | 'error';
+  detail: string;
+};
+
+export type ProductionChecklistResponse = {
+  status: 'ok' | 'warning' | 'error';
+  checked_at: string;
+  checks: ProductionChecklistItem[];
+};
+
+export type OperationalLogFile = {
+  file: string;
+  updated_at: string;
+  lines: string[];
+};
+
+export type OperationalLogsResponse = {
+  status: 'ok' | 'warning' | 'error';
+  directory: string;
+  message: string;
+  logs: OperationalLogFile[];
+};
+
 export async function getDiagnostics() {
   return apiClient.get<DiagnosticsResponse>('/diagnostics');
+}
+
+export async function getProductionChecklist() {
+  return apiClient.get<ProductionChecklistResponse>('/diagnostics/production-checklist');
+}
+
+export async function getOperationalLogs() {
+  return apiClient.get<OperationalLogsResponse>('/diagnostics/logs');
 }
 
 export async function runDiagnosticChecks(checks?: string[]) {

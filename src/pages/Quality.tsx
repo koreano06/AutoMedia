@@ -26,7 +26,16 @@ import TopBar from '@/components/layout/TopBar';
 import { Button } from '@/components/ui/button';
 import { getLastApiError } from '@/api/httpClient';
 import { cn } from '@/lib/utils';
-import { getDiagnostics, runDiagnosticChecks, type DiagnosticServiceStatus, type DiagnosticsResponse } from '@/services/diagnostics';
+import {
+  getDiagnostics,
+  getOperationalLogs,
+  getProductionChecklist,
+  runDiagnosticChecks,
+  type DiagnosticServiceStatus,
+  type DiagnosticsResponse,
+  type OperationalLogsResponse,
+  type ProductionChecklistResponse,
+} from '@/services/diagnostics';
 import { listJobs } from '@/services/jobs';
 import { listMediaAssets } from '@/services/mediaAssets';
 import { listPlatformAccounts, type PlatformAccountWithConfig } from '@/services/platforms';
@@ -178,6 +187,8 @@ function formatDate(value?: string) {
 export default function Quality() {
   const [activeTab, setActiveTab] = useState<TabId>('health');
   const [diagnostics, setDiagnostics] = useState<DiagnosticsResponse | null>(null);
+  const [productionChecklist, setProductionChecklist] = useState<ProductionChecklistResponse | null>(null);
+  const [operationalLogs, setOperationalLogs] = useState<OperationalLogsResponse | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -212,8 +223,10 @@ export default function Quality() {
     setPageError(null);
 
     try {
-      const [diagnosticsResult, productsResult, mediaResult, postsResult, jobsResult, platformsResult] = await Promise.all([
+      const [diagnosticsResult, checklistResult, logsResult, productsResult, mediaResult, postsResult, jobsResult, platformsResult] = await Promise.all([
         getDiagnostics(),
+        getProductionChecklist(),
+        getOperationalLogs(),
         listProducts('-created_date', 20),
         listMediaAssets('-created_date', 20),
         listPosts('-created_at', 40),
@@ -222,6 +235,8 @@ export default function Quality() {
       ]);
 
       setDiagnostics(diagnosticsResult);
+      setProductionChecklist(checklistResult);
+      setOperationalLogs(logsResult);
       setProducts(productsResult);
       setMediaAssets(mediaResult);
       setPosts(postsResult);
@@ -363,6 +378,24 @@ export default function Quality() {
                 <MetricCard icon={Activity} label="Última checagem" value={diagnostics ? formatDate(diagnostics.checked_at) : 'Pendente'} />
               </div>
             </PanelCard>
+            <PanelCard icon={ShieldCheck} title="Checklist de produção" subtitle="Itens objetivos para saber se a operação está pronta.">
+              <div className="space-y-3">
+                {productionChecklist?.checks?.map((check) => (
+                  <div key={check.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-background/50 p-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{check.title}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{check.detail}</p>
+                    </div>
+                    <StatusPill status={check.status} />
+                  </div>
+                ))}
+                {!productionChecklist?.checks?.length && (
+                  <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                    Checklist ainda não carregado.
+                  </p>
+                )}
+              </div>
+            </PanelCard>
           </div>
         )}
 
@@ -495,6 +528,26 @@ export default function Quality() {
                 <InfoRow label="Vídeos ativos" value={String(diagnostics?.services.worker?.active_count ?? 0)} />
                 <InfoRow label="Vídeos travados" value={String(diagnostics?.services.worker?.stale_count ?? 0)} />
                 <InfoRow label="Falhas na última hora" value={String(diagnostics?.services.worker?.failed_last_hour ?? 0)} />
+              </div>
+            </PanelCard>
+            <PanelCard icon={FileWarning} title="Logs operacionais" subtitle="Últimas linhas de deploy, monitoramento e backup da VM.">
+              <div className="space-y-3">
+                {operationalLogs?.logs?.map((log) => (
+                  <div key={log.file} className="rounded-2xl border border-border bg-background/50 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">{log.file}</p>
+                      <span className="text-[10px] text-muted-foreground">{formatDate(log.updated_at)}</span>
+                    </div>
+                    <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-[11px] leading-5 text-muted-foreground">
+                      {log.lines.slice(-12).join('\n')}
+                    </pre>
+                  </div>
+                ))}
+                {!operationalLogs?.logs?.length && (
+                  <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                    {operationalLogs?.message || 'Logs ainda não carregados.'}
+                  </p>
+                )}
               </div>
             </PanelCard>
           </div>
