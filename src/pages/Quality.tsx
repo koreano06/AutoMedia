@@ -191,6 +191,20 @@ export default function Quality() {
   const failedPosts = useMemo(() => posts.filter((post) => post.status === 'failed' || post.error_message), [posts]);
   const lastApiError = getLastApiError();
   const healthStatus = diagnostics?.status || (pageError ? 'error' : 'warning');
+  const monitorAlerts = useMemo(() => {
+    const alerts = [];
+    if (pageError) alerts.push({ title: 'Diagnóstico indisponível', detail: pageError, status: 'error' });
+    if (failedJobs.length > 0) alerts.push({ title: 'Jobs falhos', detail: `${failedJobs.length} job(s) precisam de revisão.`, status: 'error' });
+    if (failedPosts.length > 0) alerts.push({ title: 'Publicações com erro', detail: `${failedPosts.length} publicação(ões) falharam ou possuem erro.`, status: 'error' });
+    if (diagnostics?.services.storage?.status && diagnostics.services.storage.status !== 'ok') {
+      alerts.push({ title: 'Storage requer atenção', detail: diagnostics.services.storage.message || 'Verifique driver e bucket.', status: diagnostics.services.storage.status });
+    }
+    if (diagnostics?.services.worker?.status && diagnostics.services.worker.status !== 'ok') {
+      alerts.push({ title: 'Worker de vídeo requer atenção', detail: diagnostics.services.worker.message || 'Verifique serviço do worker.', status: diagnostics.services.worker.status });
+    }
+    if (lastApiError) alerts.push({ title: 'Último erro da API', detail: lastApiError.message, status: 'warning' });
+    return alerts;
+  }, [diagnostics, failedJobs.length, failedPosts.length, lastApiError, pageError]);
 
   async function loadDashboardData() {
     setLoading(true);
@@ -304,6 +318,30 @@ export default function Quality() {
             {pageError}
           </div>
         )}
+
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {monitorAlerts.length === 0 ? (
+            <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-5 md:col-span-2 xl:col-span-3">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-300" />
+                <div>
+                  <p className="font-syne text-sm font-bold text-foreground">Nenhum alerta crítico detectado</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Backend, jobs e integrações não reportaram falhas críticas nesta leitura.</p>
+                </div>
+              </div>
+            </div>
+          ) : monitorAlerts.map((alert) => (
+            <div key={`${alert.title}-${alert.detail}`} className={cn('rounded-3xl border p-5', getStatusClass(alert.status))}>
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-syne text-sm font-bold">{alert.title}</p>
+                  <p className="mt-1 text-xs leading-5 opacity-85">{alert.detail}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </section>
 
         {activeTab === 'health' && (
           <div className="grid gap-4 lg:grid-cols-2">

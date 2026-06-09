@@ -68,6 +68,28 @@ export default function Dashboard() {
     { label: 'Conectar plataforma', done: posts.some((post) => Boolean(post.platform)), href: '/integrations', icon: Link2 },
   ];
   const onboardingProgress = Math.round((onboardingSteps.filter((step) => step.done).length / onboardingSteps.length) * 100);
+  const executiveMetrics = [
+    {
+      label: 'Taxa publicada',
+      value: `${posts.length ? Math.round((posts.filter((post) => post.status === 'published').length / posts.length) * 100) : 0}%`,
+      detail: 'posts publicados / total',
+    },
+    {
+      label: 'Fila ativa',
+      value: stats.scheduled + stats.pending,
+      detail: 'agendados + pendentes',
+    },
+    {
+      label: 'Cobertura de anúncio',
+      value: `${products.length ? Math.round((products.filter((product) => (product.videos_generated || 0) > 0).length / products.length) * 100) : 0}%`,
+      detail: 'anúncios com vídeo',
+    },
+    {
+      label: 'Próxima ação',
+      value: products.length === 0 ? 'Criar anúncio' : posts.length === 0 ? 'Agendar post' : stats.pending > 0 ? 'Aprovar' : 'Monitorar',
+      detail: 'prioridade operacional',
+    },
+  ];
   const hideOnboarding = () => {
     localStorage.setItem('automedia_onboarding_hidden', 'true');
     setShowOnboarding(false);
@@ -133,6 +155,26 @@ export default function Dashboard() {
           <StatCard title="Aguardando Aprovação" value={loading ? '—' : stats.pending} icon={Clock} color="warning" loading={loading} />
           <StatCard title="Agendados" value={loading ? '—' : stats.scheduled} icon={CheckCircle} color="blue" loading={loading} />
         </div>
+
+        <section className="responsive-card responsive-card-pad">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Visão executiva</span>
+              <h2 className="mt-3 font-syne text-xl font-bold text-foreground">Resumo para tomada de decisão</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Leitura rápida do que precisa de atenção antes de escalar os disparos.</p>
+            </div>
+            <Link to="/quality" className="text-sm font-medium text-primary hover:underline">Abrir central de qualidade</Link>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {executiveMetrics.map((metric) => (
+              <div key={metric.label} className="rounded-2xl border border-border bg-muted/25 p-4">
+                <p className="text-xs text-muted-foreground">{metric.label}</p>
+                <p className="mt-2 font-syne text-2xl font-bold text-foreground">{metric.value}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{metric.detail}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
           <div className="responsive-card responsive-card-pad lg:col-span-2">

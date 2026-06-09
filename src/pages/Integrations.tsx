@@ -145,6 +145,7 @@ export default function Integrations() {
 
   const connectedCount = platformAccounts.filter((account) => account.status === 'connected').length;
   const productionCount = platformAccounts.filter((account) => account.mode === 'live' && account.configured).length;
+  const socialLaunchPlatforms = platformAccounts.filter((account) => ['instagram', 'tiktok'].includes(account.platform));
   const readiness = Math.round((connectedCount / platforms.length) * 100);
   const selectedAccount = selectedPlatform ? getAccount(selectedPlatform, accounts, overrides) : null;
 
@@ -306,6 +307,33 @@ export default function Integrations() {
             </div>
           </section>
         )}
+
+        <section className="grid gap-3 md:grid-cols-2">
+          {socialLaunchPlatforms.map((account) => {
+            const ready = account.status === 'connected' && account.mode === 'live' && account.configured;
+            const testReady = account.status === 'connected' && account.mode === 'mock';
+            return (
+              <div key={`launch-${account.platform}`} className="rounded-3xl border border-border bg-card p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <PlatformIcon platform={account.platform} showLabel size="lg" />
+                    <p className="mt-3 text-sm font-semibold text-foreground">
+                      {ready ? 'Pronto para publicação oficial' : testReady ? 'Fluxo validado em modo teste' : 'Ainda não pronto para publicação'}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      {ready
+                        ? 'Conta autorizada via OAuth oficial. Pode entrar no fluxo de agendamento/publicação.'
+                        : testReady
+                          ? 'Interface e backend respondem, mas falta credencial oficial para postar em produção.'
+                          : account.setup_hint || 'Conecte a conta e valide as permissões antes de publicar.'}
+                    </p>
+                  </div>
+                  <StatusPill status={ready ? 'connected' : testReady ? 'mock' : account.status} />
+                </div>
+              </div>
+            );
+          })}
+        </section>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {platformAccounts.map((account) => (

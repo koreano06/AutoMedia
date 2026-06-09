@@ -141,6 +141,24 @@ export default function Schedule() {
 
   const alerts = useMemo(() => buildAlerts(posts, settings), [posts, settings]);
   const naturalityScore = Math.max(35, 100 - alerts.length * 12);
+  const dayDistribution = useMemo(() => {
+    const scheduled = posts.filter((post) => post.status === 'scheduled' && post.scheduled_at);
+    const buckets = [
+      { label: 'Manhã', range: '08h-12h', count: 0 },
+      { label: 'Tarde', range: '12h-18h', count: 0 },
+      { label: 'Noite', range: '18h-22h', count: 0 },
+    ];
+
+    scheduled.forEach((post) => {
+      const hour = new Date(post.scheduled_at!).getHours();
+      if (hour < 12) buckets[0].count += 1;
+      else if (hour < 18) buckets[1].count += 1;
+      else buckets[2].count += 1;
+    });
+
+    const max = Math.max(1, ...buckets.map((bucket) => bucket.count));
+    return buckets.map((bucket) => ({ ...bucket, percent: Math.round((bucket.count / max) * 100) }));
+  }, [posts]);
 
   const updateSelectedPost = async (payload: Partial<Post>) => {
     if (!selectedPost) return;
@@ -268,6 +286,26 @@ export default function Schedule() {
           <Metric label="Falhas" value={stats.failed} icon={XCircle} tone="destructive" />
           <Metric label="Naturalidade" value={`${naturalityScore}%`} icon={Shuffle} tone={naturalityScore >= 75 ? 'success' : 'warning'} />
         </div>
+
+        <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <SectionTitle icon={Clock} title="Distribuição visual da agenda" subtitle="Equilibre horários para evitar disparos com cara de automação" />
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {dayDistribution.map((bucket) => (
+              <div key={bucket.label} className="rounded-2xl border border-border bg-muted/25 p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-syne text-sm font-bold text-foreground">{bucket.label}</p>
+                    <p className="text-xs text-muted-foreground">{bucket.range}</p>
+                  </div>
+                  <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{bucket.count} posts</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-background">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${bucket.percent}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
           <main className="space-y-5">

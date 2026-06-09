@@ -25,18 +25,20 @@ const env = { ...fileEnv, ...process.env };
 const required = ["VITE_API_BASE_URL"];
 const missing = required.filter((key) => !env[key]);
 const warnings = [];
+const blockers = [];
+const isStrictProduction = env.NODE_ENV === "production" || env.VERCEL_ENV === "production";
 
 if (env.VITE_API_BASE_URL) {
   try {
     const apiUrl = new URL(env.VITE_API_BASE_URL);
     if (apiUrl.hostname === "localhost" || apiUrl.hostname === "127.0.0.1") {
-      warnings.push("VITE_API_BASE_URL aponta para ambiente local.");
+      (isStrictProduction ? blockers : warnings).push("VITE_API_BASE_URL aponta para ambiente local.");
     }
     if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(apiUrl.hostname)) {
-      warnings.push("VITE_API_BASE_URL aponta para IP privado. O frontend publicado na Vercel precisa de uma URL publica com HTTPS.");
+      (isStrictProduction ? blockers : warnings).push("VITE_API_BASE_URL aponta para IP privado. O frontend publicado na Vercel precisa de uma URL publica com HTTPS.");
     }
     if (apiUrl.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(apiUrl.hostname)) {
-      warnings.push("VITE_API_BASE_URL nao usa HTTPS. Em producao, use HTTPS para evitar bloqueios e trafego inseguro.");
+      (isStrictProduction ? blockers : warnings).push("VITE_API_BASE_URL nao usa HTTPS. Em producao, use HTTPS para evitar bloqueios e trafego inseguro.");
     }
   } catch {
     missing.push("VITE_API_BASE_URL precisa ser uma URL valida.");
@@ -50,6 +52,12 @@ if (!env.VITE_APP_BASE_URL) {
 if (missing.length > 0) {
   console.error("Falha na checagem de producao do frontend:");
   missing.forEach((item) => console.error(`- ${item}`));
+  process.exit(1);
+}
+
+if (blockers.length > 0) {
+  console.error("Configuracao insegura para producao:");
+  blockers.forEach((item) => console.error(`- ${item}`));
   process.exit(1);
 }
 

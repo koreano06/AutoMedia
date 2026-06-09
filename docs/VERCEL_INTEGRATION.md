@@ -62,6 +62,20 @@ CORS_ORIGIN=https://auto-media-sooty.vercel.app,http://localhost:5173
 
 Não use `http://192.168.1.6:3333/api` no frontend publicado na Vercel. Esse IP só funciona dentro da sua rede local.
 
+Antes de publicar o frontend, rode:
+
+```bash
+npm run prod:check
+```
+
+Em `NODE_ENV=production` ou `VERCEL_ENV=production`, essa checagem bloqueia:
+
+- API em `localhost`.
+- API em IP privado como `192.168.x.x`.
+- API pública sem HTTPS.
+
+Isso evita o erro clássico em que o frontend da Vercel abre para você, mas não consegue falar com o backend da VM fora da sua rede.
+
 Para desenvolvimento local com a VM:
 
 ```bash

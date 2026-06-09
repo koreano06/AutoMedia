@@ -12,4 +12,13 @@ describe("permissions", () => {
     expect(hasPermission("user", "post:publish")).toBe(false);
     expect(hasPermission(undefined, "product:delete")).toBe(false);
   });
+
+  it("allows operational roles only in their areas", () => {
+    expect(hasPermission("operator", "post:publish")).toBe(true);
+    expect(hasPermission("operator", "finance:manage")).toBe(false);
+    expect(hasPermission("reviewer", "media:review")).toBe(true);
+    expect(hasPermission("reviewer", "post:delete")).toBe(false);
+    expect(hasPermission("finance", "finance:manage")).toBe(true);
+    expect(hasPermission("finance", "platform:manage")).toBe(false);
+  });
 });

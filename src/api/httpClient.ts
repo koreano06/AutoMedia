@@ -30,6 +30,7 @@ type LastApiError = {
   path: string;
   status: number;
   message: string;
+  technicalMessage?: string;
 };
 
 let lastApiError: LastApiError | null = null;
@@ -52,6 +53,19 @@ export function getLastApiError() {
 
 export function isNotFoundError(error: unknown) {
   return error instanceof ApiRequestError && error.status === 404;
+}
+
+function friendlyApiMessage(status: number, fallback: string) {
+  if (status === 0) return 'Não foi possível conectar ao backend. Verifique se a API está online e se a URL está correta.';
+  if (status === 400) return fallback || 'Os dados enviados não passaram na validação.';
+  if (status === 401) return 'Sua sessão expirou ou o login é necessário. Entre novamente para continuar.';
+  if (status === 403) return 'Você não tem permissão para executar esta ação.';
+  if (status === 404) return 'Recurso não encontrado. Atualize a tela e tente novamente.';
+  if (status === 409) return 'Conflito de dados detectado. Atualize a tela antes de tentar de novo.';
+  if (status === 413) return 'Arquivo muito grande para envio.';
+  if (status === 429) return 'Muitas tentativas em pouco tempo. Aguarde alguns instantes e tente novamente.';
+  if (status >= 500) return 'O backend encontrou uma falha interna. Veja a aba Qualidade ou tente novamente em instantes.';
+  return fallback || 'Não foi possível concluir a operação.';
 }
 
 function unwrapPayload<T>(payload: unknown) {
@@ -165,8 +179,9 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
       headers: requestHeaders,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Falha de conexão com a API';
-    lastApiError = { path, status: 0, message };
+    const technicalMessage = error instanceof Error ? error.message : 'Falha de conexão com a API';
+    const message = friendlyApiMessage(0, technicalMessage);
+    lastApiError = { path, status: 0, message, technicalMessage };
     throw new ApiRequestError(message, 0, null);
   }
 
@@ -179,8 +194,9 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
       if (refreshed) return request<T>(path, options, true);
     }
 
-    const message = typeof payload === 'object' && payload?.error?.message ? payload.error.message : 'Erro inesperado na API';
-    lastApiError = { path, status: response.status, message };
+    const technicalMessage = typeof payload === 'object' && payload?.error?.message ? payload.error.message : 'Erro inesperado na API';
+    const message = friendlyApiMessage(response.status, technicalMessage);
+    lastApiError = { path, status: response.status, message, technicalMessage };
     throw new ApiRequestError(message, response.status, payload);
   }
 

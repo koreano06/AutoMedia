@@ -13,7 +13,7 @@ export type AuthUser = {
   username: string;
   workspace_id?: string;
   store_name?: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'operator' | 'reviewer' | 'finance' | 'user' | 'viewer' | string;
   created_at: string;
 };
 
