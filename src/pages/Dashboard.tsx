@@ -4,7 +4,7 @@ import StatCard from '@/components/common/StatCard';
 import StatusBadge from '@/components/common/StatusBadge';
 import PlatformIcon from '@/components/common/PlatformIcon';
 import ErrorState from '@/components/common/ErrorState';
-import { Package, Zap, Clock, CheckCircle } from 'lucide-react';
+import { Package, Zap, Clock, CheckCircle, Film, Link2, X } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';
 import { listProducts } from '@/services/products';
@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => localStorage.getItem('automedia_onboarding_hidden') !== 'true');
 
   const load = async () => {
     setLoading(true);
@@ -59,12 +60,72 @@ export default function Dashboard() {
     pending: products.filter(p => ['review', 'generating'].includes(p.status)).length,
     scheduled: posts.filter(p => p.status === 'scheduled').length,
   };
+  const onboardingSteps = [
+    { label: 'Cadastrar primeiro anúncio', done: products.length > 0, href: '/products', icon: Package },
+    { label: 'Importar mídia base', done: products.some((product) => (product.media_count || 0) > 0), href: '/media', icon: Film },
+    { label: 'Gerar vídeo com IA', done: products.some((product) => (product.videos_generated || 0) > 0), href: '/videos', icon: Zap },
+    { label: 'Aprovar e agendar', done: posts.some((post) => ['scheduled', 'published'].includes(String(post.status))), href: '/approval', icon: CheckCircle },
+    { label: 'Conectar plataforma', done: posts.some((post) => Boolean(post.platform)), href: '/integrations', icon: Link2 },
+  ];
+  const onboardingProgress = Math.round((onboardingSteps.filter((step) => step.done).length / onboardingSteps.length) * 100);
+  const hideOnboarding = () => {
+    localStorage.setItem('automedia_onboarding_hidden', 'true');
+    setShowOnboarding(false);
+  };
 
   return (
     <div>
       <TopBar title="Dashboard" subtitle="Visão geral da automação de marketing" />
       <div className="mobile-page-pad page-stack">
         {error && <ErrorState onRetry={load} />}
+
+        {showOnboarding && !loading && (
+          <section className="responsive-card overflow-hidden">
+            <div className="grid gap-0 lg:grid-cols-[1fr_320px]">
+              <div className="relative p-4 sm:p-5 lg:p-6">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,hsl(var(--primary)/0.18),transparent_34%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))]" />
+                <div className="relative">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">Primeiros passos</span>
+                      <h2 className="mt-4 max-w-2xl font-syne text-xl font-bold leading-tight text-foreground sm:text-2xl">
+                        Configure sua operação de criativos em poucos passos.
+                      </h2>
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                        Esse checklist ajuda a sair do zero até o primeiro vídeo pronto para divulgação, sem precisar decorar o fluxo.
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={hideOnboarding} aria-label="Ocultar onboarding">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                    {onboardingSteps.map(({ label, done, href, icon: Icon }) => (
+                      <Link key={label} to={href} className="rounded-2xl border border-border bg-background/55 p-3 transition-all hover:-translate-y-0.5 hover:border-primary/40">
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span>
+                          {done ? <CheckCircle className="h-4 w-4 text-success" /> : <Clock className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                        <p className="text-xs font-semibold text-foreground">{label}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="border-t border-border bg-muted/25 p-4 sm:p-5 lg:border-l lg:border-t-0">
+                <p className="font-syne text-sm font-bold text-foreground">Progresso de implantação</p>
+                <p className="mt-1 text-xs text-muted-foreground">Quanto mais completo, mais pronta fica a plataforma para uso real.</p>
+                <div className="mt-5 flex items-end justify-between">
+                  <span className="font-syne text-4xl font-bold text-primary">{onboardingProgress}%</span>
+                  <span className="text-xs text-muted-foreground">{onboardingSteps.filter((step) => step.done).length}/{onboardingSteps.length} etapas</span>
+                </div>
+                <div className="mt-4 h-2 overflow-hidden rounded-full bg-background">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${onboardingProgress}%` }} />
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           <StatCard title="Anúncios Base" value={loading ? '—' : stats.totalProducts} icon={Package} color="primary" trendValue="+12%" trend="up" loading={loading} />
