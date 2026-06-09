@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import {
   AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
   Bot,
   CheckCircle,
   Clock,
@@ -119,6 +121,7 @@ export default function VideoGeneration() {
   const [queue, setQueue] = useState<Job[]>([]);
   const [historyFilter, setHistoryFilter] = useState('all');
   const [activeVideo, setActiveVideo] = useState<MediaAsset | null>(null);
+  const [activeWizardStep, setActiveWizardStep] = useState(1);
 
   const load = async () => {
     setLoading(true);
@@ -175,13 +178,40 @@ export default function VideoGeneration() {
     { label: 'Formato escolhido', ok: Boolean(selectedFormat), hint: selectedFormatConfig?.ratio || '' },
   ];
   const readiness = Math.round((checklist.filter((item) => item.ok).length / checklist.length) * 100);
-  const currentStep = !product ? 1 : readiness < 80 ? 2 : activeJobs.length > 0 ? 4 : 3;
+  const recommendedStep = !product ? 1 : readiness < 80 ? 2 : activeJobs.length > 0 ? 4 : 3;
   const qualityWarnings = [
     !product ? 'Selecione um anúncio base para contextualizar o roteiro.' : '',
     !generationPreview && selectedMedia.length === 0 ? 'Adicione uma imagem real ou gere um criativo IA para evitar vídeo genérico.' : '',
     !briefing.promise.trim() ? 'Preencha a promessa principal para deixar o gancho mais forte.' : '',
     scriptPreview && scriptPreview.length < 120 ? 'Roteiro curto demais: revise antes de renderizar.' : '',
   ].filter(Boolean);
+  const currentStep = activeWizardStep;
+  const wizardProgress = Math.round((currentStep / 4) * 100);
+  const stepCards = [
+    { number: 1, title: 'Anúncio', desc: 'Escolha produto, destino e formato', done: Boolean(product) },
+    { number: 2, title: 'Briefing', desc: 'Defina promessa, público e CTA', done: readiness >= 80 },
+    { number: 3, title: 'Roteiro & mídia', desc: 'Gere roteiro, imagem e escolha assets', done: Boolean(scriptPreview || generationPreview || selectedMedia.length) },
+    { number: 4, title: 'Render & revisão', desc: 'Renderize, acompanhe fila e aprove', done: stats.review + stats.approved > 0 },
+  ];
+  const canAdvanceWizard =
+    currentStep === 1
+      ? Boolean(product)
+      : currentStep === 2
+        ? readiness >= 60
+        : currentStep === 3
+          ? Boolean(scriptPreview || generationPreview || selectedMedia.length || product?.image_url)
+          : readiness >= 80;
+  const stageCardClass = (step: number) =>
+    cn(
+      'rounded-2xl border bg-card p-4 transition-all sm:p-5',
+      currentStep === step
+        ? 'border-primary/60 shadow-lg shadow-primary/10 ring-1 ring-primary/20'
+        : 'border-border',
+    );
+
+  useEffect(() => {
+    setActiveWizardStep((current) => (recommendedStep > current ? recommendedStep : current));
+  }, [recommendedStep]);
 
   useEffect(() => {
     if (activeJobs.length === 0) return;
@@ -435,10 +465,50 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
             <div className="p-4 sm:p-5">
               <SectionTitle icon={Rocket} title="Fluxo guiado do criativo" subtitle="Do anúncio base até o vídeo pronto para publicação" />
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <FlowStep number={1} title="Anúncio" desc="Escolha o produto ou oferta base" active={currentStep === 1} done={Boolean(product)} />
-                <FlowStep number={2} title="Briefing" desc="Defina promessa, público e CTA" active={currentStep === 2} done={readiness >= 80} />
-                <FlowStep number={3} title="Roteiro & mídia" desc="Revise cenas e selecione assets" active={currentStep === 3} done={Boolean(scriptPreview || generationPreview || selectedMedia.length)} />
-                <FlowStep number={4} title="Render & revisão" desc="Acompanhe fila, aprove e agende" active={currentStep === 4} done={stats.review + stats.approved > 0} />
+                {stepCards.map((step) => (
+                  <FlowStep
+                    key={step.number}
+                    number={step.number}
+                    title={step.title}
+                    desc={step.desc}
+                    active={currentStep === step.number}
+                    done={step.done}
+                    onClick={() => setActiveWizardStep(step.number)}
+                  />
+                ))}
+              </div>
+              <div className="mt-5 rounded-2xl border border-border bg-muted/25 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+                  <span className="font-medium text-muted-foreground">Progresso do fluxo</span>
+                  <span className="font-syne font-bold text-primary">{wizardProgress}%</span>
+                </div>
+                <Progress value={wizardProgress} />
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Etapa {currentStep}/4: {stepCards[currentStep - 1]?.desc}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1"
+                      disabled={currentStep === 1}
+                      onClick={() => setActiveWizardStep((step) => Math.max(1, step - 1))}
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 gap-1"
+                      disabled={currentStep === 4 || !canAdvanceWizard}
+                      onClick={() => setActiveWizardStep((step) => Math.min(4, step + 1))}
+                    >
+                      Próximo <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="border-t border-border bg-muted/25 p-4 sm:p-5 lg:border-l lg:border-t-0">
@@ -466,7 +536,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <section className={stageCardClass(1)}>
               <SectionTitle icon={Wand2} title="Configuração do vídeo" subtitle="Escolha o anúncio base, formato, plataforma e briefing" />
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
@@ -519,7 +589,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <section className={stageCardClass(2)}>
               <SectionTitle icon={Target} title="Briefing profissional" subtitle="Campos separados deixam o roteiro mais consistente" />
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <Field label="Público-alvo" value={briefing.targetAudience} onChange={(value) => setBriefing({ ...briefing, targetAudience: value })} placeholder="ex: mulheres 25-40 que compram skincare" />
@@ -545,7 +615,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <section className={stageCardClass(3)}>
               <SectionTitle icon={Layers3} title="Mídias para composição" subtitle="Escolha imagens e vídeos da biblioteca para orientar a geração" />
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {availableMedia.slice(0, 10).map((asset) => (
@@ -565,7 +635,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
               {availableMedia.length === 0 && <p className="mt-3 text-sm text-muted-foreground">Nenhuma mídia encontrada para este anúncio. O gerador usará o print/criativo principal quando disponível.</p>}
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <section className={stageCardClass(3)}>
               <SectionTitle icon={Image} title="Imagem IA para o vídeo" subtitle="Gere um criativo visual pela API para usar como capa/base do vídeo" />
               <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_220px]">
                 <div>
@@ -604,7 +674,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
           </div>
 
           <div className="space-y-5">
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <section className={stageCardClass(4)}>
               <SectionTitle icon={ListChecks} title="Checklist antes de gerar" subtitle="Reduz erro e melhora o resultado final" />
               <div className="mt-4">
                 <div className="mb-2 flex items-center justify-between text-sm">
@@ -630,7 +700,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
               </Button>
             </section>
 
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <section className={stageCardClass(4)}>
               <SectionTitle icon={Clock} title="Fila de jobs" subtitle="Status, progresso, retry e erros" />
               <div className="mt-4 space-y-2">
                 {queue.length === 0 ? (
@@ -676,7 +746,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
           </div>
         </div>
 
-        <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <section className={stageCardClass(3)}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <SectionTitle icon={Play} title="Prévia do roteiro" subtitle="Revise antes de renderizar o vídeo final" />
             {scriptPreview && <Button variant="outline" size="sm" className="gap-2" onClick={() => navigator.clipboard.writeText(scriptPreview)}><Copy className="h-4 w-4" /> Copiar roteiro</Button>}
@@ -756,9 +826,16 @@ function StudioMetric({ label, value, icon: Icon, tone = 'neutral' }: { label: s
   );
 }
 
-function FlowStep({ number, title, desc, active, done }: { number: number; title: string; desc: string; active?: boolean; done?: boolean }) {
+function FlowStep({ number, title, desc, active, done, onClick }: { number: number; title: string; desc: string; active?: boolean; done?: boolean; onClick?: () => void }) {
   return (
-    <div className={cn('rounded-2xl border p-4 transition-all', active ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10' : done ? 'border-success/25 bg-success/5' : 'border-border bg-muted/25')}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        active ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10' : done ? 'border-success/25 bg-success/5' : 'border-border bg-muted/25',
+      )}
+    >
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className={cn('flex h-8 w-8 items-center justify-center rounded-xl font-syne text-sm font-bold', done ? 'bg-success text-success-foreground' : active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
           {done ? <CheckCircle className="h-4 w-4" /> : number}
@@ -767,7 +844,7 @@ function FlowStep({ number, title, desc, active, done }: { number: number; title
       </div>
       <p className="font-syne text-sm font-bold text-foreground">{title}</p>
       <p className="mt-1 text-xs leading-5 text-muted-foreground">{desc}</p>
-    </div>
+    </button>
   );
 }
 
