@@ -17,6 +17,7 @@ function resolveApiBaseUrl() {
 const API_BASE_URL = resolveApiBaseUrl();
 export const API_TOKEN_STORAGE_KEY = 'automedia_api_token';
 export const API_REFRESH_TOKEN_STORAGE_KEY = 'automedia_api_refresh_token';
+export const API_AUTH_EXPIRED_EVENT = 'automedia:auth-expired';
 
 type ApiEnvelope<T> = {
   data?: T;
@@ -34,6 +35,11 @@ type LastApiError = {
 };
 
 let lastApiError: LastApiError | null = null;
+
+function notifyAuthExpired() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(API_AUTH_EXPIRED_EVENT));
+}
 
 export class ApiRequestError extends Error {
   status: number;
@@ -145,6 +151,7 @@ async function refreshAccessToken() {
   if (!response.ok) {
     window.localStorage.removeItem(API_TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(API_REFRESH_TOKEN_STORAGE_KEY);
+    notifyAuthExpired();
     return false;
   }
 
@@ -197,6 +204,9 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
     const technicalMessage = typeof payload === 'object' && payload?.error?.message ? payload.error.message : 'Erro inesperado na API';
     const message = friendlyApiMessage(response.status, technicalMessage);
     lastApiError = { path, status: response.status, message, technicalMessage };
+    if (response.status === 401 && path !== '/auth/login') {
+      notifyAuthExpired();
+    }
     throw new ApiRequestError(message, response.status, payload);
   }
 

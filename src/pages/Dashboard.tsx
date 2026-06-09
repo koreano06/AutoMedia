@@ -4,6 +4,7 @@ import StatCard from '@/components/common/StatCard';
 import StatusBadge from '@/components/common/StatusBadge';
 import PlatformIcon from '@/components/common/PlatformIcon';
 import ErrorState from '@/components/common/ErrorState';
+import { Button } from '@/components/ui/button';
 import { Package, Zap, Clock, CheckCircle, Film, Link2, X } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';

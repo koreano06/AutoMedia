@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { API_REFRESH_TOKEN_STORAGE_KEY, API_TOKEN_STORAGE_KEY } from '@/api/httpClient';
+import { API_AUTH_EXPIRED_EVENT, API_REFRESH_TOKEN_STORAGE_KEY, API_TOKEN_STORAGE_KEY } from '@/api/httpClient';
 import { getCurrentBackendUser, loginWithBackend } from '@/services/auth';
 
 type AuthError = {
@@ -190,6 +190,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     checkAppState();
+  }, []);
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      logout();
+      setAuthError({
+        type: 'auth_required',
+        message: 'Sua sessão expirou. Entre novamente para continuar.',
+      });
+    };
+
+    window.addEventListener(API_AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(API_AUTH_EXPIRED_EVENT, handleAuthExpired);
   }, []);
 
   const login = async (username: string, password: string) => {

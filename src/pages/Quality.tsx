@@ -60,6 +60,7 @@ const initialFlowChecks: FlowCheck[] = [
   { id: 'storage', label: 'Storage', description: 'Confere driver e configuração sem enviar arquivos reais.', status: 'idle' },
   { id: 'queue', label: 'Fila Redis', description: 'Valida resposta da fila usada por jobs.', status: 'idle' },
   { id: 'ai', label: 'OpenAI', description: 'Confere configuração da IA sem executar chamada paga.', status: 'idle' },
+  { id: 'video_pipeline', label: 'Pipeline de vídeo', description: 'Detecta jobs de vídeo presos, falhas recentes e fila ativa.', status: 'idle' },
   { id: 'mock_publish', label: 'Publicação simulada', description: 'Verifica se o modo mock/live está apto sem publicar.', status: 'idle' },
   { id: 'latency', label: 'Latência', description: 'Mede consultas internas essenciais.', status: 'idle' },
   { id: 'contracts', label: 'Contratos', description: 'Confere formatos básicos de produtos, mídias, posts e jobs.', status: 'idle' },
@@ -491,6 +492,9 @@ export default function Quality() {
                 <InfoRow label="Storage" value={diagnostics?.services.storage?.driver || 'não informado'} />
                 <InfoRow label="OpenAI model" value={diagnostics?.services.openai?.image_model || 'não informado'} />
                 <InfoRow label="Worker" value={diagnostics?.services.worker?.command || 'não informado'} />
+                <InfoRow label="Vídeos ativos" value={String(diagnostics?.services.worker?.active_count ?? 0)} />
+                <InfoRow label="Vídeos travados" value={String(diagnostics?.services.worker?.stale_count ?? 0)} />
+                <InfoRow label="Falhas na última hora" value={String(diagnostics?.services.worker?.failed_last_hour ?? 0)} />
               </div>
             </PanelCard>
           </div>

@@ -9,6 +9,9 @@ export type DiagnosticServiceStatus = {
   bucket?: string;
   command?: string;
   image_model?: string;
+  active_count?: number;
+  stale_count?: number;
+  failed_last_hour?: number;
 };
 
 export type DiagnosticsResponse = {

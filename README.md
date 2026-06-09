@@ -37,6 +37,8 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ Permissões por papel em áreas e ações sensíveis da interface
 - ✅ Configuração preparada para backend local, VM, túnel e URL pública HTTPS
 - ✅ Tela de qualidade/diagnóstico preparada para acompanhar saúde da plataforma
+- ✅ Sessão expirada limpa tokens inválidos e retorna para login de forma controlada
+- ✅ Central de Qualidade acompanha pipeline de vídeo, jobs ativos, travados e falhas recentes
 - 🟡 Backend público definitivo com HTTPS ainda precisa de domínio/túnel estável
 - 🟡 OpenAI real em validação no backend por limite/rate limit da conta
 - 🔜 Publicação real em redes sociais via APIs oficiais
@@ -52,9 +54,11 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ 5. Revisar CRUDs ponta a ponta
 - ✅ 6. Preparar frontend para API pública do backend na VM
 - ✅ 7. Documentar operação local, VM e Vercel
-- 🟡 8. Publicar backend/MinIO com domínio ou tunnel HTTPS estável
-- 🟡 9. Validar OpenAI real sem fallback por limite de conta
-- 🔜 10. Implementar integrações sociais live
+- ✅ 8. Tratar sessão expirada e falhas de API com mensagens operacionais
+- ✅ 9. Exibir saúde do pipeline de vídeo na aba Qualidade
+- 🟡 10. Publicar backend/MinIO com domínio ou tunnel HTTPS estável
+- 🟡 11. Validar OpenAI real sem fallback por limite de conta
+- 🔜 12. Implementar integrações sociais live
 
 ## Plano de Segurança
 
@@ -149,6 +153,14 @@ Para usar o backend da VM dentro da sua rede:
 ```bash
 npm run api:vm
 ```
+
+Teste público correto da API na VM:
+
+```text
+http://192.168.1.6:3333/api/health
+```
+
+Se abrir apenas `/api`, é normal receber `AUTH_REQUIRED`, porque as rotas internas são protegidas por JWT.
 
 Para usar uma URL pública com HTTPS, como domínio ou tunnel:
 
