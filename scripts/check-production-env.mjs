@@ -32,6 +32,12 @@ if (env.VITE_API_BASE_URL) {
     if (apiUrl.hostname === "localhost" || apiUrl.hostname === "127.0.0.1") {
       warnings.push("VITE_API_BASE_URL aponta para ambiente local.");
     }
+    if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(apiUrl.hostname)) {
+      warnings.push("VITE_API_BASE_URL aponta para IP privado. O frontend publicado na Vercel precisa de uma URL publica com HTTPS.");
+    }
+    if (apiUrl.protocol !== "https:" && !["localhost", "127.0.0.1"].includes(apiUrl.hostname)) {
+      warnings.push("VITE_API_BASE_URL nao usa HTTPS. Em producao, use HTTPS para evitar bloqueios e trafego inseguro.");
+    }
   } catch {
     missing.push("VITE_API_BASE_URL precisa ser uma URL valida.");
   }

@@ -7,7 +7,7 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 ## Status Atual
 
 - Frontend em React/Vite com layout responsivo para desktop, tablet e mobile.
-- Comunicação com backend via `VITE_API_BASE_URL`.
+- Comunicação com backend via `VITE_API_BASE_URL`, incluindo presets para local, VM, túnel e URL pública.
 - Login integrado ao backend em produção usando JWT e refresh token.
 - Usuário de teste disponível para validação do painel: `admin / admin123`.
 - Fluxo de geração de vídeo preparado para enviar briefing, template, formato, duração, mídia base e plataformas.
@@ -23,15 +23,16 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ Biblioteca de mídia com previews grandes e padronizados
 - ✅ Tela de geração de vídeos com briefing, template, formato e plataformas
 - ✅ Comunicação com backend próprio via `VITE_API_BASE_URL`
+- ✅ Scripts para alternar API local, VM, túnel temporário e URL pública
 - ✅ Fluxo visual de integrações sociais e marketplaces
 - ✅ Telas comerciais/ERP leve para operação e finanças
 - ✅ Cliente HTTP envia JWT automaticamente quando há sessão da API
 - ✅ Tokens sensíveis de plataformas não são expostos ao frontend
 - ✅ Refresh token automático quando access token expira
-- ✅ Login de produção validado contra `https://auto-media-backend.vercel.app/api/auth/login`
+- ✅ Login validado contra o backend próprio com `admin / admin123`
 - ✅ Testes unitários para permissões, cliente HTTP e contrato dos services
 - ✅ Testes E2E com Playwright para login, shell principal, desktop e mobile
-- 🟡 Feedback em tempo real dos jobs de vídeo ainda em evolução
+- ✅ Feedback em tempo real dos jobs de vídeo em evolução na tela de geração
 - ✅ Fallback local desabilitado em produção para forçar autenticação real
 - ✅ Permissões por papel em áreas e ações sensíveis da interface
 - 🔜 Publicação real em redes sociais via APIs oficiais
@@ -112,10 +113,30 @@ VITE_APP_BASE_URL=http://localhost:5173
 VITE_API_BASE_URL=http://localhost:3333/api
 ```
 
-Para usar o backend em produção:
+Para alternar rapidamente a API local:
+
+```bash
+npm run api:local
+```
+
+Para usar o backend da VM dentro da sua rede:
+
+```bash
+npm run api:vm
+```
+
+Para usar uma URL pública com HTTPS, como domínio ou tunnel:
+
+```bash
+npm run api:public -- https://api.seudominio.com
+```
+
+O script cria `.env.local` com `/api` no final automaticamente quando necessário.
+
+Para usar o backend em produção na Vercel, configure a variável no painel do projeto:
 
 ```env
-VITE_API_BASE_URL=https://auto-media-backend.vercel.app/api
+VITE_API_BASE_URL=https://api.seudominio.com/api
 ```
 
 3. Inicie o frontend:
@@ -146,6 +167,9 @@ npm run preview    # preview local do build
 npm run lint       # valida ESLint
 npm run lint:fix   # corrige lint quando possível
 npm run prod:check # valida variáveis essenciais de produção
+npm run api:local  # aponta .env.local para http://localhost:3333/api
+npm run api:vm     # aponta .env.local para http://192.168.1.6:3333/api
+npm run api:public -- https://api.seudominio.com # aponta para URL pública HTTPS
 npm run test       # testes unitários/contrato com Vitest
 npm run test:e2e   # testes E2E com Playwright
 npm run check:errors # roda validações e mostra apenas erros
@@ -196,8 +220,10 @@ Configuração recomendada:
 Variável principal:
 
 ```env
-VITE_API_BASE_URL=https://auto-media-backend.vercel.app/api
+VITE_API_BASE_URL=https://api.seudominio.com/api
 ```
+
+Importante: o frontend publicado na Vercel não consegue acessar `192.168.1.6` fora da sua rede. Para produção, use domínio/tunnel HTTPS apontando para a VM.
 
 O arquivo `vercel.json` mantém o roteamento SPA funcionando em rotas internas como `/products`, `/media`, `/videos`, `/schedule`, `/publications` e `/settings`.
 

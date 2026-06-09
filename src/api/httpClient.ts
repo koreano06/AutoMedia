@@ -2,7 +2,19 @@ type RequestOptions = RequestInit & {
   query?: Record<string, string | number | boolean | undefined>;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://auto-media-backend.vercel.app/api';
+function resolveApiBaseUrl() {
+  const configuredUrl = import.meta.env.VITE_API_BASE_URL;
+  if (configuredUrl) return configuredUrl.replace(/\/+$/, '');
+
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return 'http://localhost:3333/api';
+  }
+
+  console.warn('VITE_API_BASE_URL não configurada. Configure a URL pública da API no ambiente de produção.');
+  return '/api';
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 export const API_TOKEN_STORAGE_KEY = 'automedia_api_token';
 export const API_REFRESH_TOKEN_STORAGE_KEY = 'automedia_api_refresh_token';
 

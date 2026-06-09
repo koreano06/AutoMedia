@@ -36,6 +36,7 @@ import { filterMediaAssets, listMediaAssets, updateMediaAsset } from '@/services
 import { listProducts } from '@/services/products';
 import { generateImage, invokeLLM } from '@/services/ai';
 import { generateVideo } from '@/services/videos';
+import { getJob } from '@/services/jobs';
 import type { EntityId, Job, MediaAsset, Platform, Product, Status } from '@/types/entities';
 
 const templates = [
@@ -156,6 +157,7 @@ export default function VideoGeneration() {
   const generationSource = generatedVisual || selectedMedia[0] || null;
   const generationPreview = generationSource ? getAssetPreview(generationSource) : '';
   const filteredVideos = videos.filter((asset) => historyFilter === 'all' || asset.status === historyFilter);
+  const activeJobs = queue.filter((job) => ['queued', 'processing', 'rendering', 'uploading'].includes(job.status));
 
   const stats = {
     total: videos.length,
@@ -173,6 +175,44 @@ export default function VideoGeneration() {
     { label: 'Formato escolhido', ok: Boolean(selectedFormat), hint: selectedFormatConfig?.ratio || '' },
   ];
   const readiness = Math.round((checklist.filter((item) => item.ok).length / checklist.length) * 100);
+  const currentStep = !product ? 1 : readiness < 80 ? 2 : activeJobs.length > 0 ? 4 : 3;
+  const qualityWarnings = [
+    !product ? 'Selecione um anúncio base para contextualizar o roteiro.' : '',
+    !generationPreview && selectedMedia.length === 0 ? 'Adicione uma imagem real ou gere um criativo IA para evitar vídeo genérico.' : '',
+    !briefing.promise.trim() ? 'Preencha a promessa principal para deixar o gancho mais forte.' : '',
+    scriptPreview && scriptPreview.length < 120 ? 'Roteiro curto demais: revise antes de renderizar.' : '',
+  ].filter(Boolean);
+
+  useEffect(() => {
+    if (activeJobs.length === 0) return;
+
+    const timer = window.setInterval(async () => {
+      const settledJobs: Job[] = [];
+
+      await Promise.all(
+        activeJobs.map(async (job) => {
+          if (job.id.startsWith('job-') || job.id.startsWith('local_')) return;
+
+          try {
+            const freshJob = await getJob(job.id);
+            updateQueue(job.id, freshJob);
+            if (['completed', 'failed', 'cancelled'].includes(freshJob.status)) {
+              settledJobs.push(freshJob);
+            }
+          } catch {
+            updateQueue(job.id, { error_message: 'Não foi possível atualizar o status em tempo real.' });
+          }
+        }),
+      );
+
+      if (settledJobs.some((job) => job.status === 'completed')) {
+        const updatedVideos = await filterMediaAssets({ type: 'generated_video' }, '-created_date', 50);
+        setVideos(updatedVideos);
+      }
+    }, 3500);
+
+    return () => window.clearInterval(timer);
+  }, [activeJobs]);
 
   const createPrompt = (currentProduct: Product, scriptOnly = false) => `
 Crie ${scriptOnly ? 'um roteiro estruturado' : 'um roteiro final'} para transformar um anúncio pronto em vídeo de divulgação.
@@ -390,6 +430,38 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
           <StudioMetric label="Rejeitados" value={stats.rejected} icon={XCircle} tone="destructive" />
         </div>
 
+        <section className="overflow-hidden rounded-3xl border border-border bg-card">
+          <div className="grid gap-0 lg:grid-cols-[1fr_360px]">
+            <div className="p-4 sm:p-5">
+              <SectionTitle icon={Rocket} title="Fluxo guiado do criativo" subtitle="Do anúncio base até o vídeo pronto para publicação" />
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <FlowStep number={1} title="Anúncio" desc="Escolha o produto ou oferta base" active={currentStep === 1} done={Boolean(product)} />
+                <FlowStep number={2} title="Briefing" desc="Defina promessa, público e CTA" active={currentStep === 2} done={readiness >= 80} />
+                <FlowStep number={3} title="Roteiro & mídia" desc="Revise cenas e selecione assets" active={currentStep === 3} done={Boolean(scriptPreview || generationPreview || selectedMedia.length)} />
+                <FlowStep number={4} title="Render & revisão" desc="Acompanhe fila, aprove e agende" active={currentStep === 4} done={stats.review + stats.approved > 0} />
+              </div>
+            </div>
+            <div className="border-t border-border bg-muted/25 p-4 sm:p-5 lg:border-l lg:border-t-0">
+              <p className="font-syne text-sm font-bold text-foreground">Próxima melhor ação</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {!product
+                  ? 'Escolha um anúncio base para a IA entender o produto.'
+                  : readiness < 80
+                    ? 'Complete o checklist para reduzir erros no render.'
+                    : activeJobs.length > 0
+                      ? 'Acompanhe o job até finalizar e revise o vídeo.'
+                      : 'Gere o vídeo ou crie uma variação com outro template.'}
+              </p>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <InfoPill label="Prontidão" value={`${readiness}%`} />
+                <InfoPill label="Formato" value={selectedFormatConfig?.ratio || '9:16'} />
+                <InfoPill label="Template" value={selectedTemplateConfig?.label || 'Direto'} />
+                <InfoPill label="Destino" value={String(platform)} />
+              </div>
+            </div>
+          </div>
+        </section>
+
         {error && <ErrorState onRetry={load} />}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
@@ -583,6 +655,24 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                 )}
               </div>
             </section>
+
+            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+              <SectionTitle icon={AlertTriangle} title="Qualidade antes do render" subtitle="Sinais que ajudam a evitar criativos fracos" />
+              <div className="mt-4 space-y-3">
+                <QualitySignal label="Base visual" ok={Boolean(generationPreview || selectedMedia.length || product?.image_url)} value={generationPreview ? 'Criativo IA' : selectedMedia.length ? `${selectedMedia.length} asset(s)` : product?.image_url ? 'Imagem do anúncio' : 'Ausente'} />
+                <QualitySignal label="Roteiro" ok={Boolean(scriptPreview)} value={scriptPreview ? 'Revisável' : 'Ainda não gerado'} />
+                <QualitySignal label="CTA" ok={Boolean(briefing.cta.trim())} value={briefing.cta || 'Ausente'} />
+                <QualitySignal label="Risco operacional" ok={qualityWarnings.length === 0} value={qualityWarnings.length === 0 ? 'Baixo' : `${qualityWarnings.length} alerta(s)`} />
+              </div>
+              {qualityWarnings.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/10 p-3">
+                  <p className="text-xs font-semibold text-warning">Ajustes recomendados</p>
+                  <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
+                    {qualityWarnings.map((warning) => <li key={warning}>• {warning}</li>)}
+                  </ul>
+                </div>
+              )}
+            </section>
           </div>
         </div>
 
@@ -662,6 +752,49 @@ function StudioMetric({ label, value, icon: Icon, tone = 'neutral' }: { label: s
       <div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}><Icon className="h-4 w-4" /></div>
       <p className="font-syne text-xl font-bold text-foreground sm:text-2xl">{value}</p>
       <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function FlowStep({ number, title, desc, active, done }: { number: number; title: string; desc: string; active?: boolean; done?: boolean }) {
+  return (
+    <div className={cn('rounded-2xl border p-4 transition-all', active ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10' : done ? 'border-success/25 bg-success/5' : 'border-border bg-muted/25')}>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <span className={cn('flex h-8 w-8 items-center justify-center rounded-xl font-syne text-sm font-bold', done ? 'bg-success text-success-foreground' : active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+          {done ? <CheckCircle className="h-4 w-4" /> : number}
+        </span>
+        {active && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">Agora</span>}
+      </div>
+      <p className="font-syne text-sm font-bold text-foreground">{title}</p>
+      <p className="mt-1 text-xs leading-5 text-muted-foreground">{desc}</p>
+    </div>
+  );
+}
+
+function InfoPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-2xl border border-border bg-card px-3 py-2">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+      <p className="mt-0.5 truncate font-syne text-xs font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function QualitySignal({ label, value, ok }: { label: string; value: string; ok: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/25 p-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', ok ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
+          {ok ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className="truncate text-xs text-muted-foreground">{value}</p>
+        </div>
+      </div>
+      <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', ok ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
+        {ok ? 'OK' : 'Ajustar'}
+      </span>
     </div>
   );
 }

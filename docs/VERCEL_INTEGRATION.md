@@ -1,9 +1,9 @@
-# Integração Frontend + Backend na Vercel
+# Integração Frontend Vercel + Backend VM
 
 Este projeto frontend (`projeto_123`) consome o backend (`projeto_321`) pela variável:
 
 ```env
-VITE_API_BASE_URL=https://auto-media-backend.vercel.app/api
+VITE_API_BASE_URL=https://api.seudominio.com/api
 ```
 
 Frontend atual em produção:
@@ -34,20 +34,22 @@ npm run dev
 VITE_API_BASE_URL=http://localhost:3333/api
 ```
 
-## Produção na Vercel
+## Produção na Vercel com backend na VM
 
-1. Faça deploy do backend primeiro.
-2. Copie a URL pública do backend.
+1. Publique o backend da VM por uma URL pública com HTTPS.
+2. Copie a URL pública do backend, sempre terminando em `/api`.
 3. No projeto frontend da Vercel, configure:
 
 ```env
-VITE_API_BASE_URL=https://auto-media-backend.vercel.app/api
+VITE_API_BASE_URL=https://api.seudominio.com/api
 ```
 
-4. No projeto backend da Vercel, configure:
+4. No `.env.local` do backend na VM, configure:
 
 ```env
 CORS_ORIGIN=https://auto-media-sooty.vercel.app
+FRONTEND_URL=https://auto-media-sooty.vercel.app
+API_PUBLIC_URL=https://api.seudominio.com
 ```
 
 Se quiser testar local e produção ao mesmo tempo, use:
@@ -58,4 +60,16 @@ CORS_ORIGIN=https://auto-media-sooty.vercel.app,http://localhost:5173
 
 ## Observação
 
-Enquanto o backend estiver usando armazenamento em memória, os dados não são persistentes em produção. A próxima etapa sólida é conectar PostgreSQL/Prisma.
+Não use `http://192.168.1.6:3333/api` no frontend publicado na Vercel. Esse IP só funciona dentro da sua rede local.
+
+Para desenvolvimento local com a VM:
+
+```bash
+npm run api:vm
+```
+
+Para produção com domínio/tunnel:
+
+```bash
+npm run api:public -- https://api.seudominio.com
+```

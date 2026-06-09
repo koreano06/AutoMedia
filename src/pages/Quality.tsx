@@ -442,7 +442,7 @@ export default function Quality() {
             <PanelCard icon={Server} title="Ambiente do frontend" subtitle="Informações seguras, sem tokens ou secrets.">
               <div className="space-y-3 text-sm">
                 <InfoRow label="Modo" value={import.meta.env.MODE} />
-                <InfoRow label="API configurada" value={import.meta.env.VITE_API_BASE_URL || 'https://auto-media-backend.vercel.app/api'} />
+                <InfoRow label="API configurada" value={import.meta.env.VITE_API_BASE_URL || 'Não configurada'} />
                 <InfoRow label="Origem atual" value={window.location.origin} />
                 <InfoRow label="Build" value={import.meta.env.PROD ? 'Produção' : 'Desenvolvimento'} />
               </div>
