@@ -225,6 +225,56 @@ export default function MediaLibrary() {
     () => assets.filter((asset) => selectedIds.includes(asset.id)),
     [assets, selectedIds],
   );
+  const smartCollections = useMemo(
+    () => [
+      {
+        label: 'Melhores para vídeo',
+        description: 'Assets aprovados ou com qualidade alta',
+        count: assets.filter((asset) => getQualityScore(asset) >= 80 || asset.status === 'approved').length,
+        action: () => {
+          setQualityFilter('high');
+          setStatusFilter('all');
+          setTypeFilter('all');
+          setView('grid');
+        },
+      },
+      {
+        label: 'Precisam revisão',
+        description: 'Baixa qualidade, rejeitados ou pendentes',
+        count: assets.filter((asset) => getQualityScore(asset) < 50 || ['pending_review', 'rejected', 'failed'].includes(String(asset.status))).length,
+        action: () => {
+          setQualityFilter('low');
+          setStatusFilter('all');
+          setTypeFilter('all');
+          setView('list');
+        },
+      },
+      {
+        label: 'Vídeos prontos',
+        description: 'Criativos gerados ou coletados em vídeo',
+        count: assets.filter((asset) => isVideoAsset(asset)).length,
+        action: () => {
+          setTypeFilter('generated_video');
+          setQualityFilter('all');
+          setStatusFilter('all');
+          setView('grid');
+        },
+      },
+      {
+        label: 'Sem anúncio vinculado',
+        description: 'Mídias que precisam organização',
+        count: assets.filter((asset) => !asset.product_name).length,
+        action: () => {
+          setSearch('');
+          setProductFilter('all');
+          setSourceFilter('all');
+          setView('list');
+          toast.info('Use a busca/lista para localizar mídias sem vínculo e corrigir manualmente.');
+        },
+      },
+    ],
+    [assets],
+  );
 
   const toggleSelected = (id: EntityId) => {
     setSelectedIds((current) =>
@@ -447,6 +497,25 @@ export default function MediaLibrary() {
             </div>
           </div>
         </div>
+
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {smartCollections.map((collection) => (
+            <button
+              key={collection.label}
+              type="button"
+              onClick={collection.action}
+              className="rounded-2xl border border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-black/5"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-syne text-sm font-bold text-foreground">{collection.label}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{collection.description}</p>
+                </div>
+                <span className="rounded-2xl bg-primary/10 px-3 py-1 font-syne text-sm font-bold text-primary">{collection.count}</span>
+              </div>
+            </button>
+          ))}
+        </section>
 
         {error ? (
           <ErrorState onRetry={load} />
