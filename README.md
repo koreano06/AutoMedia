@@ -13,6 +13,7 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - Fluxo de geração de vídeo preparado para enviar briefing, template, formato, duração, mídia base e plataformas para criação orientada por IA.
 - Biblioteca de mídia e previews padronizados em modais amplos e legíveis.
 - Telas de anúncios, publicações e agendamento com visual profissional e responsivo.
+- Camada visual lúdica para explicar a jornada: mapa de campanha, storyboard, preview mobile, semáforo e cockpit operacional.
 - Integrações sociais exibidas na interface, com backend preparado para modo `mock` e `live`.
 
 ## Status das Funcionalidades
@@ -42,6 +43,11 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ Central de Qualidade exibe checklist de produção e logs operacionais da VM
 - ✅ Tela de geração de vídeos permite repetir jobs falhos direto pela interface
 - ✅ Backend cacheia mídia externa no storage próprio antes do render, reduzindo falhas por hotlink/429
+- ✅ Dashboard com jornada criativa, mapa de campanha, maturidade operacional e cockpit
+- ✅ Geração de vídeos com preview vertical, storyboard visual e semáforo de prontidão
+- ✅ Biblioteca de mídia agrupada por campanha com semáforo de qualidade
+- ✅ Agendamento com mapa de disparo por plataforma e cockpit de naturalidade
+- ✅ Componentes visuais reutilizáveis para explicar cada etapa do fluxo
 - 🟡 Backend público definitivo com HTTPS ainda precisa de domínio/túnel estável
 - 🟡 OpenAI real em validação no backend por limite/rate limit da conta
 - 🔜 Publicação real em redes sociais via APIs oficiais
@@ -62,9 +68,26 @@ O frontend conversa com o backend próprio do AutoMedia e cobre o fluxo principa
 - ✅ 10. Exibir checklist de produção e logs operacionais na aba Qualidade
 - ✅ 11. Adicionar retry visual para jobs de vídeo falhos
 - ✅ 12. Preparar uso de mídia cacheada no storage antes do render
-- 🟡 13. Publicar backend/MinIO com domínio ou tunnel HTTPS estável
-- 🟡 14. Validar OpenAI real sem fallback por limite de conta
-- 🔜 15. Implementar integrações sociais live
+- ✅ 13. Criar camada visual da jornada criativa no frontend
+- ✅ 14. Melhorar leitura de campanha, mídia, agenda e qualidade com indicadores visuais
+- 🟡 15. Publicar backend/MinIO com domínio ou tunnel HTTPS estável
+- 🟡 16. Validar OpenAI real sem fallback por limite de conta
+- 🔜 17. Implementar integrações sociais live
+
+## Experiência Visual do Fluxo
+
+- ✅ Linha do tempo do criativo para mostrar anúncio, roteiro, assets, render e postagem.
+- ✅ Mapa visual de campanha com contagem de anúncios, mídias, vídeos e posts.
+- ✅ Cockpit operacional para transformar métricas técnicas em decisões rápidas.
+- ✅ Preview tipo celular para visualizar o criativo no formato de rede social.
+- ✅ Storyboard visual com cenas, duração e texto principal.
+- ✅ Checklist e semáforo de qualidade antes de gerar ou publicar.
+- ✅ Biblioteca agrupada por campanha para saber quais anúncios têm material pronto.
+- ✅ Agenda com mapa de disparo por plataforma e score de naturalidade.
+- ✅ Indicador de maturidade operacional para apresentação do projeto.
+- ✅ Modo apresentação para pitch e demonstração comercial.
+- ✅ Guia rápido visual nas telas de geração, biblioteca e agendamento.
+- ✅ Acesso dedicado no menu para demonstrar a campanha de ponta a ponta.
 
 ## Plano de Segurança
 
@@ -111,6 +134,7 @@ npm run prod:check
 - `Agendamento`: calendário, horários e edição de posts.
 - `Publicações`: acompanhamento de posts publicados/agendados.
 - `Comentários`: leitura e automação de respostas.
+- `Apresentação`: modo pitch para explicar campanha, jornada criativa, qualidade, posts e próximos passos.
 - `Integrações`: conexão visual com redes sociais e marketplaces.
 - `Comercial`: visão leve de estoque, margem, fornecedores e vendas.
 - `Configurações`: automações, horários e palavras-chave.

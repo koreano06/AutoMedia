@@ -29,6 +29,7 @@ import Can from '@/components/auth/Can';
 import PlatformIcon from '@/components/common/PlatformIcon';
 import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
+import { CockpitPanel, CreativeJourney, FlowGuide, QualityTrafficLight } from '@/components/creative/CreativeVisualKit';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -159,6 +160,30 @@ export default function Schedule() {
     const max = Math.max(1, ...buckets.map((bucket) => bucket.count));
     return buckets.map((bucket) => ({ ...bucket, percent: Math.round((bucket.count / max) * 100) }));
   }, [posts]);
+  const platformPipeline = useMemo(() => {
+    return PLATFORMS.map((platform) => {
+      const platformPosts = posts.filter((post) => post.platform === platform);
+      return {
+        platform,
+        scheduled: platformPosts.filter((post) => post.status === 'scheduled').length,
+        published: platformPosts.filter((post) => post.status === 'published').length,
+        failed: platformPosts.filter((post) => post.status === 'failed').length,
+      };
+    }).filter((item) => item.scheduled || item.published || item.failed).slice(0, 5);
+  }, [posts]);
+  const scheduleStages = [
+    { id: 'ready', label: 'Aprovado', description: `${readyAssets.length} criativo(s) prontos`, icon: CheckCircle, status: readyAssets.length ? 'active' as const : 'waiting' as const },
+    { id: 'calendar', label: 'Calendário', description: `${stats.week} post(s) na semana`, icon: Calendar, status: stats.week ? 'active' as const : 'waiting' as const },
+    { id: 'random', label: 'Naturalidade', description: `${naturalityScore}% de equilíbrio`, icon: Shuffle, status: naturalityScore >= 75 ? 'done' as const : 'active' as const },
+    { id: 'publish', label: 'Disparo', description: `${stats.published} publicado(s)`, icon: Send, status: stats.published ? 'done' as const : 'waiting' as const },
+    { id: 'learn', label: 'Ajuste', description: `${alerts.length} alerta(s)`, icon: AlertTriangle, status: alerts.length ? 'blocked' as const : 'done' as const },
+  ];
+  const cockpitItems = [
+    { label: 'Posts na semana', value: stats.week, hint: 'Volume previsto para os próximos dias.', tone: 'primary' as const, icon: Calendar },
+    { label: 'Naturalidade', value: `${naturalityScore}%`, hint: alerts.length ? 'Revise alertas antes de escalar.' : 'Distribuição saudável.', tone: naturalityScore >= 75 ? 'success' as const : 'warning' as const, icon: Shuffle },
+    { label: 'Falhas', value: stats.failed, hint: 'Publicações que precisam de nova tentativa.', tone: stats.failed ? 'danger' as const : 'success' as const, icon: XCircle },
+    { label: 'Prontos sem agenda', value: readyAssets.length, hint: 'Conteúdos aprovados aguardando horário.', tone: readyAssets.length ? 'warning' as const : 'muted' as const, icon: PlayCircle },
+  ];
 
   const updateSelectedPost = async (payload: Partial<Post>) => {
     if (!selectedPost) return;
@@ -286,6 +311,65 @@ export default function Schedule() {
           <Metric label="Falhas" value={stats.failed} icon={XCircle} tone="destructive" />
           <Metric label="Naturalidade" value={`${naturalityScore}%`} icon={Shuffle} tone={naturalityScore >= 75 ? 'success' : 'warning'} />
         </div>
+
+        {!loading && (
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+            <div className="space-y-5">
+              <CreativeJourney stages={scheduleStages} compact />
+              <section className="rounded-3xl border border-border bg-card p-4 sm:p-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Mapa de disparo</p>
+                    <h3 className="mt-1 font-syne text-lg font-bold text-foreground">Plataformas na agenda</h3>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{platformPipeline.length || 0} canal(is) ativos</span>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {(platformPipeline.length ? platformPipeline : [{ platform: 'instagram', scheduled: 0, published: 0, failed: 0 }]).map((item) => (
+                    <div key={item.platform} className="rounded-2xl border border-border bg-muted/20 p-3">
+                      <div className="flex items-center gap-3">
+                        <PlatformIcon platform={item.platform} size="sm" />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold capitalize text-foreground">{item.platform}</p>
+                          <p className="text-xs text-muted-foreground">{item.scheduled} agendado(s)</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-xl bg-background/70 p-2">
+                          <p className="font-syne text-sm font-bold text-foreground">{item.scheduled}</p>
+                          <p className="text-[9px] text-muted-foreground">Fila</p>
+                        </div>
+                        <div className="rounded-xl bg-background/70 p-2">
+                          <p className="font-syne text-sm font-bold text-success">{item.published}</p>
+                          <p className="text-[9px] text-muted-foreground">Pub.</p>
+                        </div>
+                        <div className="rounded-xl bg-background/70 p-2">
+                          <p className="font-syne text-sm font-bold text-destructive">{item.failed}</p>
+                          <p className="text-[9px] text-muted-foreground">Erro</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+            <div className="space-y-5">
+              <QualityTrafficLight score={naturalityScore} label="Semáforo da agenda" />
+              <CockpitPanel items={cockpitItems} />
+            </div>
+          </div>
+        )}
+
+        {!loading && (
+          <FlowGuide
+            title="Agendar sem parecer robô"
+            items={[
+              { label: 'Distribua horários', description: 'Espalhe posts entre manhã, tarde e noite para manter naturalidade.', icon: Shuffle },
+              { label: 'Revise alertas', description: 'Corrija posts muito próximos, repetição de plataforma ou falta de mídia.', icon: AlertTriangle },
+              { label: 'Publique com controle', description: 'Processe vencidos e acompanhe falhas antes de escalar volume.', icon: Send },
+            ]}
+          />
+        )}
 
         <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
           <SectionTitle icon={Clock} title="Distribuição visual da agenda" subtitle="Equilibre horários para evitar disparos com cara de automação" />

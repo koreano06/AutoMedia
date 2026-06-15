@@ -5,12 +5,19 @@ import StatusBadge from '@/components/common/StatusBadge';
 import PlatformIcon from '@/components/common/PlatformIcon';
 import ErrorState from '@/components/common/ErrorState';
 import { Button } from '@/components/ui/button';
-import { Package, Zap, Clock, CheckCircle, Film, Link2, X } from 'lucide-react';
+import { Package, Zap, Clock, CheckCircle, Film, Link2, Rocket as RocketIcon, X } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from 'react-router-dom';
 import { listProducts } from '@/services/products';
 import { listPosts } from '@/services/posts';
 import type { Product, Post } from '@/types/entities';
+import {
+  CampaignMap,
+  CockpitPanel,
+  CreativeJourney,
+  MaturityMeter,
+  MissingStepsPanel,
+} from '@/components/creative/CreativeVisualKit';
 
 const chartData = [
   { day: 'Seg', posts: 4, reach: 1200 },
@@ -91,6 +98,37 @@ export default function Dashboard() {
       detail: 'prioridade operacional',
     },
   ];
+  const totalMedia = products.reduce((sum, product) => sum + Number(product.media_count || 0), 0);
+  const totalVideos = products.reduce((sum, product) => sum + Number(product.videos_generated || 0), 0);
+  const maturityScore = Math.round(
+    Math.min(
+      100,
+      (products.length > 0 ? 20 : 0)
+      + (totalMedia > 0 ? 18 : 0)
+      + (totalVideos > 0 ? 22 : 0)
+      + (stats.pending > 0 || stats.scheduled > 0 ? 18 : 0)
+      + (stats.published > 0 ? 22 : 0),
+    ),
+  );
+  const journeyStages = [
+    { id: 'base', label: 'Anúncio', description: 'Oferta cadastrada', icon: Package, status: products.length > 0 ? 'done' as const : 'active' as const },
+    { id: 'media', label: 'Mídias', description: 'Assets coletados ou criados', icon: Film, status: totalMedia > 0 ? 'done' as const : products.length > 0 ? 'active' as const : 'waiting' as const },
+    { id: 'video', label: 'Vídeo IA', description: 'Roteiro e renderização', icon: Zap, status: totalVideos > 0 ? 'done' as const : totalMedia > 0 ? 'active' as const : 'waiting' as const },
+    { id: 'approval', label: 'Aprovação', description: 'Revisão manual', icon: CheckCircle, status: stats.pending > 0 ? 'active' as const : totalVideos > 0 ? 'done' as const : 'waiting' as const },
+    { id: 'publish', label: 'Postagem', description: 'Agenda e disparo', icon: RocketIcon, status: stats.published > 0 ? 'done' as const : stats.scheduled > 0 ? 'active' as const : 'waiting' as const },
+  ];
+  const missingSteps = [
+    { label: 'Cadastrar anúncio base', done: products.length > 0, hint: products.length > 0 ? 'Base pronta para criação.' : 'Crie uma oferta/anúncio para iniciar o fluxo.' },
+    { label: 'Adicionar mídia real', done: totalMedia > 0, hint: totalMedia > 0 ? `${totalMedia} asset(s) disponíveis.` : 'Use imagem real, upload ou criativo IA.' },
+    { label: 'Gerar primeiro vídeo', done: totalVideos > 0, hint: totalVideos > 0 ? `${totalVideos} vídeo(s) gerados.` : 'Acesse Geração de Vídeos e renderize um criativo.' },
+    { label: 'Agendar publicação', done: stats.scheduled > 0 || stats.published > 0, hint: stats.scheduled > 0 ? `${stats.scheduled} post(s) agendados.` : 'Defina plataforma, horário e legenda.' },
+  ];
+  const cockpitItems = [
+    { label: 'Maturidade', value: `${maturityScore}%`, hint: 'Prontidão geral do funil criativo.', tone: maturityScore >= 70 ? 'success' as const : 'warning' as const, icon: CheckCircle },
+    { label: 'Fila ativa', value: stats.pending + stats.scheduled, hint: 'Itens que precisam de revisão ou disparo.', tone: 'primary' as const, icon: Clock },
+    { label: 'Vídeos criados', value: totalVideos, hint: 'Criativos renderizados a partir de anúncios.', tone: 'warning' as const, icon: Film },
+    { label: 'Publicados', value: stats.published, hint: 'Conteúdos que já foram enviados.', tone: 'success' as const, icon: Zap },
+  ];
   const hideOnboarding = () => {
     localStorage.setItem('automedia_onboarding_hidden', 'true');
     setShowOnboarding(false);
@@ -156,6 +194,28 @@ export default function Dashboard() {
           <StatCard title="Aguardando Aprovação" value={loading ? '—' : stats.pending} icon={Clock} color="warning" loading={loading} />
           <StatCard title="Agendados" value={loading ? '—' : stats.scheduled} icon={CheckCircle} color="blue" loading={loading} />
         </div>
+
+        {!loading && (
+          <>
+            <CreativeJourney stages={journeyStages} />
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.4fr_0.8fr]">
+              <CampaignMap
+                title="Fluxo AutoMedia"
+                productCount={products.length}
+                mediaCount={totalMedia}
+                videoCount={totalVideos}
+                scheduledCount={stats.scheduled + stats.published}
+              />
+              <MaturityMeter score={maturityScore} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.2fr]">
+              <MissingStepsPanel items={missingSteps} />
+              <CockpitPanel items={cockpitItems} />
+            </div>
+          </>
+        )}
 
         <section className="responsive-card responsive-card-pad">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

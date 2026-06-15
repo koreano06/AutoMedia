@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { fileToDataUrl } from '@/lib/fileToDataUrl';
 import { createMediaAsset, listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
 import type { EntityId, MediaAsset, Status } from '@/types/entities';
+import { CampaignMap, FlowGuide, QualityTrafficLight } from '@/components/creative/CreativeVisualKit';
 
 type ViewMode = 'grid' | 'list' | 'grouped';
 
@@ -274,6 +275,34 @@ export default function MediaLibrary() {
       },
     ],
     [assets],
+  );
+  const campaignOverview = useMemo(() => {
+    const groups = assets.reduce<Record<string, MediaAsset[]>>((currentGroups, asset) => {
+      const key = asset.product_name || 'Sem anúncio vinculado';
+      currentGroups[key] = [...(currentGroups[key] || []), asset];
+      return currentGroups;
+    }, {});
+
+    return Object.entries(groups)
+      .map(([productName, productAssets]) => {
+        const averageQuality = Math.round(
+          productAssets.reduce((sum, asset) => sum + getQualityScore(asset), 0) / Math.max(1, productAssets.length),
+        );
+        return {
+          productName,
+          total: productAssets.length,
+          images: productAssets.filter((asset) => asset.type === 'image' || asset.type === 'thumbnail').length,
+          videos: productAssets.filter((asset) => isVideoAsset(asset)).length,
+          approved: productAssets.filter((asset) => asset.status === 'approved').length,
+          averageQuality,
+        };
+      })
+      .sort((first, second) => second.total - first.total)
+      .slice(0, 3);
+  }, [assets]);
+  const primaryCampaign = campaignOverview[0];
+  const libraryQuality = Math.round(
+    assets.reduce((sum, asset) => sum + getQualityScore(asset), 0) / Math.max(1, assets.length),
   );
 
   const toggleSelected = (id: EntityId) => {
@@ -516,6 +545,81 @@ export default function MediaLibrary() {
             </button>
           ))}
         </section>
+
+        {!loading && assets.length > 0 && (
+          <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.25fr_0.75fr]">
+            <CampaignMap
+              title={primaryCampaign?.productName || 'Biblioteca criativa'}
+              productCount={campaignOverview.length}
+              mediaCount={primaryCampaign?.images || stats.images}
+              videoCount={primaryCampaign?.videos || stats.videos}
+              scheduledCount={primaryCampaign?.approved || stats.approved}
+            />
+            <QualityTrafficLight score={primaryCampaign?.averageQuality || libraryQuality} label="Semáforo da biblioteca" />
+          </section>
+        )}
+
+        {!loading && campaignOverview.length > 0 && (
+          <section className="responsive-card responsive-card-pad">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Campanhas agrupadas</p>
+                <h3 className="mt-1 font-syne text-lg font-bold text-foreground">Prontidão por anúncio</h3>
+              </div>
+              <Button variant="outline" size="sm" className="rounded-xl" onClick={() => setView('grouped')}>
+                Ver agrupado
+              </Button>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {campaignOverview.map((campaign) => (
+                <button
+                  key={campaign.productName}
+                  type="button"
+                  onClick={() => {
+                    setProductFilter(campaign.productName === 'Sem anúncio vinculado' ? 'all' : campaign.productName);
+                    setView('grouped');
+                  }}
+                  className="rounded-2xl border border-border bg-muted/20 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-syne text-sm font-bold text-foreground">{campaign.productName}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{campaign.total} mídia(s) organizadas</p>
+                    </div>
+                    <span className={cn('rounded-full px-2.5 py-1 text-[10px] font-bold', getQualityTone(campaign.averageQuality))}>
+                      {campaign.averageQuality}%
+                    </span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-xl bg-background/70 p-2">
+                      <p className="font-syne text-base font-bold text-foreground">{campaign.images}</p>
+                      <p className="text-[10px] text-muted-foreground">Imagens</p>
+                    </div>
+                    <div className="rounded-xl bg-background/70 p-2">
+                      <p className="font-syne text-base font-bold text-foreground">{campaign.videos}</p>
+                      <p className="text-[10px] text-muted-foreground">Vídeos</p>
+                    </div>
+                    <div className="rounded-xl bg-background/70 p-2">
+                      <p className="font-syne text-base font-bold text-foreground">{campaign.approved}</p>
+                      <p className="text-[10px] text-muted-foreground">Aprov.</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {!loading && assets.length > 0 && (
+          <FlowGuide
+            title="Preparar material para vídeos melhores"
+            items={[
+              { label: 'Organize por anúncio', description: 'Agrupe mídias pela campanha para encontrar rápido o que já está pronto.', icon: FolderKanban },
+              { label: 'Aprove os melhores', description: 'Use o semáforo de qualidade para separar assets bons dos que precisam revisão.', icon: CheckCircle },
+              { label: 'Envie para vídeo', description: 'Selecione imagens e vídeos aprovados como base para o criativo IA.', icon: Film },
+            ]}
+          />
+        )}
 
         {error ? (
           <ErrorState onRetry={load} />

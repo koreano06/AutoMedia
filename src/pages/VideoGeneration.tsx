@@ -3,6 +3,13 @@ import TopBar from '@/components/layout/TopBar';
 import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
 import JobStatusBadge from '@/components/common/JobStatusBadge';
+import {
+  CreativeJourney,
+  FlowGuide,
+  PhoneCreativePreview,
+  QualityTrafficLight,
+  StoryboardStrip,
+} from '@/components/creative/CreativeVisualKit';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -336,6 +343,18 @@ export default function VideoGeneration() {
     ),
   );
   const creativeScoreLabel = creativeScore >= 82 ? 'Pronto para render' : creativeScore >= 62 ? 'Bom, mas revise' : 'Precisa de ajustes';
+  const creativeJourneyStages = [
+    { id: 'briefing', label: 'Briefing', description: product ? product.name : 'Escolha o anúncio', icon: Target, status: product ? 'done' as const : 'active' as const },
+    { id: 'script', label: 'Roteiro IA', description: scriptPreview ? 'Texto pronto para revisar' : 'Criar gancho e CTA', icon: Sparkles, status: scriptPreview ? 'done' as const : product ? 'active' as const : 'waiting' as const },
+    { id: 'storyboard', label: 'Storyboard', description: `${filledSceneCount}/${scenes.length} cenas completas`, icon: Layers3, status: filledSceneCount >= Math.min(3, scenes.length) ? 'done' as const : product ? 'active' as const : 'waiting' as const },
+    { id: 'visual', label: 'Visual', description: hasVisualBase ? 'Imagem base disponível' : 'Gerar ou selecionar asset', icon: Image, status: hasVisualBase ? 'done' as const : product ? 'active' as const : 'waiting' as const },
+    { id: 'render', label: 'Render', description: activeJobs.length ? 'Job em andamento' : 'Enviar para fila', icon: Film, status: activeJobs.length ? 'active' as const : creativeScore >= 80 ? 'done' as const : 'waiting' as const },
+  ];
+  const storyboardScenes = scenes.map((scene) => ({
+    title: scene.title || 'Cena sem título',
+    text: scene.onScreenText || scene.narration || scene.visualDirection,
+    duration: scene.duration,
+  }));
 
   useEffect(() => {
     if (activeJobs.length === 0) return;
@@ -675,6 +694,37 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
             </div>
           </div>
         </section>
+
+        {!loading && (
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+            <div className="space-y-5">
+              <CreativeJourney stages={creativeJourneyStages} />
+              <StoryboardStrip scenes={storyboardScenes} />
+            </div>
+            <div className="space-y-5">
+              <PhoneCreativePreview
+                title={scenes[0]?.onScreenText || briefing.promise || product?.name || 'Seu vídeo de divulgação'}
+                subtitle={product?.name || selectedTemplateConfig?.label}
+                imageUrl={generationPreview || product?.image_url}
+                badge={selectedTemplateConfig?.label || 'IA'}
+                cta={briefing.cta}
+                progress={creativeScore}
+              />
+              <QualityTrafficLight score={creativeScore} label="Prontidão do vídeo" />
+            </div>
+          </div>
+        )}
+
+        {!loading && (
+          <FlowGuide
+            title="Gerar vídeo sem se perder no fluxo"
+            items={[
+              { label: 'Escolha a oferta', description: 'Selecione o anúncio base para a IA entender produto, categoria e promessa.', icon: Target },
+              { label: 'Monte roteiro e visual', description: 'Use briefing, cenas e imagem IA para criar um criativo menos genérico.', icon: Wand2 },
+              { label: 'Renderize e revise', description: 'Envie para a fila, acompanhe o job e aprove antes de agendar.', icon: CheckCircle },
+            ]}
+          />
+        )}
 
         {error && <ErrorState onRetry={load} />}
 
