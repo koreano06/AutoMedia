@@ -20,7 +20,8 @@ export type AIProviderUsage = {
   failed: number;
   fallback: number;
   videos: number;
-  estimated_cost_usd: number;
+  official_cost_usd: number | null;
+  cost_source: 'official_api' | 'free_local' | 'unavailable';
 };
 
 export type AIRecentVideoCost = {
@@ -31,8 +32,9 @@ export type AIRecentVideoCost = {
   provider: string;
   model?: string;
   duration_seconds: number | null;
-  estimated_cost_usd: number;
-  cost_source: 'configured_estimate' | 'free_local' | 'unknown';
+  official_cost_usd: number | null;
+  cost_source: 'official_api' | 'free_local' | 'unavailable';
+  cost_message: string;
   url: string | null;
   created_at: string;
 };
@@ -44,7 +46,13 @@ export type AIPeriodUsage = {
   failed: number;
   fallback: number;
   videos: number;
-  estimated_cost_usd: number;
+  official_cost_usd: number;
+  billing_status: {
+    openai: 'available' | 'not_configured' | 'error' | string;
+    openai_message: string;
+    replicate: 'available' | 'unavailable' | string;
+    replicate_message: string;
+  };
   providers: AIProviderUsage[];
   recent_videos: AIRecentVideoCost[];
 };

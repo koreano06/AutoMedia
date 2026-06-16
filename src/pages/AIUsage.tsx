@@ -95,10 +95,10 @@ function ProviderStatusCard({ provider }: { provider: AIProviderStatus }) {
         <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3">
           <div className="flex items-center gap-2 text-amber-300">
             <DollarSign className="h-4 w-4" />
-            <span className="text-xs font-semibold">Saldo de crédito</span>
+            <span className="text-xs font-semibold">Billing oficial</span>
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            Leitura automática ainda não disponível. Use o painel oficial do provedor para confirmar o saldo real.
+            {provider.credit_message}
           </p>
         </div>
       </div>
@@ -179,7 +179,7 @@ function UsageTable({ providers }: { providers: AIProviderUsage[] }) {
               <SmallMetric label="OK" value={usage.completed} tone="ok" />
               <SmallMetric label="Falhas" value={usage.failed} tone={usage.failed ? 'error' : 'neutral'} />
               <SmallMetric label="Fallback" value={usage.fallback} tone={usage.fallback ? 'warning' : 'neutral'} />
-              <SmallCurrency label="Custo" value={usage.estimated_cost_usd} />
+              <SmallCurrency label="Custo" value={usage.official_cost_usd} source={usage.cost_source} />
             </div>
           </div>
         ))}
@@ -188,11 +188,16 @@ function UsageTable({ providers }: { providers: AIProviderUsage[] }) {
   );
 }
 
-function SmallCurrency({ label, value }: { label: string; value: number }) {
+function SmallCurrency({ label, value, source }: { label: string; value: number | null; source: AIProviderUsage['cost_source'] }) {
+  const available = value !== null;
   return (
-    <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-center text-amber-300 lg:border-0 lg:bg-transparent lg:p-0 lg:text-left lg:text-foreground">
-      <p className="text-sm font-bold">{money(value)}</p>
+    <div className={cn(
+      'rounded-2xl border px-3 py-2 text-center lg:border-0 lg:bg-transparent lg:p-0 lg:text-left',
+      available ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300 lg:text-foreground' : 'border-amber-500/25 bg-amber-500/10 text-amber-300 lg:text-muted-foreground',
+    )}>
+      <p className="text-sm font-bold">{available ? money(value) : 'Indisponível'}</p>
       <p className="text-[9px] font-semibold uppercase tracking-wider opacity-70 lg:hidden">{label}</p>
+      {source === 'official_api' && <p className="hidden text-[10px] text-emerald-300 lg:block">Oficial</p>}
     </div>
   );
 }
@@ -213,16 +218,16 @@ function SummaryMetrics({ usage }: { usage: AIPeriodUsage }) {
       <MetricCard icon={Cpu} label="Jobs de vídeo" value={number(usage.jobs)} detail="Pedidos enviados ao pipeline de geração." />
       <MetricCard icon={CheckCircle2} label="Concluídos" value={number(usage.completed)} detail="Jobs finalizados com resultado." tone="ok" />
       <MetricCard icon={AlertCircle} label="Fallback/Falhas" value={`${number(usage.fallback)} / ${number(usage.failed)}`} detail="Fallback FFmpeg e jobs com erro." tone={usage.failed || usage.fallback ? 'warning' : 'neutral'} />
-      <MetricCard icon={DollarSign} label="Custo estimado" value={money(usage.estimated_cost_usd)} detail="Estimativa por vídeo baseada nas taxas configuradas no backend." tone="warning" />
+      <MetricCard icon={DollarSign} label="Gasto oficial" value={money(usage.official_cost_usd)} detail="Somente custos retornados por APIs oficiais de billing." tone="ok" />
     </div>
   );
 }
 
 function costSourceLabel(source: AIRecentVideoCost['cost_source']) {
   return {
-    configured_estimate: 'Estimado',
+    official_api: 'Oficial',
     free_local: 'Local',
-    unknown: 'Sem taxa',
+    unavailable: 'Indisponível',
   }[source];
 }
 
@@ -232,7 +237,7 @@ function RecentVideoCosts({ videos }: { videos: AIRecentVideoCost[] }) {
       <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
         <Video className="mx-auto h-8 w-8 text-muted-foreground/50" />
         <p className="mt-3 font-syne text-sm font-bold text-foreground">Nenhum vídeo recente neste período</p>
-        <p className="mt-1 text-xs text-muted-foreground">Quando um vídeo for gerado, o custo estimado aparecerá aqui.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Quando um vídeo for gerado, os dados oficiais disponíveis aparecerão aqui.</p>
       </div>
     );
   }
@@ -262,8 +267,9 @@ function RecentVideoCosts({ videos }: { videos: AIRecentVideoCost[] }) {
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-left sm:text-right">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">Custo estimado</p>
-                <p className="mt-1 font-syne text-xl font-bold text-foreground">{money(video.estimated_cost_usd)}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-300">Custo oficial</p>
+                <p className="mt-1 font-syne text-xl font-bold text-foreground">{video.official_cost_usd !== null ? money(video.official_cost_usd) : 'Indisponível'}</p>
+                <p className="mt-1 max-w-[220px] text-[10px] leading-4 text-muted-foreground">{video.cost_message}</p>
               </div>
               {video.url && (
                 <Button asChild variant="outline" className="gap-2">
@@ -331,7 +337,7 @@ export default function AIUsage() {
                 Acompanhe quanto a automação criativa está usando em roteiros e vídeos.
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-                Esta tela cruza jobs, mídias geradas e provedores para mostrar uso por dia, semana e mês. O saldo financeiro fica marcado como manual até conectarmos APIs oficiais de billing.
+                Esta tela cruza jobs, mídias geradas e provedores para mostrar uso por dia, semana e mês. Os valores financeiros só aparecem quando vierem de API oficial.
               </p>
             </div>
             <div className="flex flex-col justify-between gap-4 rounded-3xl border border-border bg-background/50 p-4">
@@ -396,9 +402,9 @@ export default function AIUsage() {
 
             <section className="space-y-4">
               <div>
-                <h2 className="font-syne text-lg font-bold text-foreground">Custo por vídeo gerado</h2>
+                <h2 className="font-syne text-lg font-bold text-foreground">Custo oficial por vídeo gerado</h2>
                 <p className="text-xs text-muted-foreground">
-                  Valores estimados com base nas taxas configuradas no backend. Use como controle operacional, não como fatura oficial.
+                  Sem estimativas: quando o provedor não entregar billing por API, o valor fica marcado como indisponível.
                 </p>
               </div>
               <RecentVideoCosts videos={currentUsage.recent_videos} />
@@ -412,7 +418,7 @@ export default function AIUsage() {
                 <div>
                   <h3 className="font-syne text-sm font-bold text-foreground">Leitura sobre créditos</h3>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                    OpenAI e Replicate tratam billing em painéis próprios. A plataforma já mostra uso operacional real; o próximo passo é adicionar campos manuais de orçamento mensal ou integrar billing quando o provedor liberar endpoint apropriado para a conta.
+                    OpenAI pode retornar custos oficiais via Costs API quando uma chave admin estiver configurada. Replicate/Kling aparece com uso operacional real, mas custo oficial fica indisponível enquanto não houver endpoint de billing compatível no fluxo.
                   </p>
                 </div>
               </div>
