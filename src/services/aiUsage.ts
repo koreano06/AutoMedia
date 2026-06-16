@@ -20,7 +20,21 @@ export type AIProviderUsage = {
   failed: number;
   fallback: number;
   videos: number;
-  estimated_cost_usd: number | null;
+  estimated_cost_usd: number;
+};
+
+export type AIRecentVideoCost = {
+  id: string;
+  title: string | null;
+  product_name: string | null;
+  status: string;
+  provider: string;
+  model?: string;
+  duration_seconds: number | null;
+  estimated_cost_usd: number;
+  cost_source: 'configured_estimate' | 'free_local' | 'unknown';
+  url: string | null;
+  created_at: string;
 };
 
 export type AIPeriodUsage = {
@@ -30,7 +44,9 @@ export type AIPeriodUsage = {
   failed: number;
   fallback: number;
   videos: number;
+  estimated_cost_usd: number;
   providers: AIProviderUsage[];
+  recent_videos: AIRecentVideoCost[];
 };
 
 export type AIUsageSummary = {
