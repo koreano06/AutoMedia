@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import type { AppPermission } from "@/lib/permissions";
 import {
   BarChart2,
+  Bot,
   Calendar,
   CheckSquare,
   Film,
@@ -37,6 +38,7 @@ export const mainNavigation: NavigationItem[] = [
   { label: "Comentários", icon: MessageSquare, path: "/comments", section: "conteudo", badgeKey: "comments" },
   { label: "Apresentação", icon: Presentation, path: "/presentation", section: "operacao" },
   { label: "Integrações", icon: Link2, path: "/integrations", section: "operacao", permission: "platform:manage" },
+  { label: "Uso de IA", icon: Bot, path: "/ai-usage", section: "operacao", permission: "admin:access" },
   { label: "Qualidade", icon: ShieldCheck, path: "/quality", section: "operacao", permission: "admin:access" },
   { label: "Relatórios", icon: BarChart2, path: "/reports", section: "operacao" },
 ];

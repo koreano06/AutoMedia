@@ -3,6 +3,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import PageNotFound from "@/components/PageNotFound";
 import RequirePermission from "@/components/auth/RequirePermission";
 import Approval from "@/pages/Approval";
+import AIUsage from "@/pages/AIUsage";
 import CampaignPresentation from "@/pages/CampaignPresentation";
 import Comments from "@/pages/Comments";
 import Commercial from "@/pages/Commercial";
@@ -35,6 +36,7 @@ export const appRoutes: RouteObject[] = [
       { path: "/comments", element: <Comments /> },
       { path: "/presentation", element: <CampaignPresentation /> },
       { path: "/integrations", element: <RequirePermission permission="platform:manage"><Integrations /></RequirePermission> },
+      { path: "/ai-usage", element: <RequirePermission permission="admin:access"><AIUsage /></RequirePermission> },
       { path: "/quality", element: <RequirePermission permission="admin:access"><Quality /></RequirePermission> },
       { path: "/commercial", element: <RequirePermission permission="finance:manage"><Commercial /></RequirePermission> },
       { path: "/reports", element: <Reports /> },
