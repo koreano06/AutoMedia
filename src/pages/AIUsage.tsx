@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import TopBar from '@/components/layout/TopBar';
 import { Button } from '@/components/ui/button';
+import { ApiRequestError } from '@/api/httpClient';
 import { getAIUsageSummary, type AIRecentVideoCost, type AIPeriodUsage, type AIProviderStatus, type AIProviderUsage, type AIUsageSummary } from '@/services/aiUsage';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +27,12 @@ const periods: Array<{ id: PeriodKey; label: string; hint: string }> = [
   { id: 'week', label: 'Semana', hint: 'Uso desde segunda-feira' },
   { id: 'month', label: 'Mês', hint: 'Uso desde o dia 1' },
 ];
+
+type PageError = {
+  message: string;
+  detail?: string;
+  status?: number;
+};
 
 function number(value?: number | null) {
   return new Intl.NumberFormat('pt-BR').format(value || 0);
@@ -278,15 +285,26 @@ export default function AIUsage() {
   const [summary, setSummary] = useState<AIUsageSummary | null>(null);
   const [period, setPeriod] = useState<PeriodKey>('month');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<PageError | null>(null);
 
   async function load() {
     setLoading(true);
-    setError('');
+    setError(null);
     try {
       setSummary(await getAIUsageSummary());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível carregar o uso de IA.');
+      if (err instanceof ApiRequestError && err.status === 404) {
+        setError({
+          status: err.status,
+          message: 'A rota de uso de IA ainda não foi encontrada no backend conectado.',
+          detail: 'Isso costuma acontecer quando o frontend está apontando para uma API antiga ou quando o deploy da VM ainda não puxou o último código.',
+        });
+      } else {
+        setError({
+          status: err instanceof ApiRequestError ? err.status : undefined,
+          message: err instanceof Error ? err.message : 'Não foi possível carregar o uso de IA.',
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -327,8 +345,22 @@ export default function AIUsage() {
         </section>
 
         {error && (
-          <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-200">
-            {error}
+          <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-100">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="font-syne text-base font-bold">{error.message}</p>
+                {error.detail && <p className="mt-2 max-w-3xl text-xs leading-5 text-red-100/75">{error.detail}</p>}
+                {error.status && (
+                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-100/60">
+                    Status HTTP {error.status}
+                  </p>
+                )}
+              </div>
+              <Button onClick={load} disabled={loading} variant="outline" className="shrink-0 gap-2 border-red-500/30 bg-red-500/10 text-red-100 hover:bg-red-500/20">
+                <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+                Tentar novamente
+              </Button>
+            </div>
           </div>
         )}
 
