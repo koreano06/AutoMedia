@@ -37,6 +37,7 @@ import {
   Sparkles,
   Target,
   Trash2,
+  Upload,
   Wand2,
   XCircle,
 } from 'lucide-react';
@@ -48,17 +49,17 @@ import { listProducts } from '@/services/products';
 import { generateImage, invokeLLM } from '@/services/ai';
 import { generateVideo } from '@/services/videos';
 import { getJob, retryJob } from '@/services/jobs';
+import { uploadProductImage } from '@/services/uploads';
 import type { EntityId, Job, MediaAsset, Platform, Product, Status } from '@/types/entities';
 
 const templates = [
-  { id: 'product', label: 'Anúncio direto', desc: 'Gancho, benefício principal e CTA direto', visual: 'Studio clean', motion: 'Zoom suave + texto grande', accent: 'from-orange-500 to-primary', prompt: 'fundo limpo, foco no produto, tipografia grande, CTA direto' },
+  { id: 'product', label: 'Anúncio direto', desc: 'Gancho, benefício principal e CTA direto', visual: 'Studio clean', motion: 'Zoom suave + texto grande', accent: 'from-primary to-emerald-500', prompt: 'fundo limpo, foco no produto, tipografia grande, CTA direto' },
   { id: 'unboxing', label: 'Unboxing', desc: 'Abertura, detalhes e primeira impressão', visual: 'UGC premium', motion: 'Cortes rápidos + close', accent: 'from-amber-400 to-orange-500', prompt: 'mãos abrindo embalagem, detalhe do produto, sensação real de descoberta' },
   { id: 'before_after', label: 'Antes e depois', desc: 'Transformação visual e prova de valor', visual: 'Split screen', motion: 'Comparação + transição', accent: 'from-teal-400 to-emerald-500', prompt: 'comparação antes e depois, transformação visual clara, prova de valor' },
-  { id: 'quick_review', label: 'Review rápido', desc: 'Pontos fortes em sequência curta', visual: 'Review tech', motion: 'Cards de pontos fortes', accent: 'from-sky-400 to-blue-500', prompt: 'review moderno, bullets visuais, detalhes do produto em cena' },
+  { id: 'seller_review', label: 'Review vendedor', desc: 'Apresentador mostra o produto com prova visual', visual: 'Creator review', motion: 'Fala direta + close demonstrativo', accent: 'from-sky-400 to-blue-500', prompt: 'review vendedor, apresentador segurando produto, demonstração real, bullets visuais, detalhes do produto em cena' },
   { id: 'flash_offer', label: 'Oferta relâmpago', desc: 'Urgência, preço e chamada de compra', visual: 'Sale impact', motion: 'Pulsos + contador', accent: 'from-red-500 to-orange-500', prompt: 'oferta relâmpago, urgência visual, preço e CTA destacados sem parecer spam' },
-  { id: 'social_proof', label: 'Prova social', desc: 'Depoimentos, avaliações e confiança', visual: 'Trust cards', motion: 'Depoimentos flutuantes', accent: 'from-violet-400 to-fuchsia-500', prompt: 'avaliações, prova social, elementos de confiança, visual limpo' },
   { id: 'demo', label: 'Demonstração', desc: 'Mostra a oferta em uso ou contexto real', visual: 'Hands-on demo', motion: 'Passo a passo curto', accent: 'from-lime-400 to-emerald-500', prompt: 'produto em uso, demonstração clara, contexto cotidiano e benefício prático' },
-  { id: 'story', label: 'Story curto', desc: 'Formato leve para atenção rápida', visual: 'Creator story', motion: 'Texto falado + CTA leve', accent: 'from-pink-400 to-orange-400', prompt: 'visual espontâneo, story vertical, linguagem natural e CTA leve' },
+  { id: 'marketplace', label: 'Marketplace', desc: 'Vídeo de oferta para Shopee, Mercado Livre e social commerce', visual: 'Produto + benefícios + confiança', motion: 'Cards de benefício + CTA de link', accent: 'from-yellow-400 to-primary', prompt: 'visual de marketplace, produto em destaque, benefícios claros, confiança, entrega, preço e CTA para link sem poluição visual' },
 ] as const;
 
 const formats = [
@@ -70,7 +71,7 @@ const formats = [
   { id: 'story', label: 'Story', ratio: '9:16' },
 ] as const;
 
-const durations = ['15s', '30s', '60s'] as const;
+const durations = ['15s', '20s', '30s', '60s'] as const;
 const rhythms = ['Rápido', 'Médio', 'Explicativo', 'Cortes dinâmicos', 'Legendas grandes'];
 const audioOptions = ['Sem música', 'Música tendência', 'Música energética', 'Música leve', 'Narração IA', 'Apenas texto na tela'];
 const platforms = SOCIAL_PLATFORMS;
@@ -151,11 +152,72 @@ const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing 
 
 const getAssetPreview = (asset: MediaAsset) => asset.thumbnail_url || asset.url;
 const getVideoScore = (asset: MediaAsset) => Number(asset.quality_score ?? (asset.status === 'approved' ? 88 : asset.status === 'rejected' ? 38 : 72));
+const readRecord = (value: unknown): Record<string, unknown> => (value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {});
+const readString = (value: unknown) => (typeof value === 'string' ? value : undefined);
+const readNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+const getDurationSeconds = (value: string) => Number.parseInt(value, 10) || 15;
+const estimateSegmentCount = (value: string) => Math.max(1, Math.ceil(getDurationSeconds(value) / 10));
+const estimateVideoCost = (value: string) => {
+  const segments = estimateSegmentCount(value);
+  const costPerSegment = 0.08;
+  return {
+    segments,
+    seconds: getDurationSeconds(value),
+    estimatedCost: Number((segments * costPerSegment).toFixed(4)),
+    costPerSegment,
+  };
+};
+const getFriendlyError = (error: unknown, fallback = 'Não foi possível concluir a ação agora.') => {
+  const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : fallback;
+  const lower = raw.toLowerCase();
+  if (lower.includes('429') || lower.includes('too many requests') || lower.includes('rate limit')) {
+    return 'A IA recebeu muitos pedidos em pouco tempo. Aguarde alguns minutos e tente novamente.';
+  }
+  if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('auth')) {
+    return 'A autenticação falhou. Faça login novamente ou revise a chave/API configurada.';
+  }
+  if (lower.includes('provider') || lower.includes('replicate') || lower.includes('kling')) {
+    return 'O provedor de vídeo não conseguiu concluir a geração. Tente novamente ou use o fallback FFmpeg.';
+  }
+  if (lower.includes('network') || lower.includes('fetch') || lower.includes('failed to fetch')) {
+    return 'A conexão com o backend falhou. Verifique a rede e tente outra vez.';
+  }
+  if (lower.includes('storage') || lower.includes('s3') || lower.includes('minio')) {
+    return 'O vídeo foi gerado, mas houve problema ao salvar no storage. Confira MinIO/S3.';
+  }
+  return raw || fallback;
+};
 const getJobStage = (job: Job) => {
   const progress = job.progress || 0;
-  if (job.status === 'failed') return { label: 'Falhou', detail: job.error_message || 'Verifique o erro e tente novamente.', progress: 100 };
+  const payload = readRecord(job.payload);
+  const result = readRecord(job.result);
+  const stage = readString(payload.ai_video_stage);
+  const currentSegment = readNumber(payload.ai_video_segment_current);
+  const totalSegments = readNumber(payload.ai_video_segments_total);
+  const fallbackReason = readString(payload.ai_video_fallback_reason);
+  const labelByStage: Record<string, { label: string; detail: string }> = {
+    queued: { label: 'Em fila', detail: 'Pedido recebido. Aguardando o worker iniciar.' },
+    creating_scene_plan: { label: 'Criando roteiro', detail: 'Organizando plano de cenas, imagens e instruções para a IA.' },
+    external_generation: {
+      label: currentSegment && totalSegments ? `Gerando segmento ${currentSegment}/${totalSegments}` : 'Gerando com IA',
+      detail: 'Kling/Replicate criando o trecho do vídeo com base nas imagens e no roteiro.',
+    },
+    concatenating_segments: { label: 'Juntando vídeo', detail: 'FFmpeg unindo segmentos IA em um vídeo maior e contínuo.' },
+    uploading_to_library: { label: 'Enviando para biblioteca', detail: 'Salvando arquivo final no storage e atualizando a mídia.' },
+    fallback_ffmpeg: { label: 'Fallback FFmpeg', detail: fallbackReason || 'Provider IA falhou. O sistema renderiza versão local para não quebrar o fluxo.' },
+  };
+  if (stage && labelByStage[stage]) return { ...labelByStage[stage], progress };
+  if (job.status === 'failed') return { label: 'Falhou', detail: getFriendlyError(job.error_message, 'Verifique o erro e tente novamente.'), progress: 100 };
   if (job.status === 'cancelled') return { label: 'Cancelado', detail: 'O processamento foi interrompido.', progress: 100 };
-  if (job.status === 'completed') return { label: 'Pronto para revisão', detail: 'Render concluído. Revise antes de publicar.', progress: 100 };
+  if (job.status === 'completed') {
+    const cost = readRecord(result.cost);
+    const costValue = readNumber(cost.estimated_cost_usd);
+    return {
+      label: 'Pronto para revisão',
+      detail: costValue ? `Render concluído. Custo estimado: US$ ${costValue.toFixed(4)}.` : 'Render concluído. Revise antes de publicar.',
+      progress: 100,
+    };
+  }
   if (job.status === 'queued' || progress < 20) return { label: 'Em fila', detail: 'Aguardando worker pegar o job.', progress };
   if (job.status === 'processing' || progress < 55) return { label: 'Preparando roteiro e assets', detail: 'Organizando cenas, mídia e plano de render.', progress };
   if (job.status === 'rendering' || progress < 85) return { label: 'Renderizando vídeo', detail: 'FFmpeg/worker montando o vídeo final.', progress };
@@ -180,6 +242,7 @@ export default function VideoGeneration() {
   const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([]);
   const [visualPrompt, setVisualPrompt] = useState('');
   const [generatedVisual, setGeneratedVisual] = useState<MediaAsset | null>(null);
+  const [uploadingReferences, setUploadingReferences] = useState(false);
   const [scriptPreview, setScriptPreview] = useState('');
   const [scenes, setScenes] = useState<VideoScene[]>(createDefaultScenes());
   const [generatingScript, setGeneratingScript] = useState(false);
@@ -189,6 +252,7 @@ export default function VideoGeneration() {
   const [historyFilter, setHistoryFilter] = useState('all');
   const [activeVideo, setActiveVideo] = useState<MediaAsset | null>(null);
   const [activeWizardStep, setActiveWizardStep] = useState(1);
+  const [showPreflight, setShowPreflight] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -228,6 +292,7 @@ export default function VideoGeneration() {
   const generationPreview = generationSource ? getAssetPreview(generationSource) : '';
   const filteredVideos = videos.filter((asset) => historyFilter === 'all' || asset.status === historyFilter);
   const activeJobs = queue.filter((job) => ['queued', 'processing', 'rendering', 'uploading'].includes(job.status));
+  const failedJobs = queue.filter((job) => job.status === 'failed' || job.error_message);
 
   const stats = {
     total: videos.length,
@@ -344,17 +409,20 @@ export default function VideoGeneration() {
   );
   const creativeScoreLabel = creativeScore >= 82 ? 'Pronto para render' : creativeScore >= 62 ? 'Bom, mas revise' : 'Precisa de ajustes';
   const creativeJourneyStages = [
-    { id: 'briefing', label: 'Briefing', description: product ? product.name : 'Escolha o anúncio', icon: Target, status: product ? 'done' as const : 'active' as const },
-    { id: 'script', label: 'Roteiro IA', description: scriptPreview ? 'Texto pronto para revisar' : 'Criar gancho e CTA', icon: Sparkles, status: scriptPreview ? 'done' as const : product ? 'active' as const : 'waiting' as const },
-    { id: 'storyboard', label: 'Storyboard', description: `${filledSceneCount}/${scenes.length} cenas completas`, icon: Layers3, status: filledSceneCount >= Math.min(3, scenes.length) ? 'done' as const : product ? 'active' as const : 'waiting' as const },
-    { id: 'visual', label: 'Visual', description: hasVisualBase ? 'Imagem base disponível' : 'Gerar ou selecionar asset', icon: Image, status: hasVisualBase ? 'done' as const : product ? 'active' as const : 'waiting' as const },
-    { id: 'render', label: 'Render', description: activeJobs.length ? 'Job em andamento' : 'Enviar para fila', icon: Film, status: activeJobs.length ? 'active' as const : creativeScore >= 80 ? 'done' as const : 'waiting' as const },
+    { id: 'product', label: 'Produto', description: product ? product.name : 'Escolha o anúncio', icon: Target, status: product ? 'done' as const : 'active' as const },
+    { id: 'script', label: 'Roteiro', description: scriptPreview ? 'Roteiro revisável' : 'Gerar antes do render', icon: Sparkles, status: scriptPreview ? 'done' as const : product ? 'active' as const : 'waiting' as const },
+    { id: 'scenes', label: 'Cenas', description: `${filledSceneCount}/${scenes.length} completas`, icon: Layers3, status: filledSceneCount >= Math.min(3, scenes.length) ? 'done' as const : product ? 'active' as const : 'waiting' as const },
+    { id: 'ai', label: 'IA', description: hasVisualBase ? 'Referências prontas' : 'Precisa de imagem', icon: Bot, status: hasVisualBase ? 'done' as const : product ? 'active' as const : 'waiting' as const },
+    { id: 'render', label: 'Render', description: activeJobs.length ? 'Job em andamento' : 'Aguardando aprovação', icon: Film, status: activeJobs.length ? 'active' as const : creativeScore >= 80 ? 'done' as const : 'waiting' as const },
+    { id: 'approval', label: 'Aprovação', description: stats.review ? `${stats.review} em revisão` : 'Revise o resultado', icon: CheckCircle, status: stats.review || stats.approved ? 'active' as const : 'waiting' as const },
+    { id: 'publish', label: 'Publicação', description: stats.approved ? 'Pronto para agendar' : 'Depois da aprovação', icon: Rocket, status: stats.approved ? 'done' as const : 'waiting' as const },
   ];
   const storyboardScenes = scenes.map((scene) => ({
     title: scene.title || 'Cena sem título',
     text: scene.onScreenText || scene.narration || scene.visualDirection,
     duration: scene.duration,
   }));
+  const costPreview = estimateVideoCost(duration);
 
   useEffect(() => {
     if (activeJobs.length === 0) return;
@@ -497,8 +565,9 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       if (result.asset) {
         setGeneratedVisual(result.asset);
         setMediaAssets((current) => [result.asset as MediaAsset, ...current]);
+        setSelectedMediaIds((current) => current.includes(result.asset!.id) ? current : [result.asset!.id, ...current]);
       } else {
-        setGeneratedVisual({
+        const fallbackAsset = {
           id: `generated-visual-${Date.now()}`,
           product_id: product.id,
           product_name: product.name,
@@ -511,7 +580,9 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
           caption: createImagePrompt(product),
           platforms: [platform],
           quality_score: 88,
-        });
+        };
+        setGeneratedVisual(fallbackAsset);
+        setSelectedMediaIds((current) => current.includes(fallbackAsset.id) ? current : [fallbackAsset.id, ...current]);
       }
 
       toast.success(result.provider === 'openai' ? 'Imagem gerada pela API de IA' : 'Imagem fallback gerada para teste');
@@ -522,11 +593,34 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
     }
   };
 
+  const handleReferenceUpload = async (files: FileList | null) => {
+    if (!product) {
+      toast.error('Selecione um anúncio base antes de enviar imagens.');
+      return;
+    }
+
+    const images = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
+    if (!images.length) return;
+
+    setUploadingReferences(true);
+    try {
+      const uploaded = await Promise.all(images.map((file) => uploadProductImage(file, product.id)));
+      const assets = uploaded.map((item) => item.asset).filter(Boolean) as MediaAsset[];
+      setMediaAssets((current) => [...assets, ...current]);
+      setSelectedMediaIds((current) => Array.from(new Set([...assets.map((asset) => asset.id), ...current])));
+      toast.success(`${assets.length} imagem(ns) enviada(s) e selecionada(s) para o vídeo`);
+    } catch {
+      toast.error('Não foi possível enviar todas as imagens agora.');
+    } finally {
+      setUploadingReferences(false);
+    }
+  };
+
   const upsertQueue = (job: Job) => setQueue((current) => [job, ...current]);
   const updateQueue = (id: EntityId, patch: Partial<Job>) =>
     setQueue((current) => current.map((job) => (job.id === id ? { ...job, ...patch } : job)));
 
-  const handleGenerate = async () => {
+  const requestGenerate = () => {
     if (!product) {
       toast.error('Selecione um anúncio base');
       return;
@@ -537,6 +631,12 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       return;
     }
 
+    setShowPreflight(true);
+  };
+
+  const handleGenerate = async () => {
+    if (!product) return;
+    setShowPreflight(false);
     setGenerating(true);
     const jobId = `job-${Date.now()}`;
     upsertQueue({
@@ -581,9 +681,10 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       setScriptPreview(result.script || script);
       const updatedVideos = await filterMediaAssets({ type: 'generated_video' }, '-created_date', 50);
       setVideos(updatedVideos);
-    } catch {
-      updateQueue(jobId, { status: 'failed', progress: 100, error_message: 'Falha ao gerar vídeo' });
-      toast.error('Não foi possível gerar o vídeo agora');
+    } catch (error) {
+      const friendly = getFriendlyError(error, 'Falha ao gerar vídeo');
+      updateQueue(jobId, { status: 'failed', progress: 100, error_message: friendly });
+      toast.error(friendly);
     } finally {
       setGenerating(false);
     }
@@ -596,8 +697,8 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       setActiveVideo((current) => (current?.id === asset.id ? { ...current, status } : current));
       const updatedVideos = await filterMediaAssets({ type: 'generated_video' }, '-created_date', 50);
       setVideos(updatedVideos);
-    } catch {
-      toast.error('Não foi possível atualizar o vídeo');
+    } catch (error) {
+      toast.error(getFriendlyError(error, 'Não foi possível atualizar o vídeo'));
     }
   };
 
@@ -606,8 +707,8 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       const retried = await retryJob(job.id);
       updateQueue(job.id, retried);
       toast.success('Job reenviado para a fila de renderização');
-    } catch {
-      toast.error('Não foi possível repetir o job agora');
+    } catch (error) {
+      toast.error(getFriendlyError(error, 'Não foi possível repetir o job agora'));
     }
   };
 
@@ -817,7 +918,27 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
             </section>
 
             <section className={stageCardClass(3)}>
-              <SectionTitle icon={Layers3} title="Mídias para composição" subtitle="Escolha imagens e vídeos da biblioteca para orientar a geração" />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <SectionTitle icon={Layers3} title="Mídias para composição" subtitle="Suba ou escolha imagens reais para orientar cada cena do vídeo" />
+                <label className={cn('inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted', (!product || uploadingReferences) && 'pointer-events-none opacity-60')}>
+                  <Upload className="h-4 w-4" />
+                  {uploadingReferences ? 'Enviando...' : 'Subir imagens'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="sr-only"
+                    disabled={!product || uploadingReferences}
+                    onChange={(event) => {
+                      handleReferenceUpload(event.target.files);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/5 p-3 text-xs leading-5 text-muted-foreground">
+                As imagens selecionadas abaixo são enviadas ao backend como referências. O worker tenta distribuir essas imagens entre as cenas e manter consistência visual na geração.
+              </div>
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {availableMedia.slice(0, 10).map((asset) => (
                   <button
@@ -946,9 +1067,9 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                   </div>
                 ))}
               </div>
-              <Button className="mt-4 w-full gap-2" onClick={handleGenerate} disabled={generating || !product}>
+              <Button className="mt-4 w-full gap-2" onClick={requestGenerate} disabled={generating || !product}>
                 <Rocket className="h-4 w-4" />
-                {generating ? 'Gerando vídeo...' : 'Gerar vídeo com IA'}
+                {generating ? 'Gerando vídeo...' : 'Revisar custo e gerar'}
               </Button>
             </section>
 
@@ -964,6 +1085,17 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                 )}
               </div>
             </section>
+
+            {failedJobs.length > 0 && (
+              <section className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 sm:p-5">
+                <SectionTitle icon={AlertTriangle} title="Central de erros amigável" subtitle="O que falhou, em linguagem simples, e qual ação tomar" />
+                <div className="mt-4 space-y-2">
+                  {failedJobs.slice(0, 4).map((job) => (
+                    <FriendlyErrorCard key={job.id} job={job} onRetry={() => handleRetryJob(job)} />
+                  ))}
+                </div>
+              </section>
+            )}
 
             <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
               <SectionTitle icon={AlertTriangle} title="Qualidade antes do render" subtitle="Sinais que ajudam a evitar criativos fracos" />
@@ -1098,7 +1230,147 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
         </section>
       </div>
 
+      <PreflightDialog
+        open={showPreflight}
+        onOpenChange={setShowPreflight}
+        productName={product?.name || 'Produto não selecionado'}
+        template={selectedTemplateConfig?.label || selectedTemplate}
+        platform={platform}
+        duration={duration}
+        format={selectedFormatConfig?.ratio || '9:16'}
+        scenes={scenes}
+        readiness={readiness}
+        costPreview={costPreview}
+        mediaCount={selectedMedia.length + (generatedVisual ? 1 : 0)}
+        onConfirm={handleGenerate}
+        generating={generating}
+      />
       <VideoDetailsDialog asset={activeVideo} open={Boolean(activeVideo)} onOpenChange={(open) => !open && setActiveVideo(null)} onStatus={handleVideoStatus} />
+    </div>
+  );
+}
+
+function PreflightDialog({
+  open,
+  onOpenChange,
+  productName,
+  template,
+  platform,
+  duration,
+  format,
+  scenes,
+  readiness,
+  costPreview,
+  mediaCount,
+  onConfirm,
+  generating,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  productName: string;
+  template: string;
+  platform: Platform;
+  duration: string;
+  format: string;
+  scenes: VideoScene[];
+  readiness: number;
+  costPreview: ReturnType<typeof estimateVideoCost>;
+  mediaCount: number;
+  onConfirm: () => void;
+  generating: boolean;
+}) {
+  const visibleScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-3xl border-border bg-card p-0 sm:max-w-4xl">
+        <DialogHeader className="border-b border-border bg-[radial-gradient(circle_at_10%_0%,hsl(var(--primary)/0.18),transparent_38%)] px-5 py-5 sm:px-6">
+          <DialogTitle className="font-syne text-xl">Revisar antes de gastar crédito</DialogTitle>
+          <DialogDescription>
+            Confira roteiro, cenas e custo estimado antes de enviar para IA/render.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5 p-5 sm:p-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <PreflightMetric label="Produto" value={productName} />
+            <PreflightMetric label="Template" value={template} />
+            <PreflightMetric label="Formato" value={`${platform} · ${format}`} />
+            <PreflightMetric label="Prontidão" value={`${readiness}%`} tone={readiness >= 80 ? 'success' : 'warning'} />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+            <div className="rounded-3xl border border-border bg-muted/25 p-4">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-syne text-sm font-bold text-foreground">Plano de cenas</p>
+                  <p className="text-xs text-muted-foreground">Cada bloco será usado para orientar a IA e o render.</p>
+                </div>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  {visibleScenes.length} cena(s)
+                </span>
+              </div>
+              <div className="space-y-3">
+                {visibleScenes.map((scene, index) => (
+                  <div key={scene.id} className="rounded-2xl border border-border bg-background/70 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="font-syne text-xs font-bold text-foreground">Cena {index + 1}: {scene.title || 'Sem título'}</p>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{scene.duration || 'sem tempo'}</span>
+                    </div>
+                    <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Tela:</span> {scene.onScreenText || 'Sem texto definido'}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Narração:</span> {scene.narration || 'Sem narração definida'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-3xl border border-primary/20 bg-primary/10 p-4">
+                <p className="font-syne text-xs font-bold uppercase tracking-[0.14em] text-primary">Estimativa</p>
+                <p className="mt-3 font-syne text-3xl font-bold text-foreground">US$ {costPreview.estimatedCost.toFixed(4)}</p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {costPreview.segments} segmento(s) de IA · {costPreview.seconds}s · aprox. US$ {costPreview.costPerSegment.toFixed(2)} por segmento.
+                </p>
+              </div>
+              <div className="rounded-3xl border border-border bg-muted/25 p-4">
+                <p className="font-syne text-sm font-bold text-foreground">Checklist rápido</p>
+                <div className="mt-3 space-y-2">
+                  <MiniCheck ok={readiness >= 80} label="Anúncio pronto para render" />
+                  <MiniCheck ok={mediaCount > 0} label={`${mediaCount} imagem(ns) de referência`} />
+                  <MiniCheck ok={visibleScenes.length >= 3} label="Cenas suficientes para narrativa" />
+                  <MiniCheck ok={duration !== '60s' || costPreview.segments >= 2} label={`Duração definida: ${duration}`} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Voltar e ajustar</Button>
+            <Button className="gap-2" onClick={onConfirm} disabled={generating}>
+              <Rocket className="h-4 w-4" />
+              {generating ? 'Enviando...' : 'Confirmar e gerar vídeo'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PreflightMetric({ label, value, tone }: { label: string; value: string; tone?: 'success' | 'warning' }) {
+  return (
+    <div className={cn('min-w-0 rounded-2xl border border-border bg-muted/25 p-3', tone === 'success' && 'border-success/20 bg-success/10', tone === 'warning' && 'border-warning/20 bg-warning/10')}>
+      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate font-syne text-sm font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function MiniCheck({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      {ok ? <CheckCircle className="h-4 w-4 text-success" /> : <AlertTriangle className="h-4 w-4 text-warning" />}
+      <span>{label}</span>
     </div>
   );
 }
@@ -1189,11 +1461,15 @@ function JobQueueCard({ job, onCancel, onRetry }: { job: Job; onCancel: () => vo
   const stage = getJobStage(job);
   const isActive = ['queued', 'processing', 'rendering', 'uploading'].includes(job.status);
   const stageSteps = [
-    { label: 'Fila', active: stage.progress >= 1 },
-    { label: 'Preparação', active: stage.progress >= 25 },
-    { label: 'Render', active: stage.progress >= 55 },
-    { label: 'Storage', active: stage.progress >= 85 },
+    { label: 'Roteiro', active: stage.progress >= 25 },
+    { label: 'Segmentos', active: stage.progress >= 45 },
+    { label: 'Concat', active: stage.progress >= 82 },
+    { label: 'Biblioteca', active: stage.progress >= 90 },
   ];
+  const payload = readRecord(job.payload);
+  const fallbackReason = readString(payload.ai_video_fallback_reason);
+  const cost = readRecord(job.result?.cost || payload.cost_estimate);
+  const costValue = readNumber(cost.estimated_cost_usd);
 
   return (
     <div className="rounded-2xl border border-border bg-muted/20 p-3">
@@ -1206,6 +1482,20 @@ function JobQueueCard({ job, onCancel, onRetry }: { job: Job; onCancel: () => vo
         <JobStatusBadge status={job.status} />
       </div>
       <Progress value={stage.progress} className="mt-3" />
+      {(fallbackReason || costValue !== undefined) && (
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {costValue !== undefined && (
+            <div className="rounded-xl border border-border bg-background/70 px-3 py-2 text-xs text-muted-foreground">
+              Custo estimado: <span className="font-semibold text-foreground">US$ {costValue.toFixed(4)}</span>
+            </div>
+          )}
+          {fallbackReason && (
+            <div className="rounded-xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning">
+              Fallback: {fallbackReason}
+            </div>
+          )}
+        </div>
+      )}
       <div className="mt-3 grid grid-cols-4 gap-1">
         {stageSteps.map((step) => (
           <div key={step.label} className={cn('rounded-full px-2 py-1 text-center text-[9px] font-semibold', step.active ? 'bg-primary/15 text-primary' : 'bg-background text-muted-foreground')}>
@@ -1214,8 +1504,34 @@ function JobQueueCard({ job, onCancel, onRetry }: { job: Job; onCancel: () => vo
         ))}
       </div>
       <div className="mt-3 flex justify-end gap-2">
-        {job.status === 'failed' && <Button size="sm" variant="outline" className="h-8 gap-1" onClick={onRetry}><RefreshCw className="h-3.5 w-3.5" /> Repetir</Button>}
+        {job.status === 'failed' && <Button size="sm" variant="outline" className="h-8 gap-1" onClick={onRetry}><RefreshCw className="h-3.5 w-3.5" /> Tentar novamente</Button>}
         {isActive && <Button size="sm" variant="ghost" className="h-8" onClick={onCancel}>Cancelar</Button>}
+      </div>
+    </div>
+  );
+}
+
+function FriendlyErrorCard({ job, onRetry }: { job: Job; onRetry: () => void }) {
+  const message = getFriendlyError(job.error_message, 'Falha não identificada no job.');
+  const action = message.includes('muitos pedidos')
+    ? 'Aguarde alguns minutos antes de tentar novamente.'
+    : message.includes('autenticação') || message.includes('chave')
+      ? 'Revise login, token ou chave configurada no backend.'
+      : message.includes('storage')
+        ? 'Confira MinIO/S3 e rode o diagnóstico de storage.'
+        : 'Tente novamente; se repetir, use fallback FFmpeg ou revise as imagens.';
+
+  return (
+    <div className="rounded-2xl border border-destructive/15 bg-background/70 p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">{job.title || 'Job de vídeo'}</p>
+          <p className="mt-1 text-xs leading-5 text-destructive">{message}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Ação recomendada:</span> {action}</p>
+        </div>
+        <Button size="sm" variant="outline" className="h-8 shrink-0 gap-1" onClick={onRetry}>
+          <RefreshCw className="h-3.5 w-3.5" /> Retry
+        </Button>
       </div>
     </div>
   );

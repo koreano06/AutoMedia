@@ -63,7 +63,7 @@ export type VideoGenerateRequest = {
   template?: string;
   format?: string;
   ratio?: string;
-  duration: '15s' | '30s' | '60s';
+  duration: '15s' | '20s' | '30s' | '60s';
   briefing?: string;
   briefing_fields?: {
     targetAudience?: string;

@@ -197,6 +197,8 @@ export type Job = {
   post_id?: EntityId;
   result_url?: string;
   error_message?: string;
+  payload?: Record<string, unknown>;
+  result?: Record<string, unknown>;
   created_at?: ISODateString;
   updated_at?: ISODateString;
   completed_at?: ISODateString;

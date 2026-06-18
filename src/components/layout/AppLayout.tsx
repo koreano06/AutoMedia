@@ -9,7 +9,7 @@ function AppShell() {
   const { counts } = useNotifications();
 
   return (
-    <div className="min-h-screen bg-background md:flex">
+    <div className="min-h-screen bg-transparent md:flex md:p-4 lg:p-5">
       <Sidebar counts={counts} open={mobileMenuOpen} onNavigate={() => setMobileMenuOpen(false)} />
       {mobileMenuOpen && (
         <button
@@ -27,7 +27,7 @@ function AppShell() {
       >
         <Menu className="h-5 w-5" />
       </button>
-      <main className="min-h-screen min-w-0 flex-1 overflow-x-clip pb-20 md:ml-64 md:pb-0">
+      <main className="automedia-shell min-h-screen min-w-0 flex-1 overflow-x-clip pb-20 md:ml-[17.5rem] md:min-h-[calc(100dvh-2rem)] md:rounded-[2rem] md:border md:border-border/70 md:shadow-2xl md:shadow-black/15 lg:ml-[18rem] lg:min-h-[calc(100dvh-2.5rem)] lg:rounded-[2.25rem]">
         <Outlet />
       </main>
     </div>

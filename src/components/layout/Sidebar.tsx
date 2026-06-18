@@ -26,19 +26,19 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
   return (
     <aside
       className={cn(
-        "sidebar-bg fixed left-0 top-0 z-50 flex h-dvh w-[min(18rem,88vw)] flex-col border-r border-white/5 transition-transform duration-200 md:z-40 md:w-64 md:translate-x-0",
+        "automedia-sidebar fixed left-0 top-0 z-50 flex h-dvh w-[min(18rem,88vw)] flex-col border-r border-white/5 transition-transform duration-200 md:left-4 md:top-4 md:z-40 md:h-[calc(100dvh-2rem)] md:w-64 md:translate-x-0 md:rounded-[2rem] md:border md:border-white/10 md:shadow-2xl md:shadow-black/20 lg:left-5 lg:top-5 lg:h-[calc(100dvh-2.5rem)]",
         open ? "translate-x-0" : "-translate-x-full"
       )}
     >
-      <div className="border-b border-white/5 px-5 py-5 sm:px-6 sm:py-6">
+      <div className="border-b border-white/10 px-5 py-5 sm:px-6 sm:py-6">
         <div className="flex items-center justify-between gap-3">
           <Link to="/" onClick={onNavigate} className="flex items-center gap-3 rounded-xl">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/30">
               <Zap className="w-5 h-5 text-white" fill="white" />
             </div>
             <div>
-              <p className="font-syne font-700 text-white text-sm leading-tight">AutoMedia</p>
-              <p className="text-xs text-white/30 font-inter">Marketing Automático</p>
+              <p className="font-syne text-sm font-bold leading-tight text-white">AutoMedia</p>
+              <p className="font-inter text-xs text-white/40">Marketing Automático</p>
             </div>
           </Link>
           <button
@@ -62,7 +62,7 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
           return (
             <div key={path}>
               {showSection && (
-                <p className="mb-2 mt-4 px-3 text-[10px] font-semibold uppercase tracking-widest text-white/20 first:mt-0">
+                <p className="mb-2 mt-4 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/28 first:mt-0">
                   {sectionLabels[section]}
                 </p>
               )}
@@ -70,10 +70,10 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
                 to={path}
                 onClick={onNavigate}
                 className={cn(
-                  "group relative mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
+                  "group relative mb-1 flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-150",
                   isActive
-                    ? "bg-primary text-white shadow-md shadow-primary/25"
-                    : "text-white/50 hover:bg-white/5 hover:text-white"
+                    ? "bg-primary text-white shadow-lg shadow-primary/25"
+                    : "text-white/55 hover:bg-white/8 hover:text-white"
                 )}
               >
                 <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-white" : "text-white/40 group-hover:text-white/70")} />
@@ -95,7 +95,7 @@ export default function Sidebar({ counts = {}, open = false, onNavigate }: Sideb
         })}
       </nav>
 
-      <div className="border-t border-white/5 px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div className="border-t border-white/10 px-3 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <Link
           to="/settings"
           onClick={onNavigate}

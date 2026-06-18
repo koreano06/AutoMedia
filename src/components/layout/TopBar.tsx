@@ -25,7 +25,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
 
   return (
     <>
-    <header className="fixed left-0 right-0 top-0 z-50 border-b border-border/80 bg-card/90 shadow-sm shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 md:left-64">
+    <header className="fixed left-0 right-0 top-0 z-50 border-b border-border/80 bg-card/92 shadow-sm shadow-black/[0.03] backdrop-blur-xl supports-[backdrop-filter]:bg-card/85 md:left-[17.5rem] md:right-4 md:top-4 md:rounded-t-[2rem] lg:left-[18rem] lg:right-5 lg:top-5 lg:rounded-t-[2.25rem]">
       <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 sm:min-h-16 sm:gap-4 sm:px-5 sm:py-3 lg:px-6">
         <div className="min-w-0 flex-1">
           <h1 className="line-clamp-1 font-syne text-[15px] font-bold leading-tight text-foreground sm:text-lg lg:text-xl">{title}</h1>
@@ -37,7 +37,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
             <Search className="absolute left-3 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder="Buscar anúncios, mídias..."
-              className="h-9 w-72 rounded-2xl border-border/60 bg-muted/60 pl-9 pr-12 text-sm shadow-inner shadow-black/[0.02] focus-visible:ring-1"
+              className="h-9 w-72 rounded-2xl border-border/70 bg-background/65 pl-9 pr-12 text-sm shadow-inner shadow-black/[0.02] focus-visible:ring-1"
             />
             <span className="pointer-events-none absolute right-2 rounded-lg border border-border bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
               /
@@ -61,7 +61,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-xl sm:h-9 sm:w-9"
+            className="h-8 w-8 rounded-xl border border-transparent sm:h-9 sm:w-9 hover:border-border"
             onClick={toggleTheme}
             title={resolvedTheme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
             aria-label={resolvedTheme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
@@ -75,7 +75,7 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-xl sm:h-9 sm:w-9">
+              <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-xl border border-transparent sm:h-9 sm:w-9 hover:border-border">
                 <Bell className="h-4 w-4 text-muted-foreground" />
                 {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">

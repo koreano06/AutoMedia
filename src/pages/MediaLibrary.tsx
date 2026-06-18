@@ -20,8 +20,9 @@ import {
   FolderKanban,
   Grid2X2,
   Image,
-  Layers3,
+  Images,
   LayoutList,
+  Link2,
   MoreHorizontal,
   Play,
   Search,
@@ -34,30 +35,28 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { fileToDataUrl } from '@/lib/fileToDataUrl';
 import { createMediaAsset, listMediaAssets, updateMediaAsset } from '@/services/mediaAssets';
+import { uploadProductImage } from '@/services/uploads';
+import { generateVideo } from '@/services/videos';
 import type { EntityId, MediaAsset, Status } from '@/types/entities';
 import { CampaignMap, FlowGuide, QualityTrafficLight } from '@/components/creative/CreativeVisualKit';
 
 type ViewMode = 'grid' | 'list' | 'grouped';
+type UploadMode = 'local' | 'url';
 
 type UploadForm = {
   title: string;
   product_name: string;
-  type: string;
   url: string;
   thumbnail_url: string;
-  source: string;
   caption: string;
 };
 
 const emptyUploadForm: UploadForm = {
   title: '',
   product_name: '',
-  type: 'image',
   url: '',
   thumbnail_url: '',
-  source: 'Upload manual',
   caption: '',
 };
 
@@ -110,6 +109,58 @@ const getQualityTone = (score: number) => {
   return 'text-destructive bg-destructive/10';
 };
 
+const readRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+
+const readString = (value: unknown, fallback = '') => (typeof value === 'string' && value.trim() ? value : fallback);
+
+const readNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const readArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
+const formatUsd = (value: unknown) => {
+  const amount = readNumber(value, 0);
+  return amount > 0 ? `US$ ${amount.toFixed(4)}` : 'Não informado';
+};
+
+const getAssetMetadata = (asset: MediaAsset) => readRecord(asset.metadata);
+
+const getAssetAiVideo = (asset: MediaAsset) => readRecord(getAssetMetadata(asset).ai_video);
+
+const getAssetCost = (asset: MediaAsset) => {
+  const metadata = getAssetMetadata(asset);
+  const aiVideo = getAssetAiVideo(asset);
+  const cost = readRecord(metadata.cost);
+  if (Object.keys(cost).length > 0) return cost;
+  return readRecord(aiVideo.cost);
+};
+
+const getScenePlan = (asset: MediaAsset) => {
+  const metadata = getAssetMetadata(asset);
+  const scenePlan = readRecord(metadata.scene_plan);
+  if (Object.keys(scenePlan).length > 0) return scenePlan;
+  return readRecord(metadata.render_plan);
+};
+
+const getSceneList = (asset: MediaAsset) => {
+  const plan = getScenePlan(asset);
+  return readArray(plan.scenes).map(readRecord);
+};
+
+const getGenerationVersion = (asset: MediaAsset) => {
+  const metadata = getAssetMetadata(asset);
+  return readNumber(metadata.generation_version, 1);
+};
+
+const getProviderLabel = (asset: MediaAsset) => {
+  const cost = getAssetCost(asset);
+  const aiVideo = getAssetAiVideo(asset);
+  return readString(cost.provider, readString(aiVideo.provider, readString(asset.source, 'Não informado')));
+};
+
 export default function MediaLibrary() {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,13 +169,13 @@ export default function MediaLibrary() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [productFilter, setProductFilter] = useState('all');
-  const [sourceFilter, setSourceFilter] = useState('all');
   const [qualityFilter, setQualityFilter] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [view, setView] = useState<ViewMode>('grid');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<MediaAsset | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [uploadMode, setUploadMode] = useState<UploadMode>('local');
   const [uploadForm, setUploadForm] = useState<UploadForm>(emptyUploadForm);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState('');
@@ -164,11 +215,6 @@ export default function MediaLibrary() {
     return [...new Set(products)];
   }, [assets]);
 
-  const sourceOptions = useMemo(() => {
-    const sources = assets.map((asset) => asset.source).filter(Boolean) as string[];
-    return [...new Set(sources)];
-  }, [assets]);
-
   const stats = useMemo(
     () => ({
       total: assets.length,
@@ -197,14 +243,13 @@ export default function MediaLibrary() {
         const matchesType = typeFilter === 'all' || asset.type === typeFilter;
         const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
         const matchesProduct = productFilter === 'all' || asset.product_name === productFilter;
-        const matchesSource = sourceFilter === 'all' || asset.source === sourceFilter;
         const matchesQuality =
           qualityFilter === 'all' ||
           (qualityFilter === 'high' && score >= 80) ||
           (qualityFilter === 'medium' && score >= 50 && score < 80) ||
           (qualityFilter === 'low' && score < 50);
 
-        return matchesSearch && matchesType && matchesStatus && matchesProduct && matchesSource && matchesQuality;
+        return matchesSearch && matchesType && matchesStatus && matchesProduct && matchesQuality;
       })
       .sort((first, second) => {
         if (sortBy === 'oldest') return assetDate(first) - assetDate(second);
@@ -212,7 +257,7 @@ export default function MediaLibrary() {
         if (sortBy === 'title') return (first.title || '').localeCompare(second.title || '');
         return assetDate(second) - assetDate(first);
       });
-  }, [assets, productFilter, qualityFilter, search, sortBy, sourceFilter, statusFilter, typeFilter]);
+  }, [assets, productFilter, qualityFilter, search, sortBy, statusFilter, typeFilter]);
 
   const groupedAssets = useMemo(() => {
     return filtered.reduce<Record<string, MediaAsset[]>>((groups, asset) => {
@@ -268,7 +313,6 @@ export default function MediaLibrary() {
         action: () => {
           setSearch('');
           setProductFilter('all');
-          setSourceFilter('all');
           setView('list');
           toast.info('Use a busca/lista para localizar mídias sem vínculo e corrigir manualmente.');
         },
@@ -354,9 +398,41 @@ export default function MediaLibrary() {
     toast.success('Link copiado');
   };
 
+  const handleGenerateVariation = async (asset: MediaAsset) => {
+    if (!asset.product_id) {
+      toast.error('Essa mídia não está vinculada a um produto.');
+      return;
+    }
+
+    try {
+      await generateVideo({
+        product_id: asset.product_id,
+        media_asset_ids: [asset.id],
+        style: 'product_demo',
+        template: 'variation_from_media_library',
+        format: 'reels',
+        ratio: '9:16',
+        duration: '20s',
+        briefing: `Gerar uma variação do criativo "${asset.title || asset.product_name || 'mídia selecionada'}" mantendo o mesmo produto, mas com novo gancho, novas cenas e CTA mais direto.`,
+        visual_prompt: readString(getAssetMetadata(asset).prompt, asset.caption || ''),
+        script: asset.caption || undefined,
+        platform: 'instagram',
+      });
+      toast.success('Variação enviada para a fila de geração.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar uma variação');
+    }
+  };
+
+  const resetUploadState = () => {
+    setUploadForm(emptyUploadForm);
+    setUploadFile(null);
+    setUploadMode('local');
+  };
+
   const handleUpload = async () => {
     if (!uploadForm.title.trim()) {
-      toast.error('Informe um título para a mídia.');
+      toast.error('Informe um título para organizar a mídia.');
       return;
     }
 
@@ -365,26 +441,58 @@ export default function MediaLibrary() {
       return;
     }
 
-    if (!uploadForm.url.trim() && !uploadFile) {
-      toast.error('Adicione um arquivo ou uma URL da mídia.');
+    if (uploadMode === 'url' && !uploadForm.url.trim()) {
+      toast.error('Informe a URL direta da imagem.');
+      return;
+    }
+
+    if (uploadMode === 'local' && !uploadFile) {
+      toast.error('Selecione uma imagem local.');
+      return;
+    }
+
+    if (uploadFile && !uploadFile.type.startsWith('image/')) {
+      toast.error('Esse fluxo aceita apenas imagens para referência de vídeo.');
       return;
     }
 
     setSavingUpload(true);
     try {
-      const fileUrl = uploadFile ? await fileToDataUrl(uploadFile) : '';
-      const url = uploadForm.url || fileUrl;
-      await createMediaAsset({
-        ...uploadForm,
-        url,
-        thumbnail_url: uploadForm.thumbnail_url || url,
-        status: 'pending_review',
-        quality_score: uploadFile || uploadForm.url ? 72 : 40,
-      });
-      toast.success('Mídia importada para revisão');
+      const metadata = {
+        import_mode: uploadMode,
+        intended_use: 'video_generation_reference',
+        original_file_name: uploadFile?.name,
+      };
+
+      if (uploadMode === 'local' && uploadFile) {
+        await uploadProductImage(uploadFile, undefined, {
+          title: uploadForm.title.trim(),
+          product_name: uploadForm.product_name.trim(),
+          caption: uploadForm.caption,
+          status: 'pending_review',
+          source: 'Upload local',
+          quality_score: 72,
+          metadata,
+        });
+      } else {
+        const url = uploadForm.url.trim();
+        await createMediaAsset({
+          title: uploadForm.title.trim(),
+          product_name: uploadForm.product_name.trim(),
+          type: 'image',
+          url,
+          thumbnail_url: uploadForm.thumbnail_url || url,
+          source: 'URL externa',
+          caption: uploadForm.caption,
+          status: 'pending_review',
+          quality_score: 72,
+          metadata,
+        });
+      }
+      toast.success('Imagem salva na biblioteca e pronta para futuros vídeos');
+
       setShowUpload(false);
-      setUploadForm(emptyUploadForm);
-      setUploadFile(null);
+      resetUploadState();
       load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível importar a mídia');
@@ -397,47 +505,12 @@ export default function MediaLibrary() {
     <div>
       <TopBar title="Biblioteca de Mídia" subtitle="Central de ativos criativos, revisão e preparação para IA" />
       <div className="mobile-page-pad page-stack">
-        <section className="responsive-card overflow-hidden">
-          <div className="grid gap-0 xl:grid-cols-[1fr_420px]">
-            <div className="relative overflow-hidden p-4 sm:p-5 lg:p-6">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,hsl(var(--primary)/0.14),transparent_32%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))]" />
-              <div className="relative">
-                <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  Central criativa
-                </span>
-                <h2 className="balanced-title mt-4 max-w-2xl font-syne text-xl font-bold leading-tight text-foreground sm:text-2xl lg:text-3xl">
-                  Organize, revise e escolha os melhores ativos para seus vídeos.
-                </h2>
-                <p className="pretty-copy mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                  Esta biblioteca junta imagens, vídeos coletados e criativos gerados por IA. Use filtros, seleção em massa e preview para preparar o material antes da publicação.
-                </p>
-                <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-                  <Button className="gap-2 rounded-2xl" onClick={() => setShowUpload(true)}>
-                    <Upload className="h-4 w-4" /> Importar mídia
-                  </Button>
-                  <Button variant="outline" className="gap-2 rounded-2xl" onClick={() => setView('grouped')}>
-                    <FolderKanban className="h-4 w-4" /> Ver por anúncio
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-px bg-border xl:grid-cols-2">
-              <MediaMetric label="Total" value={stats.total} icon={Layers3} />
-              <MediaMetric label="Imagens" value={stats.images} icon={Image} tone="primary" />
-              <MediaMetric label="Vídeos" value={stats.videos} icon={Film} tone="accent" />
-              <MediaMetric label="Em revisão" value={stats.review} icon={Eye} tone="warning" />
-              <MediaMetric label="Aprovadas" value={stats.approved} icon={CheckCircle} tone="success" />
-              <MediaMetric label="Rejeitadas" value={stats.rejected} icon={XCircle} tone="destructive" />
-            </div>
-          </div>
-        </section>
-
         <div className="responsive-card responsive-card-pad">
           <div className="grid gap-3 xl:grid-cols-[minmax(260px,1fr)_auto] xl:items-start">
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por anúncio, título, origem, status..."
+                placeholder="Buscar por anúncio, título, tipo ou status..."
                 className="h-11 rounded-2xl pl-9"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -458,13 +531,6 @@ export default function MediaLibrary() {
                 <SelectContent>
                   <SelectItem value="all">Todos anúncios</SelectItem>
                   {productOptions.map((product) => <SelectItem key={product} value={product}>{product}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="h-11 rounded-2xl xl:w-40"><SelectValue placeholder="Origem" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas origens</SelectItem>
-                  {sourceOptions.map((source) => <SelectItem key={source} value={source}>{source}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={qualityFilter} onValueChange={setQualityFilter}>
@@ -668,125 +734,197 @@ export default function MediaLibrary() {
         onOpenChange={(open) => !open && setSelectedAsset(null)}
         onCopyLink={handleCopyLink}
         onStatus={handleStatus}
+        onGenerateVariation={handleGenerateVariation}
       />
 
-      <Dialog open={showUpload} onOpenChange={setShowUpload}>
-        <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-syne">Importar mídia manualmente</DialogTitle>
+      <Dialog
+        open={showUpload}
+        onOpenChange={(open) => {
+          setShowUpload(open);
+          if (!open) resetUploadState();
+        }}
+      >
+        <DialogContent className="flex !h-[94dvh] !w-[calc(100vw-0.75rem)] !max-w-none flex-col overflow-hidden rounded-t-[1.5rem] border-border bg-card p-0 text-foreground shadow-2xl sm:!h-[90dvh] sm:!w-[calc(100vw-2rem)] sm:rounded-[1.5rem] lg:!h-[min(88dvh,860px)] lg:!w-[min(92vw,1280px)] xl:!w-[min(88vw,1380px)]">
+          <DialogHeader className="shrink-0 border-b border-border bg-[linear-gradient(135deg,hsl(var(--primary)/0.16),hsl(var(--muted)/0.25)_42%,transparent)] px-5 py-4 pr-12 sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                  <Images className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <DialogTitle className="line-clamp-1 font-syne text-lg sm:text-xl">Adicionar imagem à biblioteca</DialogTitle>
+                  <DialogDescription className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                    Envie imagens de referência do produto para usar na geração dos vídeos com IA.
+                  </DialogDescription>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-semibold text-primary">Biblioteca</span>
+                <span className="rounded-full border border-border bg-background/70 px-3 py-1 text-muted-foreground">
+                  {uploadMode === 'url' ? 'Imagem por URL' : uploadFile?.name || 'Imagem local'}
+                </span>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-              <p className="text-sm font-semibold text-foreground">Ativo criativo</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Associe imagens e vídeos a produtos para revisão, geração de vídeo e publicação.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label>Título *</Label>
-                <Input value={uploadForm.title} onChange={(event) => setUploadForm({ ...uploadForm, title: event.target.value })} className="mt-1" placeholder="ex: Close do produto" />
+
+          <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.82fr)]">
+            <section className="order-2 min-h-0 overflow-y-auto border-t border-border bg-card p-4 sm:p-5 lg:order-2 lg:border-l lg:border-t-0">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {[
+                  { key: 'local', title: 'Imagem local', description: 'Enviar imagem do computador', icon: Upload },
+                  { key: 'url', title: 'Imagem por URL', description: 'Usar link direto de imagem', icon: Link2 },
+                ].map(({ key, title, description, icon: Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setUploadMode(key as UploadMode)}
+                    className={cn(
+                      'rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40',
+                      uploadMode === key ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-border bg-card',
+                    )}
+                  >
+                    <Icon className={cn('mb-3 h-5 w-5', uploadMode === key ? 'text-primary' : 'text-muted-foreground')} />
+                    <p className="font-syne text-sm font-bold text-foreground">{title}</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
+                  </button>
+                ))}
               </div>
-              <div>
-                <Label>Produto vinculado *</Label>
-                <Input value={uploadForm.product_name} onChange={(event) => setUploadForm({ ...uploadForm, product_name: event.target.value })} className="mt-1" placeholder="Nome do produto" />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label>Tipo</Label>
-                <Select value={uploadForm.type} onValueChange={(value) => setUploadForm({ ...uploadForm, type: value })}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="image">Imagem</SelectItem>
-                    <SelectItem value="video">Vídeo</SelectItem>
-                    <SelectItem value="generated_video">Vídeo gerado por IA</SelectItem>
-                    <SelectItem value="thumbnail">Thumbnail</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Origem</Label>
-                <Input value={uploadForm.source} onChange={(event) => setUploadForm({ ...uploadForm, source: event.target.value })} className="mt-1" />
-              </div>
-            </div>
-            <div>
-              <Label>URL da mídia</Label>
-              <Input value={uploadForm.url} onChange={(event) => setUploadForm({ ...uploadForm, url: event.target.value })} className="mt-1" placeholder="https://..." />
-            </div>
-            <div>
-              <Label>URL da thumbnail</Label>
-              <Input value={uploadForm.thumbnail_url} onChange={(event) => setUploadForm({ ...uploadForm, thumbnail_url: event.target.value })} className="mt-1" placeholder="Opcional" />
-            </div>
-            <div>
-              <Label>Arquivo local</Label>
-              <div className="mt-1.5 rounded-xl border border-dashed border-border bg-muted/30 p-3">
-                {uploadPreview ? (
-                  <div className="flex items-center gap-3">
-                    <img src={uploadPreview} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{uploadFile?.name}</p>
-                      <p className="text-xs text-muted-foreground">Pronto para envio ao backend de storage</p>
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => setUploadFile(null)}>
-                      <X className="h-4 w-4" />
-                    </Button>
+
+              <div className="mt-5 grid gap-4 rounded-3xl border border-border bg-card/70 p-4 sm:p-5">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label>Título da imagem *</Label>
+                    <Input
+                      value={uploadForm.title}
+                      onChange={(event) => setUploadForm({ ...uploadForm, title: event.target.value })}
+                      className="mt-1.5 h-11 rounded-2xl"
+                      placeholder="ex: Unboxing mini projetor"
+                    />
                   </div>
-                ) : (
-                  <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg px-4 py-5 text-center hover:bg-background">
-                    <Upload className="mb-2 h-6 w-6 text-muted-foreground" />
-                    <span className="text-sm font-medium text-foreground">Selecionar arquivo</span>
-                    <span className="mt-1 text-xs text-muted-foreground">Imagem ou vídeo para associar ao produto</span>
-                    <input type="file" accept="image/*,video/*" className="sr-only" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} />
-                  </label>
+                  <div>
+                    <Label>Produto vinculado *</Label>
+                    <Input
+                      value={uploadForm.product_name}
+                      onChange={(event) => setUploadForm({ ...uploadForm, product_name: event.target.value })}
+                      className="mt-1.5 h-11 rounded-2xl"
+                      placeholder="Nome do produto"
+                    />
+                  </div>
+                </div>
+
+                {uploadMode === 'url' && (
+                  <div className="grid gap-3">
+                    <div>
+                      <Label>URL da mídia *</Label>
+                      <Input
+                        value={uploadForm.url}
+                        onChange={(event) => setUploadForm({ ...uploadForm, url: event.target.value })}
+                        className="mt-1.5 h-11 rounded-2xl"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div>
+                      <Label>URL da thumbnail</Label>
+                      <Input
+                        value={uploadForm.thumbnail_url}
+                        onChange={(event) => setUploadForm({ ...uploadForm, thumbnail_url: event.target.value })}
+                        className="mt-1.5 h-11 rounded-2xl"
+                        placeholder="Opcional"
+                      />
+                    </div>
+                  </div>
                 )}
+
+                {uploadMode === 'local' && (
+                  <div>
+                    <Label>Imagem local *</Label>
+                    <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-muted/25 px-4 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary/5">
+                      <Upload className="mb-3 h-8 w-8 text-primary" />
+                      <span className="font-syne text-sm font-bold text-foreground">Selecionar imagem</span>
+                      <span className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">Use imagens nítidas do produto para alimentar a geração de vídeo.</span>
+                      <input type="file" accept="image/*" className="sr-only" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} />
+                    </label>
+                  </div>
+                )}
+
+                <div>
+                  <Label>Observações / roteiro de uso</Label>
+                  <Textarea
+                    value={uploadForm.caption}
+                    onChange={(event) => setUploadForm({ ...uploadForm, caption: event.target.value })}
+                    className="mt-1.5 min-h-28 rounded-2xl"
+                    placeholder="Explique como essas mídias devem ser usadas no vídeo: close do produto, unboxing, controle remoto, tela projetada, CTA..."
+                  />
+                </div>
               </div>
-            </div>
-            <div>
-              <Label>Observações / legenda</Label>
-              <Textarea value={uploadForm.caption} onChange={(event) => setUploadForm({ ...uploadForm, caption: event.target.value })} className="mt-1 h-24" placeholder="Contexto, legenda, pontos fortes..." />
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button variant="outline" className="flex-1" onClick={() => setShowUpload(false)}>Cancelar</Button>
-              <Button className="flex-1 gap-2" onClick={handleUpload} disabled={savingUpload}>
-                <Upload className="h-4 w-4" />
-                {savingUpload ? 'Importando...' : 'Importar para revisão'}
-              </Button>
-            </div>
+            </section>
+
+            <aside className="order-1 min-h-0 border-border bg-muted/20 p-4 sm:p-5 lg:order-1">
+              <div className="flex h-full min-h-[420px] flex-col rounded-3xl border border-border bg-background/70 p-4 shadow-inner">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-syne text-sm font-bold text-foreground">Prévia da importação</p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Confira o que vai entrar na biblioteca antes de salvar.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                    {uploadMode === 'url' ? 'URL' : 'Local'}
+                  </span>
+                </div>
+
+                <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-3xl border border-border bg-card">
+                  {uploadMode === 'local' && uploadPreview ? (
+                    <img src={uploadPreview} alt="Preview" className="h-full max-h-[460px] w-full object-contain" />
+                  ) : uploadMode === 'url' && (uploadForm.thumbnail_url || uploadForm.url) ? (
+                    <img src={uploadForm.thumbnail_url || uploadForm.url} alt="Preview URL" className="h-full max-h-[460px] w-full object-contain" />
+                  ) : (
+                    <div className="px-8 text-center">
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+                        {uploadMode === 'url' ? <Link2 className="h-7 w-7" /> : <Upload className="h-7 w-7" />}
+                      </div>
+                      <p className="font-syne text-sm font-bold text-foreground">Aguardando mídia</p>
+                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                        {uploadMode === 'url'
+                          ? 'Cole uma URL direta de imagem para visualizar aqui.'
+                          : 'Selecione uma imagem local para ver a prévia aqui.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 grid gap-2 rounded-2xl border border-border bg-muted/25 p-3 text-xs text-muted-foreground">
+                  <div className="flex justify-between gap-3">
+                    <span>Título</span>
+                    <strong className="max-w-[60%] truncate text-foreground">{uploadForm.title || 'Não informado'}</strong>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span>Produto</span>
+                    <strong className="max-w-[60%] truncate text-foreground">{uploadForm.product_name || 'Não vinculado'}</strong>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <span>Itens</span>
+                    <strong className="text-foreground">
+                      {uploadMode === 'url' ? (uploadForm.url ? 1 : 0) : uploadFile ? 1 : 0}
+                    </strong>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <Button variant="outline" className="h-12 rounded-2xl" onClick={() => setShowUpload(false)}>Cancelar</Button>
+                  <Button className="h-12 gap-2 rounded-2xl" onClick={handleUpload} disabled={savingUpload}>
+                    <CheckCircle className="h-4 w-4" />
+                    {savingUpload ? 'Salvando...' : 'Salvar na biblioteca'}
+                  </Button>
+                </div>
+                <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
+                  Depois de salva, esta imagem fica disponível para seleção em novos vídeos com IA.
+                </p>
+              </div>
+            </aside>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-function MediaMetric({
-  label,
-  value,
-  icon: Icon,
-  tone = 'neutral',
-}: {
-  label: string;
-  value: number;
-  icon: typeof Image;
-  tone?: 'neutral' | 'primary' | 'accent' | 'warning' | 'success' | 'destructive';
-}) {
-  const toneClass = {
-    neutral: 'bg-muted text-muted-foreground',
-    primary: 'bg-primary/10 text-primary',
-    accent: 'bg-accent text-accent-foreground',
-    warning: 'bg-warning/10 text-warning',
-    success: 'bg-success/10 text-success',
-    destructive: 'bg-destructive/10 text-destructive',
-  }[tone];
-
-  return (
-    <div className="bg-card p-4">
-      <div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-xl', toneClass)}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <p className="font-syne text-2xl font-bold text-foreground">{value}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }
@@ -946,7 +1084,7 @@ function MediaTable({
                     <AssetThumb asset={asset} />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">{asset.title || 'Sem título'}</p>
-                      <p className="truncate text-xs text-muted-foreground">{asset.type?.replace('_', ' ') || 'mídia'} · {asset.source || 'Origem desconhecida'}</p>
+                      <p className="truncate text-xs text-muted-foreground">{asset.type?.replace('_', ' ') || 'mídia'} · {asset.source || 'Entrada não informada'}</p>
                     </div>
                   </button>
                 </td>
@@ -1050,12 +1188,14 @@ function MediaDetailsDialog({
   onOpenChange,
   onCopyLink,
   onStatus,
+  onGenerateVariation,
 }: {
   asset: MediaAsset | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCopyLink: (asset: MediaAsset) => void;
   onStatus: (id: EntityId, status: Status, message: string) => void;
+  onGenerateVariation: (asset: MediaAsset) => void;
 }) {
   if (!asset) return null;
 
@@ -1063,6 +1203,18 @@ function MediaDetailsDialog({
   const preview = assetPreview(asset);
   const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
   const shortId = String(asset.id || '').slice(0, 10) || 'sem_id';
+  const metadata = getAssetMetadata(asset);
+  const cost = getAssetCost(asset);
+  const scenePlan = getScenePlan(asset);
+  const scenes = getSceneList(asset);
+  const aiVideo = getAssetAiVideo(asset);
+  const provider = getProviderLabel(asset);
+  const model = readString(cost.model, readString(aiVideo.model, readString(metadata.model, 'Modelo não informado')));
+  const estimatedCost = formatUsd(cost.estimated_cost_usd ?? metadata.estimated_cost_usd);
+  const segments = readNumber(cost.segments, readNumber(aiVideo.segments, scenes.length || 1));
+  const generationVersion = getGenerationVersion(asset);
+  const prompt = readString(metadata.prompt, readString(metadata.ai_prompt, asset.caption || 'Prompt não registrado para esta mídia.'));
+  const durationSeconds = readNumber(cost.duration_seconds, readNumber(asset.duration, 0));
   const reviewMessage =
     score < 50
       ? 'Revisar antes de publicar - qualidade baixa detectada'
@@ -1159,9 +1311,13 @@ function MediaDetailsDialog({
               <p className="mb-3 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Metadados</p>
               <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:gap-3">
                 <PreviewMetaBox label="Tipo" value={asset.type?.replace('_', ' ') || 'mídia'} />
-                <PreviewMetaBox label="Origem" value={asset.source || 'Não informada'} />
-                <PreviewMetaBox label="Duração" value={asset.duration ? `${asset.duration}s` : 'Não informada'} muted={!asset.duration} />
+                <PreviewMetaBox label="Entrada" value={asset.source || 'Não informada'} />
+                <PreviewMetaBox label="Duração" value={asset.duration ? `${asset.duration}s`.replace('ss', 's') : 'Não informada'} muted={!asset.duration} />
                 <PreviewMetaBox label="Tamanho" value={asset.file_size ? `${Math.round(asset.file_size / 1024)} KB` : 'Não informado'} muted={!asset.file_size} />
+                <PreviewMetaBox label="Provider" value={provider} muted={provider === 'Não informado'} />
+                <PreviewMetaBox label="Modelo" value={model} muted={model === 'Modelo não informado'} />
+                <PreviewMetaBox label="Custo" value={estimatedCost} muted={estimatedCost === 'Não informado'} />
+                <PreviewMetaBox label="Versão" value={`v${generationVersion} · ${segments} segmento${segments === 1 ? '' : 's'}`} />
               </div>
             </div>
 
@@ -1180,8 +1336,48 @@ function MediaDetailsDialog({
                 <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => onCopyLink(asset)}>
                   <Copy className="h-3.5 w-3.5" /> Copiar link
                 </Button>
+                {isVideoAsset(asset) && (
+                  <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card min-[420px]:col-span-2" onClick={() => onGenerateVariation(asset)}>
+                    <Wand2 className="h-3.5 w-3.5" /> Gerar variação com IA
+                  </Button>
+                )}
               </div>
             </div>
+
+            <div className="grid shrink-0 gap-3 lg:grid-cols-2">
+              <InfoLine label="Prompt original" value={prompt} compact />
+              <InfoLine
+                label="Resumo do plano"
+                value={`${readString(scenePlan.style, readString(scenePlan.template, 'Template não informado'))} · ${durationSeconds || asset.duration || 'duração não informada'} · ${segments} segmento${segments === 1 ? '' : 's'}`}
+                compact
+              />
+            </div>
+
+            {scenes.length > 0 && (
+              <div className="shrink-0 rounded-2xl border border-border bg-muted/25 p-4 sm:rounded-3xl">
+                <p className="font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Plano de cenas</p>
+                <div className="mt-3 grid gap-2">
+                  {scenes.slice(0, 4).map((scene, index) => (
+                    <div key={`${readString(scene.id, `scene_${index}`)}-${index}`} className="rounded-2xl border border-border bg-background/70 p-3">
+                      <div className="mb-1 flex items-center justify-between gap-3">
+                        <p className="font-syne text-xs font-bold text-foreground">Cena {index + 1}</p>
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          {readNumber(scene.duration, readNumber(scene.duration_seconds, 0)) || 'auto'}s
+                        </span>
+                      </div>
+                      <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
+                        {readString(scene.locked_instruction, readString(scene.visual, readString(scene.title, 'Cena sem instrução registrada.')))}
+                      </p>
+                      {readString(scene.on_screen_text) && (
+                        <p className="mt-2 rounded-lg bg-muted px-2 py-1 text-[11px] font-semibold text-foreground">
+                          Texto: {readString(scene.on_screen_text)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="min-h-[150px] rounded-2xl border border-border bg-muted/25 p-4 sm:min-h-[170px] sm:rounded-3xl lg:flex-1">
               <p className="font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Legenda</p>

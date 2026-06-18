@@ -17,8 +17,8 @@ const getSystemTheme = () =>
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'system';
-    return (window.localStorage.getItem(STORAGE_KEY) as Theme | null) || 'system';
+    if (typeof window === 'undefined') return 'light';
+    return (window.localStorage.getItem(STORAGE_KEY) as Theme | null) || 'light';
   });
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'light';
