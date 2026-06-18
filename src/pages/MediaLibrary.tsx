@@ -60,6 +60,8 @@ const emptyUploadForm: UploadForm = {
   caption: '',
 };
 
+const MAX_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024;
+
 const statusOptions = [
   { value: 'all', label: 'Todos os status' },
   { value: 'draft', label: 'Nova' },
@@ -456,6 +458,11 @@ export default function MediaLibrary() {
 
     if (uploadFile && !uploadFile.type.startsWith('image/')) {
       toast.error('Esse fluxo aceita apenas imagens para referência de vídeo.');
+      return;
+    }
+
+    if (uploadFile && uploadFile.size > MAX_IMAGE_UPLOAD_BYTES) {
+      toast.error('Imagem muito grande. Envie um arquivo de até 8 MB para salvar na biblioteca.');
       return;
     }
 
