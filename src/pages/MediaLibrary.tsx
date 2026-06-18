@@ -60,14 +60,6 @@ const emptyUploadForm: UploadForm = {
   caption: '',
 };
 
-const typeOptions = [
-  { value: 'all', label: 'Todos os tipos' },
-  { value: 'image', label: 'Imagens' },
-  { value: 'video', label: 'Vídeos coletados' },
-  { value: 'generated_video', label: 'Vídeos gerados por IA' },
-  { value: 'thumbnail', label: 'Thumbnails' },
-];
-
 const statusOptions = [
   { value: 'all', label: 'Todos os status' },
   { value: 'draft', label: 'Nova' },
@@ -161,12 +153,25 @@ const getProviderLabel = (asset: MediaAsset) => {
   return readString(cost.provider, readString(aiVideo.provider, readString(asset.source, 'Não informado')));
 };
 
+const isVideoReferenceImage = (asset: MediaAsset) => {
+  const metadata = getAssetMetadata(asset);
+  const intendedUse = readString(metadata.intended_use);
+  const source = readString(asset.source).toLowerCase();
+
+  return (
+    asset.type === 'image' &&
+    (
+      intendedUse === 'video_generation_reference' ||
+      ['upload local', 'url externa', 'upload', 'upload-fallback'].includes(source)
+    )
+  );
+};
+
 export default function MediaLibrary() {
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [productFilter, setProductFilter] = useState('all');
   const [qualityFilter, setQualityFilter] = useState('all');
@@ -210,27 +215,29 @@ export default function MediaLibrary() {
     return () => URL.revokeObjectURL(previewUrl);
   }, [uploadFile]);
 
+  const libraryImages = useMemo(() => assets.filter(isVideoReferenceImage), [assets]);
+
   const productOptions = useMemo(() => {
-    const products = assets.map((asset) => asset.product_name).filter(Boolean) as string[];
+    const products = libraryImages.map((asset) => asset.product_name).filter(Boolean) as string[];
     return [...new Set(products)];
-  }, [assets]);
+  }, [libraryImages]);
 
   const stats = useMemo(
     () => ({
-      total: assets.length,
-      images: assets.filter((asset) => asset.type === 'image').length,
-      videos: assets.filter((asset) => asset.type === 'video' || asset.type === 'generated_video').length,
-      review: assets.filter((asset) => asset.status === 'pending_review').length,
-      approved: assets.filter((asset) => asset.status === 'approved').length,
-      rejected: assets.filter((asset) => asset.status === 'rejected').length,
+      total: libraryImages.length,
+      images: libraryImages.length,
+      videos: 0,
+      review: libraryImages.filter((asset) => asset.status === 'pending_review').length,
+      approved: libraryImages.filter((asset) => asset.status === 'approved').length,
+      rejected: libraryImages.filter((asset) => asset.status === 'rejected').length,
     }),
-    [assets],
+    [libraryImages],
   );
 
   const filtered = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    return assets
+    return libraryImages
       .filter((asset) => {
         const score = getQualityScore(asset);
         const matchesSearch =
@@ -240,7 +247,6 @@ export default function MediaLibrary() {
           asset.type?.toLowerCase().includes(normalizedSearch) ||
           asset.source?.toLowerCase().includes(normalizedSearch) ||
           asset.status?.toLowerCase().includes(normalizedSearch);
-        const matchesType = typeFilter === 'all' || asset.type === typeFilter;
         const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
         const matchesProduct = productFilter === 'all' || asset.product_name === productFilter;
         const matchesQuality =
@@ -249,7 +255,7 @@ export default function MediaLibrary() {
           (qualityFilter === 'medium' && score >= 50 && score < 80) ||
           (qualityFilter === 'low' && score < 50);
 
-        return matchesSearch && matchesType && matchesStatus && matchesProduct && matchesQuality;
+        return matchesSearch && matchesStatus && matchesProduct && matchesQuality;
       })
       .sort((first, second) => {
         if (sortBy === 'oldest') return assetDate(first) - assetDate(second);
@@ -257,7 +263,7 @@ export default function MediaLibrary() {
         if (sortBy === 'title') return (first.title || '').localeCompare(second.title || '');
         return assetDate(second) - assetDate(first);
       });
-  }, [assets, productFilter, qualityFilter, search, sortBy, statusFilter, typeFilter]);
+  }, [libraryImages, productFilter, qualityFilter, search, sortBy, statusFilter]);
 
   const groupedAssets = useMemo(() => {
     return filtered.reduce<Record<string, MediaAsset[]>>((groups, asset) => {
@@ -268,39 +274,36 @@ export default function MediaLibrary() {
   }, [filtered]);
 
   const selectedAssets = useMemo(
-    () => assets.filter((asset) => selectedIds.includes(asset.id)),
-    [assets, selectedIds],
+    () => libraryImages.filter((asset) => selectedIds.includes(asset.id)),
+    [libraryImages, selectedIds],
   );
   const smartCollections = useMemo(
     () => [
       {
         label: 'Melhores para vídeo',
-        description: 'Assets aprovados ou com qualidade alta',
-        count: assets.filter((asset) => getQualityScore(asset) >= 80 || asset.status === 'approved').length,
+        description: 'Imagens aprovadas ou com qualidade alta',
+        count: libraryImages.filter((asset) => getQualityScore(asset) >= 80 || asset.status === 'approved').length,
         action: () => {
           setQualityFilter('high');
           setStatusFilter('all');
-          setTypeFilter('all');
           setView('grid');
         },
       },
       {
         label: 'Precisam revisão',
         description: 'Baixa qualidade, rejeitados ou pendentes',
-        count: assets.filter((asset) => getQualityScore(asset) < 50 || ['pending_review', 'rejected', 'failed'].includes(String(asset.status))).length,
+        count: libraryImages.filter((asset) => getQualityScore(asset) < 50 || ['pending_review', 'rejected', 'failed'].includes(String(asset.status))).length,
         action: () => {
           setQualityFilter('low');
           setStatusFilter('all');
-          setTypeFilter('all');
           setView('list');
         },
       },
       {
-        label: 'Vídeos prontos',
-        description: 'Criativos gerados ou coletados em vídeo',
-        count: assets.filter((asset) => isVideoAsset(asset)).length,
+        label: 'Prontas para roteiro',
+        description: 'Imagens que podem alimentar cenas com IA',
+        count: libraryImages.filter((asset) => ['approved', 'pending_review', 'collected'].includes(String(asset.status))).length,
         action: () => {
-          setTypeFilter('generated_video');
           setQualityFilter('all');
           setStatusFilter('all');
           setView('grid');
@@ -308,8 +311,8 @@ export default function MediaLibrary() {
       },
       {
         label: 'Sem anúncio vinculado',
-        description: 'Mídias que precisam organização',
-        count: assets.filter((asset) => !asset.product_name).length,
+        description: 'Imagens que precisam organização',
+        count: libraryImages.filter((asset) => !asset.product_name).length,
         action: () => {
           setSearch('');
           setProductFilter('all');
@@ -318,10 +321,10 @@ export default function MediaLibrary() {
         },
       },
     ],
-    [assets],
+    [libraryImages],
   );
   const campaignOverview = useMemo(() => {
-    const groups = assets.reduce<Record<string, MediaAsset[]>>((currentGroups, asset) => {
+    const groups = libraryImages.reduce<Record<string, MediaAsset[]>>((currentGroups, asset) => {
       const key = asset.product_name || 'Sem anúncio vinculado';
       currentGroups[key] = [...(currentGroups[key] || []), asset];
       return currentGroups;
@@ -343,10 +346,10 @@ export default function MediaLibrary() {
       })
       .sort((first, second) => second.total - first.total)
       .slice(0, 3);
-  }, [assets]);
+  }, [libraryImages]);
   const primaryCampaign = campaignOverview[0];
   const libraryQuality = Math.round(
-    assets.reduce((sum, asset) => sum + getQualityScore(asset), 0) / Math.max(1, assets.length),
+    libraryImages.reduce((sum, asset) => sum + getQualityScore(asset), 0) / Math.max(1, libraryImages.length),
   );
 
   const toggleSelected = (id: EntityId) => {
@@ -463,9 +466,10 @@ export default function MediaLibrary() {
         intended_use: 'video_generation_reference',
         original_file_name: uploadFile?.name,
       };
+      let savedAsset: MediaAsset | undefined;
 
       if (uploadMode === 'local' && uploadFile) {
-        await uploadProductImage(uploadFile, undefined, {
+        const result = await uploadProductImage(uploadFile, undefined, {
           title: uploadForm.title.trim(),
           product_name: uploadForm.product_name.trim(),
           caption: uploadForm.caption,
@@ -474,9 +478,10 @@ export default function MediaLibrary() {
           quality_score: 72,
           metadata,
         });
+        savedAsset = result.asset;
       } else {
         const url = uploadForm.url.trim();
-        await createMediaAsset({
+        savedAsset = await createMediaAsset({
           title: uploadForm.title.trim(),
           product_name: uploadForm.product_name.trim(),
           type: 'image',
@@ -489,11 +494,14 @@ export default function MediaLibrary() {
           metadata,
         });
       }
+      if (savedAsset) {
+        setAssets((current) => [savedAsset, ...current.filter((asset) => asset.id !== savedAsset.id)]);
+      }
       toast.success('Imagem salva na biblioteca e pronta para futuros vídeos');
 
       setShowUpload(false);
       resetUploadState();
-      load();
+      void load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível importar a mídia');
     } finally {
@@ -510,7 +518,7 @@ export default function MediaLibrary() {
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por anúncio, título, tipo ou status..."
+                placeholder="Buscar imagem por anúncio, título ou status..."
                 className="h-11 rounded-2xl pl-9"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -518,10 +526,6 @@ export default function MediaLibrary() {
             </div>
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:flex">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="h-11 rounded-2xl xl:w-44"><SelectValue /></SelectTrigger>
-                <SelectContent>{typeOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
-              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="h-11 rounded-2xl xl:w-44"><SelectValue /></SelectTrigger>
                 <SelectContent>{statusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
@@ -550,7 +554,7 @@ export default function MediaLibrary() {
                 <Checkbox checked={filtered.length > 0 && filtered.every((asset) => selectedIds.includes(asset.id))} onCheckedChange={toggleAllFiltered} />
                 Selecionar filtradas
               </label>
-              <span>{filtered.length} de {assets.length} mídias</span>
+              <span>{filtered.length} de {libraryImages.length} imagens</span>
               {selectedIds.length > 0 && <span className="font-medium text-primary">{selectedIds.length} selecionadas</span>}
             </div>
 
@@ -612,7 +616,7 @@ export default function MediaLibrary() {
           ))}
         </section>
 
-        {!loading && assets.length > 0 && (
+        {!loading && libraryImages.length > 0 && (
           <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.25fr_0.75fr]">
             <CampaignMap
               title={primaryCampaign?.productName || 'Biblioteca criativa'}
@@ -676,7 +680,7 @@ export default function MediaLibrary() {
           </section>
         )}
 
-        {!loading && assets.length > 0 && (
+        {!loading && libraryImages.length > 0 && (
           <FlowGuide
             title="Preparar material para vídeos melhores"
             items={[
