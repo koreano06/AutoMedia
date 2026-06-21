@@ -189,7 +189,7 @@ npm run api:vm
 Teste público correto da API na VM:
 
 ```text
-http://192.168.1.6:3333/api/health
+http://192.168.1.42:3333/api/health
 ```
 
 Se abrir apenas `/api`, é normal receber `AUTH_REQUIRED`, porque as rotas internas são protegidas por JWT.
@@ -237,7 +237,7 @@ npm run lint       # valida ESLint
 npm run lint:fix   # corrige lint quando possível
 npm run prod:check # valida variáveis essenciais de produção
 npm run api:local  # aponta .env.local para http://localhost:3333/api
-npm run api:vm     # aponta .env.local para http://192.168.1.6:3333/api
+npm run api:vm     # aponta .env.local para http://192.168.1.42:3333/api
 npm run api:public -- https://api.seudominio.com # aponta para URL pública HTTPS
 npm run test       # testes unitários/contrato com Vitest
 npm run test:e2e   # testes E2E com Playwright
@@ -292,7 +292,7 @@ Variável principal:
 VITE_API_BASE_URL=https://api.seudominio.com/api
 ```
 
-Importante: o frontend publicado na Vercel não consegue acessar `192.168.1.6` fora da sua rede. Para produção, use domínio/tunnel HTTPS apontando para a VM.
+Importante: o frontend publicado na Vercel não consegue acessar `192.168.1.42` fora da sua rede. Para produção, use domínio/tunnel HTTPS apontando para a VM.
 
 O arquivo `vercel.json` mantém o roteamento SPA funcionando em rotas internas como `/products`, `/media`, `/videos`, `/schedule`, `/publications` e `/settings`.
 
@@ -341,3 +341,4 @@ src/
 - `docs/BACKEND_PLAN.md`: plano de backend.
 - `docs/FRONTEND_READINESS.md`: pontos de prontidão do frontend.
 - `docs/PROJECT_STRUCTURE.md`: organização do projeto.
+

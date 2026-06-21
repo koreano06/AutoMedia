@@ -4,7 +4,7 @@ const [, , target, customUrl] = process.argv;
 
 const presets = {
   local: "http://localhost:3333/api",
-  vm: "http://192.168.1.6:3333/api",
+  vm: "http://192.168.1.42:3333/api",
   vercel: "https://auto-media-backend.vercel.app/api",
 };
 
@@ -37,3 +37,4 @@ console.log(`.env.local atualizado:`);
 console.log(`VITE_API_BASE_URL=${apiUrl}`);
 console.log("");
 console.log("Reinicie o Vite para aplicar a troca: npm run dev");
+

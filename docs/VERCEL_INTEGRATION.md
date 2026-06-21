@@ -60,7 +60,7 @@ CORS_ORIGIN=https://auto-media-sooty.vercel.app,http://localhost:5173
 
 ## Observação
 
-Não use `http://192.168.1.6:3333/api` no frontend publicado na Vercel. Esse IP só funciona dentro da sua rede local.
+Não use `http://192.168.1.42:3333/api` no frontend publicado na Vercel. Esse IP só funciona dentro da sua rede local.
 
 Antes de publicar o frontend, rode:
 
@@ -87,3 +87,4 @@ Para produção com domínio/tunnel:
 ```bash
 npm run api:public -- https://api.seudominio.com
 ```
+
