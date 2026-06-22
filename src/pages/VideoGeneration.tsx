@@ -98,9 +98,15 @@ type VideoScene = {
   id: string;
   title: string;
   duration: string;
+  goal: string;
   onScreenText: string;
   narration: string;
+  visualAction: string;
   visualDirection: string;
+  cameraDirection: string;
+  referenceUse: string;
+  transition: string;
+  constraints: string;
 };
 
 const emptyBriefing: Briefing = {
@@ -120,25 +126,43 @@ const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing 
     id: createSceneId(),
     title: 'Gancho inicial',
     duration: '0-3s',
-    onScreenText: `${productName}: atenção nos primeiros segundos`,
-    narration: currentBriefing.promise || `Conheça uma oferta prática para quem procura ${productName}.`,
-    visualDirection: 'Close forte no produto, fundo limpo, texto grande e contraste alto.',
+    goal: 'Parar o scroll nos primeiros segundos e deixar claro qual produto será demonstrado.',
+    onScreenText: `${productName}: veja antes de comprar`,
+    narration: currentBriefing.promise || `Olha esse ${productName} em uma demonstração rápida e direta.`,
+    visualAction: 'Mostrar o produto inteiro por 0,5s e entrar em close no detalhe mais reconhecível, sem cortes confusos.',
+    visualDirection: 'Produto centralizado, fundo limpo, contraste alto, visual de demonstração real e não apenas foto estática.',
+    cameraDirection: 'Vídeo vertical 9:16. Produto no centro, margem segura para texto no topo e CTA no rodapé. Movimento de push-in suave.',
+    referenceUse: 'Usar a melhor imagem real do produto como referência principal para manter forma, cor e proporções.',
+    transition: 'Terminar com movimento aproximando do detalhe que será explicado na próxima cena.',
+    constraints: 'Não inventar funções que não apareçam no anúncio. Evitar promessa absoluta e texto muito longo.',
   },
   {
     id: createSceneId(),
     title: 'Benefício principal',
     duration: '3-8s',
-    onScreenText: currentBriefing.promise || 'Benefício claro em poucos segundos',
-    narration: `Mostre o principal motivo para a pessoa se interessar pela oferta.`,
-    visualDirection: 'Movimento de zoom/pan no produto, detalhe visual e ritmo rápido.',
+    goal: 'Transformar a atenção inicial em interesse, mostrando o benefício mais vendável do produto.',
+    onScreenText: currentBriefing.promise || 'Benefício principal em uso real',
+    narration: `Mostre de forma simples por que esse ${productName} resolve uma necessidade prática do comprador.`,
+    visualAction: 'Demonstrar o produto em uso ou simular o uso com mãos, mesa, ambiente real e detalhe do recurso principal.',
+    visualDirection: 'Cortes curtos, zoom/pan no produto, foco no antes/depois do benefício e ritmo de review vendedor.',
+    cameraDirection: 'Manter composição 9:16 com produto ocupando 60% da tela. Texto curto em área livre, sem cobrir detalhes importantes.',
+    referenceUse: 'Se houver várias imagens, usar close, embalagem, acessório ou controle como apoio visual para explicar o benefício.',
+    transition: 'Conectar com a prova: depois do benefício, mostrar evidência visual ou contexto que dá confiança.',
+    constraints: 'Não usar frases genéricas como “produto incrível” sem mostrar o motivo visualmente.',
   },
   {
     id: createSceneId(),
     title: 'Prova e contexto',
     duration: '8-12s',
-    onScreenText: 'Veja como isso ajuda no dia a dia',
-    narration: 'Reforce a utilidade, o contexto de uso e uma prova simples sem exageros.',
-    visualDirection: 'Cena de uso, detalhe de textura/material ou comparação visual.',
+    goal: 'Dar confiança ao comprador mostrando contexto real, detalhe físico e utilidade concreta.',
+    onScreenText: 'Detalhes que fazem diferença',
+    narration: 'Reforce o uso no dia a dia com uma prova visual simples, natural e sem exageros.',
+    visualAction: 'Mostrar textura, tamanho, acessório, tela, encaixe ou resultado final. Se for unboxing, incluir embalagem e item fora da caixa.',
+    visualDirection: 'Cena de demonstração com luz natural/premium, fundo organizado e destaque para mãos interagindo com o produto.',
+    cameraDirection: 'Alternar close vertical e plano médio. Manter o produto nítido e o fundo levemente desfocado.',
+    referenceUse: 'Usar imagens secundárias para manter continuidade: acessório, controle, embalagem, tela projetada ou detalhe de acabamento.',
+    transition: 'Finalizar com o produto pronto para uso, preparando a chamada de ação final.',
+    constraints: 'Evitar aparência de propaganda exagerada. A cena precisa parecer uma demonstração honesta.',
   },
   {
     id: createSceneId(),
@@ -146,7 +170,13 @@ const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing 
     duration: '12-15s',
     onScreenText: currentBriefing.cta || 'Comente "eu quero"',
     narration: currentBriefing.cta || 'Comente eu quero para receber o link.',
-    visualDirection: 'Tela final com produto, CTA visível e visual limpo para publicação.',
+    goal: 'Encerrar com ação clara e fácil, mantendo o produto visível até o último segundo.',
+    visualAction: 'Mostrar produto em composição final bonita, com benefício resumido e CTA destacado.',
+    visualDirection: 'Tela final limpa, produto em destaque, CTA grande, contraste alto e sensação de anúncio pronto para Reels/TikTok/Shorts.',
+    cameraDirection: 'Formato 9:16 com CTA no terço inferior, produto central e espaço superior para frase curta. Sem elementos cortados.',
+    referenceUse: 'Usar imagem mais bonita do produto como hero shot final.',
+    transition: 'Encerrar com leve zoom out ou brilho sutil no CTA, sem cortar abruptamente.',
+    constraints: 'Não colocar excesso de texto. Manter CTA único e direto.',
   },
 ];
 
@@ -176,6 +206,15 @@ const getFriendlyError = (error: unknown, fallback = 'Não foi possível conclui
   if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('auth')) {
     return 'A autenticação falhou. Faça login novamente ou revise a chave/API configurada.';
   }
+  if (
+    lower.includes('imagem inicial precisa estar em uma url pública') ||
+    lower.includes('url pública') ||
+    lower.includes('start_image_not_public') ||
+    lower.includes('192.168.') ||
+    lower.includes('localhost')
+  ) {
+    return 'A IA de vídeo não consegue acessar imagens locais da VM. Use uma imagem com URL pública ou publique o storage/túnel antes de gerar com Kling.';
+  }
   if (lower.includes('provider') || lower.includes('replicate') || lower.includes('kling')) {
     return 'O provedor de vídeo não conseguiu concluir a geração. Tente novamente ou use o fallback FFmpeg.';
   }
@@ -204,7 +243,7 @@ const getJobStage = (job: Job) => {
     },
     concatenating_segments: { label: 'Juntando vídeo', detail: 'FFmpeg unindo segmentos IA em um vídeo maior e contínuo.' },
     uploading_to_library: { label: 'Enviando para biblioteca', detail: 'Salvando arquivo final no storage e atualizando a mídia.' },
-    fallback_ffmpeg: { label: 'Fallback FFmpeg', detail: fallbackReason || 'Provider IA falhou. O sistema renderiza versão local para não quebrar o fluxo.' },
+    fallback_ffmpeg: { label: 'Fallback FFmpeg', detail: fallbackReason ? getFriendlyError(fallbackReason) : 'Provider IA falhou. O sistema renderiza versão local para não quebrar o fluxo.' },
   };
   if (stage && labelByStage[stage]) return { ...labelByStage[stage], progress };
   if (job.status === 'failed') return { label: 'Falhou', detail: getFriendlyError(job.error_message, 'Verifique o erro e tente novamente.'), progress: 100 };
@@ -212,6 +251,14 @@ const getJobStage = (job: Job) => {
   if (job.status === 'completed') {
     const cost = readRecord(result.cost);
     const costValue = readNumber(cost.estimated_cost_usd);
+    const resultFallbackReason = readString(result.fallback_reason);
+    if (fallbackReason || resultFallbackReason) {
+      return {
+        label: 'Pronto com fallback',
+        detail: getFriendlyError(fallbackReason || resultFallbackReason),
+        progress: 100,
+      };
+    }
     return {
       label: 'Pronto para revisão',
       detail: costValue ? `Render concluído. Custo estimado: US$ ${costValue.toFixed(4)}.` : 'Render concluído. Revise antes de publicar.',
@@ -356,9 +403,15 @@ export default function VideoGeneration() {
         id: createSceneId(),
         title: `Cena ${current.length + 1}`,
         duration: '',
+        goal: '',
         onScreenText: '',
         narration: '',
+        visualAction: '',
         visualDirection: '',
+        cameraDirection: 'Vídeo vertical 9:16, produto centralizado, texto em área segura e sem cortar detalhes importantes.',
+        referenceUse: '',
+        transition: '',
+        constraints: 'Não inventar características do produto. Manter linguagem natural e comercial.',
       },
     ]);
   };
@@ -373,27 +426,41 @@ export default function VideoGeneration() {
   };
 
   const buildStructuredScript = (baseScript = scriptPreview) => {
-    const filledScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection);
+    const filledScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection || scene.goal || scene.visualAction);
     if (filledScenes.length === 0) return scriptPreview;
 
     const sceneText = filledScenes
       .map((scene, index) => [
         `Cena ${index + 1}: ${scene.title || 'Sem título'}`,
         scene.duration ? `Tempo: ${scene.duration}` : '',
+        scene.goal ? `Objetivo da cena: ${scene.goal}` : '',
         scene.onScreenText ? `Texto na tela: ${scene.onScreenText}` : '',
         scene.narration ? `Narração/legenda: ${scene.narration}` : '',
+        scene.visualAction ? `Ação visual obrigatória: ${scene.visualAction}` : '',
         scene.visualDirection ? `Direção visual: ${scene.visualDirection}` : '',
+        scene.cameraDirection ? `Câmera e enquadramento 9:16: ${scene.cameraDirection}` : '',
+        scene.referenceUse ? `Uso das imagens de referência: ${scene.referenceUse}` : '',
+        scene.transition ? `Transição/conexão com a próxima cena: ${scene.transition}` : '',
+        scene.constraints ? `Restrições da cena: ${scene.constraints}` : '',
       ].filter(Boolean).join('\n'))
       .join('\n\n');
 
     return [
       baseScript ? `Roteiro IA/base:\n${baseScript}` : '',
+      [
+        'Instruções técnicas obrigatórias para o vídeo:',
+        `- Formato final: ${selectedFormatConfig?.ratio || '9:16'} vertical, otimizado para Reels, TikTok e Shorts.`,
+        '- Manter continuidade visual entre cenas, como se fosse uma demonstração de produto com começo, meio e CTA.',
+        '- Usar as imagens reais selecionadas como referência de aparência, cor, proporção e acessórios do produto.',
+        '- Não inventar funções, marcas, preço, descontos ou resultados que não estejam no anúncio/briefing.',
+        '- Texto na tela deve ser curto, grande, legível no celular e dentro da área segura vertical.',
+      ].join('\n'),
       `Roteiro estruturado por cenas:\n${sceneText}`,
       `CTA final: ${briefing.cta}`,
       `Observações: ${briefing.restrictions || 'Evitar promessas exageradas e manter linguagem natural.'}`,
     ].filter(Boolean).join('\n\n');
   };
-  const filledSceneCount = scenes.filter((scene) => scene.title && scene.onScreenText && scene.narration).length;
+  const filledSceneCount = scenes.filter((scene) => scene.title && scene.goal && scene.onScreenText && scene.narration && scene.visualAction).length;
   const hasVisualBase = Boolean(generationPreview || selectedMedia.length || product?.image_url);
   const creativeScore = Math.min(
     100,
@@ -419,7 +486,7 @@ export default function VideoGeneration() {
   ];
   const storyboardScenes = scenes.map((scene) => ({
     title: scene.title || 'Cena sem título',
-    text: scene.onScreenText || scene.narration || scene.visualDirection,
+    text: scene.onScreenText || scene.visualAction || scene.narration || scene.visualDirection,
     duration: scene.duration,
   }));
   const costPreview = estimateVideoCost(duration);
@@ -456,7 +523,8 @@ export default function VideoGeneration() {
   }, [activeJobs]);
 
   const createPrompt = (currentProduct: Product, scriptOnly = false) => `
-Crie ${scriptOnly ? 'um roteiro estruturado' : 'um roteiro final'} para transformar um anúncio pronto em vídeo de divulgação.
+Você é um diretor criativo especialista em vídeos curtos de produto para afiliados, social commerce e anúncios UGC.
+Crie ${scriptOnly ? 'um roteiro estruturado por cenas' : 'um roteiro final'} para transformar um anúncio pronto em vídeo de divulgação.
 Anúncio/oferta base: ${currentProduct.name}
 Texto/contexto do anúncio original: ${currentProduct.description || 'Sem descrição'}
 Categoria/nicho: ${currentProduct.category || 'Não informada'}
@@ -477,13 +545,40 @@ Restrições: ${briefing.restrictions || 'evitar promessas exageradas'}
 Mídias selecionadas: ${selectedMedia.map((asset) => asset.title || asset.url).join(', ') || 'usar imagem principal do anúncio'}
 Briefing extra: ${briefing.extra || 'sem briefing extra'}
 
-Responda em português com:
-1. Gancho inicial
-2. Cenas sugeridas
-3. Texto na tela
-4. Legenda para publicação
-5. CTA final
-6. Observação anti-spam/naturalidade para disparo em redes
+Regras de qualidade:
+- O vídeo deve ser pensado para formato vertical 9:16, com texto legível em celular e área segura.
+- O roteiro precisa ter começo, meio e fim: gancho, demonstração, prova/contexto e CTA.
+- Cada cena precisa explicar o que aparece, o que acontece, como a câmera se move e como conecta com a próxima.
+- Não invente preço, desconto, marca, garantia, recursos técnicos ou resultados que não estejam no anúncio.
+- Evite frases genéricas. Mostre benefício por ação visual concreta.
+- Linguagem natural de vendedor/apresentador, sem promessa exagerada e sem cara de spam.
+
+Responda em português neste formato exato:
+
+Resumo criativo:
+- Ideia central:
+- Público:
+- Promessa principal:
+- CTA:
+
+Roteiro estruturado por cenas:
+Cena 1: [título curto]
+Tempo: [ex: 0-3s]
+Objetivo da cena: [por que essa cena existe]
+Texto na tela: [frase curta e grande]
+Narração/legenda: [fala natural]
+Ação visual obrigatória: [o que deve acontecer na imagem/vídeo]
+Direção visual: [luz, fundo, ritmo, estética]
+Câmera e enquadramento 9:16: [posição do produto, margem segura, movimento]
+Uso das imagens de referência: [qual tipo de imagem usar e como]
+Transição/conexão com a próxima cena: [como uma cena puxa a outra]
+Restrições da cena: [o que não fazer]
+
+Repita para 4 a 6 cenas, conforme a duração ${duration}. Depois finalize com:
+
+Legenda para publicação:
+CTA final:
+Observação anti-spam/naturalidade:
 `;
 
   const createImagePrompt = (currentProduct: Product) => `
@@ -1120,7 +1215,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
 
         <section className={stageCardClass(3)}>
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <SectionTitle icon={ListChecks} title="Editor de roteiro por cenas" subtitle="Ajuste o que aparece, o que é narrado e a direção visual antes do render" />
+            <SectionTitle icon={ListChecks} title="Editor de roteiro por cenas" subtitle="Monte cada cena com objetivo, ação, câmera 9:16 e continuidade antes do render" />
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="outline" size="sm" className="gap-2" onClick={resetScenesFromBriefing}>
                 <Sparkles className="h-4 w-4" /> Sugerir cenas
@@ -1137,7 +1232,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
                     <p className="font-syne text-xs font-bold uppercase tracking-[0.14em] text-primary">Cena {index + 1}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Use frases curtas para melhorar legibilidade no vídeo.</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Cena vertical 9:16 com começo, ação visual e conexão narrativa.</p>
                   </div>
                   <Button
                     type="button"
@@ -1154,6 +1249,15 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                 <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
                   <Field label="Título da cena" value={scene.title} onChange={(value) => updateScene(scene.id, { title: value })} placeholder="Gancho, benefício, prova..." />
                   <Field label="Tempo" value={scene.duration} onChange={(value) => updateScene(scene.id, { duration: value })} placeholder="0-3s" />
+                </div>
+                <div className="mt-3">
+                  <Label>Objetivo da cena</Label>
+                  <Textarea
+                    value={scene.goal}
+                    onChange={(event) => updateScene(scene.id, { goal: event.target.value })}
+                    className="mt-1.5 h-20 resize-none"
+                    placeholder="Ex: parar o scroll, mostrar benefício, provar uso, preparar CTA..."
+                  />
                 </div>
                 <div className="mt-3">
                   <Label>Texto na tela</Label>
@@ -1174,6 +1278,15 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                   />
                 </div>
                 <div className="mt-3">
+                  <Label>Ação visual obrigatória</Label>
+                  <Textarea
+                    value={scene.visualAction}
+                    onChange={(event) => updateScene(scene.id, { visualAction: event.target.value })}
+                    className="mt-1.5 h-20 resize-none"
+                    placeholder="Ex: mão abrindo embalagem, close no controle, produto projetando imagem..."
+                  />
+                </div>
+                <div className="mt-3">
                   <Label>Direção visual</Label>
                   <Textarea
                     value={scene.visualDirection}
@@ -1181,6 +1294,46 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                     className="mt-1.5 h-20 resize-none"
                     placeholder="Zoom, close, movimento, fundo, elementos visuais..."
                   />
+                </div>
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                  <div>
+                    <Label>Câmera e enquadramento 9:16</Label>
+                    <Textarea
+                      value={scene.cameraDirection}
+                      onChange={(event) => updateScene(scene.id, { cameraDirection: event.target.value })}
+                      className="mt-1.5 h-24 resize-none"
+                      placeholder="Produto central, texto em área segura, movimento vertical..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Uso das imagens de referência</Label>
+                    <Textarea
+                      value={scene.referenceUse}
+                      onChange={(event) => updateScene(scene.id, { referenceUse: event.target.value })}
+                      className="mt-1.5 h-24 resize-none"
+                      placeholder="Qual imagem usar: close, embalagem, detalhe, uso real..."
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                  <div>
+                    <Label>Transição para próxima cena</Label>
+                    <Textarea
+                      value={scene.transition}
+                      onChange={(event) => updateScene(scene.id, { transition: event.target.value })}
+                      className="mt-1.5 h-24 resize-none"
+                      placeholder="Como essa cena puxa a próxima sem parecer cortada..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Restrições da cena</Label>
+                    <Textarea
+                      value={scene.constraints}
+                      onChange={(event) => updateScene(scene.id, { constraints: event.target.value })}
+                      className="mt-1.5 h-24 resize-none"
+                      placeholder="O que a IA não deve inventar, exagerar ou mostrar..."
+                    />
+                  </div>
                 </div>
               </div>
             ))}
@@ -1279,7 +1432,7 @@ function PreflightDialog({
   onConfirm: () => void;
   generating: boolean;
 }) {
-  const visibleScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection);
+  const visibleScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection || scene.goal || scene.visualAction);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1317,8 +1470,20 @@ function PreflightDialog({
                       <p className="font-syne text-xs font-bold text-foreground">Cena {index + 1}: {scene.title || 'Sem título'}</p>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{scene.duration || 'sem tempo'}</span>
                     </div>
+                    {scene.goal && (
+                      <p className="mb-1 text-xs leading-5 text-muted-foreground">
+                        <span className="font-semibold text-foreground">Objetivo:</span> {scene.goal}
+                      </p>
+                    )}
                     <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Tela:</span> {scene.onScreenText || 'Sem texto definido'}</p>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Narração:</span> {scene.narration || 'Sem narração definida'}</p>
+                    {(scene.visualAction || scene.cameraDirection || scene.transition) && (
+                      <div className="mt-2 space-y-1 rounded-xl border border-border bg-muted/25 p-2">
+                        {scene.visualAction && <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Ação:</span> {scene.visualAction}</p>}
+                        {scene.cameraDirection && <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">9:16:</span> {scene.cameraDirection}</p>}
+                        {scene.transition && <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Transição:</span> {scene.transition}</p>}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
