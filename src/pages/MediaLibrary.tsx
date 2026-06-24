@@ -6,10 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Bot,
   CheckCircle,
@@ -20,9 +18,7 @@ import {
   FolderKanban,
   Grid2X2,
   Image,
-  Images,
   LayoutList,
-  Link2,
   MoreHorizontal,
   Play,
   Search,
@@ -30,7 +26,6 @@ import {
   Trash2,
   Upload,
   Wand2,
-  X,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -40,17 +35,9 @@ import { uploadProductImage } from '@/services/uploads';
 import { generateVideo } from '@/services/videos';
 import type { EntityId, MediaAsset, Status } from '@/types/entities';
 import { CampaignMap, FlowGuide, QualityTrafficLight } from '@/components/creative/CreativeVisualKit';
+import MediaImportModal, { type UploadForm, type UploadMode } from '@/features/media-library/MediaImportModal';
 
 type ViewMode = 'grid' | 'list' | 'grouped';
-type UploadMode = 'local' | 'url';
-
-type UploadForm = {
-  title: string;
-  product_name: string;
-  url: string;
-  thumbnail_url: string;
-  caption: string;
-};
 
 const emptyUploadForm: UploadForm = {
   title: '',
@@ -218,6 +205,7 @@ export default function MediaLibrary() {
   }, [uploadFile]);
 
   const libraryImages = useMemo(() => assets.filter(isVideoReferenceImage), [assets]);
+  const generatedVideos = useMemo(() => assets.filter(isVideoAsset), [assets]);
 
   const productOptions = useMemo(() => {
     const products = libraryImages.map((asset) => asset.product_name).filter(Boolean) as string[];
@@ -228,12 +216,12 @@ export default function MediaLibrary() {
     () => ({
       total: libraryImages.length,
       images: libraryImages.length,
-      videos: 0,
+      videos: generatedVideos.length,
       review: libraryImages.filter((asset) => asset.status === 'pending_review').length,
       approved: libraryImages.filter((asset) => asset.status === 'approved').length,
       rejected: libraryImages.filter((asset) => asset.status === 'rejected').length,
     }),
-    [libraryImages],
+    [generatedVideos.length, libraryImages],
   );
 
   const filtered = useMemo(() => {
@@ -698,6 +686,34 @@ export default function MediaLibrary() {
           />
         )}
 
+        {!loading && generatedVideos.length > 0 && (
+          <section className="responsive-card responsive-card-pad">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">Galeria de vídeos</p>
+                <h3 className="mt-1 font-syne text-lg font-bold text-foreground">Criativos finais gerados</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Vídeos prontos ou em revisão ficam separados das imagens de referência.</p>
+              </div>
+              <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {generatedVideos.length} vídeo(s)
+              </span>
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {generatedVideos.slice(0, 6).map((asset) => (
+                <MediaCard
+                  key={asset.id}
+                  asset={asset}
+                  selected={selectedIds.includes(asset.id)}
+                  onToggleSelected={toggleSelected}
+                  onOpen={setSelectedAsset}
+                  onCopyLink={handleCopyLink}
+                  onStatus={handleStatus}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
         {error ? (
           <ErrorState onRetry={load} />
         ) : loading ? (
@@ -748,194 +764,22 @@ export default function MediaLibrary() {
         onGenerateVariation={handleGenerateVariation}
       />
 
-      <Dialog
+      <MediaImportModal
         open={showUpload}
         onOpenChange={(open) => {
           setShowUpload(open);
           if (!open) resetUploadState();
         }}
-      >
-        <DialogContent className="flex !h-[94dvh] !w-[calc(100vw-0.75rem)] !max-w-none flex-col overflow-hidden rounded-t-[1.5rem] border-border bg-card p-0 text-foreground shadow-2xl sm:!h-[90dvh] sm:!w-[calc(100vw-2rem)] sm:rounded-[1.5rem] lg:!h-[min(88dvh,860px)] lg:!w-[min(92vw,1280px)] xl:!w-[min(88vw,1380px)]">
-          <DialogHeader className="shrink-0 border-b border-border bg-[linear-gradient(135deg,hsl(var(--primary)/0.16),hsl(var(--muted)/0.25)_42%,transparent)] px-5 py-4 pr-12 sm:px-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-start gap-3">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                  <Images className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <DialogTitle className="line-clamp-1 font-syne text-lg sm:text-xl">Adicionar imagem à biblioteca</DialogTitle>
-                  <DialogDescription className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                    Envie imagens de referência do produto para usar na geração dos vídeos com IA.
-                  </DialogDescription>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 font-semibold text-primary">Biblioteca</span>
-                <span className="rounded-full border border-border bg-background/70 px-3 py-1 text-muted-foreground">
-                  {uploadMode === 'url' ? 'Imagem por URL' : uploadFile?.name || 'Imagem local'}
-                </span>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(0,1.18fr)_minmax(380px,0.82fr)]">
-            <section className="order-2 min-h-0 overflow-y-auto border-t border-border bg-card p-4 sm:p-5 lg:order-2 lg:border-l lg:border-t-0">
-              <div className="grid gap-2 sm:grid-cols-2">
-                {[
-                  { key: 'local', title: 'Imagem local', description: 'Enviar imagem do computador', icon: Upload },
-                  { key: 'url', title: 'Imagem por URL', description: 'Usar link direto de imagem', icon: Link2 },
-                ].map(({ key, title, description, icon: Icon }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setUploadMode(key as UploadMode)}
-                    className={cn(
-                      'rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40',
-                      uploadMode === key ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' : 'border-border bg-card',
-                    )}
-                  >
-                    <Icon className={cn('mb-3 h-5 w-5', uploadMode === key ? 'text-primary' : 'text-muted-foreground')} />
-                    <p className="font-syne text-sm font-bold text-foreground">{title}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-5 grid gap-4 rounded-3xl border border-border bg-card/70 p-4 sm:p-5">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <Label>Título da imagem *</Label>
-                    <Input
-                      value={uploadForm.title}
-                      onChange={(event) => setUploadForm({ ...uploadForm, title: event.target.value })}
-                      className="mt-1.5 h-11 rounded-2xl"
-                      placeholder="ex: Unboxing mini projetor"
-                    />
-                  </div>
-                  <div>
-                    <Label>Produto vinculado *</Label>
-                    <Input
-                      value={uploadForm.product_name}
-                      onChange={(event) => setUploadForm({ ...uploadForm, product_name: event.target.value })}
-                      className="mt-1.5 h-11 rounded-2xl"
-                      placeholder="Nome do produto"
-                    />
-                  </div>
-                </div>
-
-                {uploadMode === 'url' && (
-                  <div className="grid gap-3">
-                    <div>
-                      <Label>URL da mídia *</Label>
-                      <Input
-                        value={uploadForm.url}
-                        onChange={(event) => setUploadForm({ ...uploadForm, url: event.target.value })}
-                        className="mt-1.5 h-11 rounded-2xl"
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <div>
-                      <Label>URL da thumbnail</Label>
-                      <Input
-                        value={uploadForm.thumbnail_url}
-                        onChange={(event) => setUploadForm({ ...uploadForm, thumbnail_url: event.target.value })}
-                        className="mt-1.5 h-11 rounded-2xl"
-                        placeholder="Opcional"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {uploadMode === 'local' && (
-                  <div>
-                    <Label>Imagem local *</Label>
-                    <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-muted/25 px-4 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary/5">
-                      <Upload className="mb-3 h-8 w-8 text-primary" />
-                      <span className="font-syne text-sm font-bold text-foreground">Selecionar imagem</span>
-                      <span className="mt-1 max-w-sm text-xs leading-5 text-muted-foreground">Use imagens nítidas do produto para alimentar a geração de vídeo.</span>
-                      <input type="file" accept="image/*" className="sr-only" onChange={(event) => setUploadFile(event.target.files?.[0] || null)} />
-                    </label>
-                  </div>
-                )}
-
-                <div>
-                  <Label>Observações / roteiro de uso</Label>
-                  <Textarea
-                    value={uploadForm.caption}
-                    onChange={(event) => setUploadForm({ ...uploadForm, caption: event.target.value })}
-                    className="mt-1.5 min-h-28 rounded-2xl"
-                    placeholder="Explique como essas mídias devem ser usadas no vídeo: close do produto, unboxing, controle remoto, tela projetada, CTA..."
-                  />
-                </div>
-              </div>
-            </section>
-
-            <aside className="order-1 min-h-0 border-border bg-muted/20 p-4 sm:p-5 lg:order-1">
-              <div className="flex h-full min-h-[420px] flex-col rounded-3xl border border-border bg-background/70 p-4 shadow-inner">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-syne text-sm font-bold text-foreground">Prévia da importação</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                      Confira o que vai entrar na biblioteca antes de salvar.
-                    </p>
-                  </div>
-                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
-                    {uploadMode === 'url' ? 'URL' : 'Local'}
-                  </span>
-                </div>
-
-                <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-3xl border border-border bg-card">
-                  {uploadMode === 'local' && uploadPreview ? (
-                    <img src={uploadPreview} alt="Preview" className="h-full max-h-[460px] w-full object-contain" />
-                  ) : uploadMode === 'url' && (uploadForm.thumbnail_url || uploadForm.url) ? (
-                    <img src={uploadForm.thumbnail_url || uploadForm.url} alt="Preview URL" className="h-full max-h-[460px] w-full object-contain" />
-                  ) : (
-                    <div className="px-8 text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
-                        {uploadMode === 'url' ? <Link2 className="h-7 w-7" /> : <Upload className="h-7 w-7" />}
-                      </div>
-                      <p className="font-syne text-sm font-bold text-foreground">Aguardando mídia</p>
-                      <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                        {uploadMode === 'url'
-                          ? 'Cole uma URL direta de imagem para visualizar aqui.'
-                          : 'Selecione uma imagem local para ver a prévia aqui.'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 grid gap-2 rounded-2xl border border-border bg-muted/25 p-3 text-xs text-muted-foreground">
-                  <div className="flex justify-between gap-3">
-                    <span>Título</span>
-                    <strong className="max-w-[60%] truncate text-foreground">{uploadForm.title || 'Não informado'}</strong>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Produto</span>
-                    <strong className="max-w-[60%] truncate text-foreground">{uploadForm.product_name || 'Não vinculado'}</strong>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Itens</span>
-                    <strong className="text-foreground">
-                      {uploadMode === 'url' ? (uploadForm.url ? 1 : 0) : uploadFile ? 1 : 0}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <Button variant="outline" className="h-12 rounded-2xl" onClick={() => setShowUpload(false)}>Cancelar</Button>
-                  <Button className="h-12 gap-2 rounded-2xl" onClick={handleUpload} disabled={savingUpload}>
-                    <CheckCircle className="h-4 w-4" />
-                    {savingUpload ? 'Salvando...' : 'Salvar na biblioteca'}
-                  </Button>
-                </div>
-                <p className="mt-3 text-center text-xs leading-5 text-muted-foreground">
-                  Depois de salva, esta imagem fica disponível para seleção em novos vídeos com IA.
-                </p>
-              </div>
-            </aside>
-          </div>
-        </DialogContent>
-      </Dialog>
+        uploadMode={uploadMode}
+        onUploadModeChange={setUploadMode}
+        uploadForm={uploadForm}
+        onUploadFormChange={setUploadForm}
+        uploadFile={uploadFile}
+        onUploadFileChange={setUploadFile}
+        uploadPreview={uploadPreview}
+        savingUpload={savingUpload}
+        onSave={handleUpload}
+      />
     </div>
   );
 }

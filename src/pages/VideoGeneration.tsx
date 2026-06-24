@@ -2,14 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
-import JobStatusBadge from '@/components/common/JobStatusBadge';
-import {
-  CreativeJourney,
-  FlowGuide,
-  PhoneCreativePreview,
-  QualityTrafficLight,
-  StoryboardStrip,
-} from '@/components/creative/CreativeVisualKit';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -20,8 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import {
   AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
   Bot,
   CheckCircle,
   Clock,
@@ -31,12 +21,10 @@ import {
   Layers3,
   ListChecks,
   Play,
-  Plus,
   RefreshCw,
   Rocket,
   Sparkles,
   Target,
-  Trash2,
   Upload,
   Wand2,
   XCircle,
@@ -51,6 +39,10 @@ import { generateVideo } from '@/services/videos';
 import { getJob, retryJob } from '@/services/jobs';
 import { uploadProductImage } from '@/services/uploads';
 import type { EntityId, Job, MediaAsset, Platform, Product, Status } from '@/types/entities';
+import JobStatusPanel from '@/features/video-generation/JobStatusPanel';
+import SceneEditor from '@/features/video-generation/SceneEditor';
+import VideoPreviewModal from '@/features/video-generation/VideoPreviewModal';
+import type { Briefing, VideoScene } from '@/features/video-generation/types';
 
 const templates = [
   { id: 'product', label: 'Anúncio direto', desc: 'Gancho, benefício principal e CTA direto', visual: 'Studio clean', motion: 'Zoom suave + texto grande', accent: 'from-primary to-emerald-500', prompt: 'fundo limpo, foco no produto, tipografia grande, CTA direto' },
@@ -84,31 +76,6 @@ const historyFilters = [
   { value: 'published', label: 'Usados em publicação' },
 ];
 
-type Briefing = {
-  targetAudience: string;
-  tone: string;
-  objective: string;
-  promise: string;
-  cta: string;
-  restrictions: string;
-  extra: string;
-};
-
-type VideoScene = {
-  id: string;
-  title: string;
-  duration: string;
-  goal: string;
-  onScreenText: string;
-  narration: string;
-  visualAction: string;
-  visualDirection: string;
-  cameraDirection: string;
-  referenceUse: string;
-  transition: string;
-  constraints: string;
-};
-
 const emptyBriefing: Briefing = {
   targetAudience: '',
   tone: 'Direto, natural e persuasivo',
@@ -132,9 +99,10 @@ const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing 
     visualAction: 'Mostrar o produto inteiro por 0,5s e entrar em close no detalhe mais reconhecível, sem cortes confusos.',
     visualDirection: 'Produto centralizado, fundo limpo, contraste alto, visual de demonstração real e não apenas foto estática.',
     cameraDirection: 'Vídeo vertical 9:16. Produto no centro, margem segura para texto no topo e CTA no rodapé. Movimento de push-in suave.',
-    referenceUse: 'Usar a melhor imagem real do produto como referência principal para manter forma, cor e proporções.',
+    referenceUse: 'Usar a melhor imagem real do produto como referência obrigatória. O vídeo precisa ser extremamente fiel ao formato, cor, proporções, textura, detalhes e acessórios visíveis do produto enviado pelo usuário.',
+    visualFidelity: 'Preservar exatamente o produto das imagens: mesma cor, formato, lente/tela/controle/acessório, textura, proporção e identidade visual. Se algo não estiver claro nas fotos, não inventar.',
     transition: 'Terminar com movimento aproximando do detalhe que será explicado na próxima cena.',
-    constraints: 'Não inventar funções que não apareçam no anúncio. Evitar promessa absoluta e texto muito longo.',
+    constraints: 'Não inventar funções que não apareçam no anúncio. Não alterar aparência, cor, formato, logo, embalagem ou acessórios do produto das imagens. Evitar promessa absoluta e texto muito longo.',
   },
   {
     id: createSceneId(),
@@ -146,9 +114,10 @@ const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing 
     visualAction: 'Demonstrar o produto em uso ou simular o uso com mãos, mesa, ambiente real e detalhe do recurso principal.',
     visualDirection: 'Cortes curtos, zoom/pan no produto, foco no antes/depois do benefício e ritmo de review vendedor.',
     cameraDirection: 'Manter composição 9:16 com produto ocupando 60% da tela. Texto curto em área livre, sem cobrir detalhes importantes.',
-    referenceUse: 'Se houver várias imagens, usar close, embalagem, acessório ou controle como apoio visual para explicar o benefício.',
+    referenceUse: 'Se houver várias imagens, usar close, embalagem, acessório ou controle como apoio visual fiel. Cada detalhe mostrado deve bater com as fotos do usuário ou com o pedido feito na plataforma.',
+    visualFidelity: 'Demonstrar o mesmo produto enviado, sem trocar por versão genérica. A ação pode ser encenada, mas o objeto precisa manter aparência e acessórios iguais às imagens.',
     transition: 'Conectar com a prova: depois do benefício, mostrar evidência visual ou contexto que dá confiança.',
-    constraints: 'Não usar frases genéricas como “produto incrível” sem mostrar o motivo visualmente.',
+    constraints: 'Não usar frases genéricas como “produto incrível” sem mostrar o motivo visualmente. Não criar uma versão diferente do produto; preservar design, escala, materiais e acessórios das imagens.',
   },
   {
     id: createSceneId(),
@@ -160,9 +129,10 @@ const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing 
     visualAction: 'Mostrar textura, tamanho, acessório, tela, encaixe ou resultado final. Se for unboxing, incluir embalagem e item fora da caixa.',
     visualDirection: 'Cena de demonstração com luz natural/premium, fundo organizado e destaque para mãos interagindo com o produto.',
     cameraDirection: 'Alternar close vertical e plano médio. Manter o produto nítido e o fundo levemente desfocado.',
-    referenceUse: 'Usar imagens secundárias para manter continuidade: acessório, controle, embalagem, tela projetada ou detalhe de acabamento.',
+    referenceUse: 'Usar imagens secundárias para manter continuidade fiel: acessório, controle, embalagem, tela projetada ou detalhe de acabamento. Tudo que aparecer precisa parecer o mesmo produto das fotos.',
+    visualFidelity: 'Detalhes físicos, embalagem, acabamento, botões, tela, controle e acessórios precisam permanecer coerentes com as imagens reais do usuário.',
     transition: 'Finalizar com o produto pronto para uso, preparando a chamada de ação final.',
-    constraints: 'Evitar aparência de propaganda exagerada. A cena precisa parecer uma demonstração honesta.',
+    constraints: 'Evitar aparência de propaganda exagerada. A cena precisa parecer uma demonstração honesta e fiel ao produto real enviado pelo usuário.',
   },
   {
     id: createSceneId(),
@@ -174,17 +144,15 @@ const createDefaultScenes = (productName = 'produto', currentBriefing: Briefing 
     visualAction: 'Mostrar produto em composição final bonita, com benefício resumido e CTA destacado.',
     visualDirection: 'Tela final limpa, produto em destaque, CTA grande, contraste alto e sensação de anúncio pronto para Reels/TikTok/Shorts.',
     cameraDirection: 'Formato 9:16 com CTA no terço inferior, produto central e espaço superior para frase curta. Sem elementos cortados.',
-    referenceUse: 'Usar imagem mais bonita do produto como hero shot final.',
+    referenceUse: 'Usar imagem mais bonita do produto como hero shot final, mantendo aparência extremamente fiel ao produto original enviado pelo usuário.',
+    visualFidelity: 'Hero shot final deve mostrar o mesmo produto do anúncio, sem alterar modelo, cor, escala, proporções, marca aparente ou acessórios.',
     transition: 'Encerrar com leve zoom out ou brilho sutil no CTA, sem cortar abruptamente.',
-    constraints: 'Não colocar excesso de texto. Manter CTA único e direto.',
+    constraints: 'Não colocar excesso de texto. Manter CTA único e direto. Não mudar o produto para um modelo genérico ou visual diferente das imagens de referência.',
   },
 ];
 
 const getAssetPreview = (asset: MediaAsset) => asset.thumbnail_url || asset.url;
 const getVideoScore = (asset: MediaAsset) => Number(asset.quality_score ?? (asset.status === 'approved' ? 88 : asset.status === 'rejected' ? 38 : 72));
-const readRecord = (value: unknown): Record<string, unknown> => (value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {});
-const readString = (value: unknown) => (typeof value === 'string' ? value : undefined);
-const readNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 const getDurationSeconds = (value: string) => Number.parseInt(value, 10) || 15;
 const estimateSegmentCount = (value: string) => Math.max(1, Math.ceil(getDurationSeconds(value) / 10));
 const estimateVideoCost = (value: string) => {
@@ -226,51 +194,6 @@ const getFriendlyError = (error: unknown, fallback = 'Não foi possível conclui
   }
   return raw || fallback;
 };
-const getJobStage = (job: Job) => {
-  const progress = job.progress || 0;
-  const payload = readRecord(job.payload);
-  const result = readRecord(job.result);
-  const stage = readString(payload.ai_video_stage);
-  const currentSegment = readNumber(payload.ai_video_segment_current);
-  const totalSegments = readNumber(payload.ai_video_segments_total);
-  const fallbackReason = readString(payload.ai_video_fallback_reason);
-  const labelByStage: Record<string, { label: string; detail: string }> = {
-    queued: { label: 'Em fila', detail: 'Pedido recebido. Aguardando o worker iniciar.' },
-    creating_scene_plan: { label: 'Criando roteiro', detail: 'Organizando plano de cenas, imagens e instruções para a IA.' },
-    external_generation: {
-      label: currentSegment && totalSegments ? `Gerando segmento ${currentSegment}/${totalSegments}` : 'Gerando com IA',
-      detail: 'Kling/Replicate criando o trecho do vídeo com base nas imagens e no roteiro.',
-    },
-    concatenating_segments: { label: 'Juntando vídeo', detail: 'FFmpeg unindo segmentos IA em um vídeo maior e contínuo.' },
-    uploading_to_library: { label: 'Enviando para biblioteca', detail: 'Salvando arquivo final no storage e atualizando a mídia.' },
-    fallback_ffmpeg: { label: 'Fallback FFmpeg', detail: fallbackReason ? getFriendlyError(fallbackReason) : 'Provider IA falhou. O sistema renderiza versão local para não quebrar o fluxo.' },
-  };
-  if (stage && labelByStage[stage]) return { ...labelByStage[stage], progress };
-  if (job.status === 'failed') return { label: 'Falhou', detail: getFriendlyError(job.error_message, 'Verifique o erro e tente novamente.'), progress: 100 };
-  if (job.status === 'cancelled') return { label: 'Cancelado', detail: 'O processamento foi interrompido.', progress: 100 };
-  if (job.status === 'completed') {
-    const cost = readRecord(result.cost);
-    const costValue = readNumber(cost.estimated_cost_usd);
-    const resultFallbackReason = readString(result.fallback_reason);
-    if (fallbackReason || resultFallbackReason) {
-      return {
-        label: 'Pronto com fallback',
-        detail: getFriendlyError(fallbackReason || resultFallbackReason),
-        progress: 100,
-      };
-    }
-    return {
-      label: 'Pronto para revisão',
-      detail: costValue ? `Render concluído. Custo estimado: US$ ${costValue.toFixed(4)}.` : 'Render concluído. Revise antes de publicar.',
-      progress: 100,
-    };
-  }
-  if (job.status === 'queued' || progress < 20) return { label: 'Em fila', detail: 'Aguardando worker pegar o job.', progress };
-  if (job.status === 'processing' || progress < 55) return { label: 'Preparando roteiro e assets', detail: 'Organizando cenas, mídia e plano de render.', progress };
-  if (job.status === 'rendering' || progress < 85) return { label: 'Renderizando vídeo', detail: 'FFmpeg/worker montando o vídeo final.', progress };
-  if (job.status === 'uploading' || progress < 100) return { label: 'Salvando mídia', detail: 'Enviando arquivo para storage e criando preview.', progress };
-  return { label: 'Processando', detail: 'Acompanhando atualização do backend.', progress };
-};
 
 export default function VideoGeneration() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -298,7 +221,6 @@ export default function VideoGeneration() {
   const [queue, setQueue] = useState<Job[]>([]);
   const [historyFilter, setHistoryFilter] = useState('all');
   const [activeVideo, setActiveVideo] = useState<MediaAsset | null>(null);
-  const [activeWizardStep, setActiveWizardStep] = useState(1);
   const [showPreflight, setShowPreflight] = useState(false);
 
   const load = async () => {
@@ -357,40 +279,8 @@ export default function VideoGeneration() {
     { label: 'Formato escolhido', ok: Boolean(selectedFormat), hint: selectedFormatConfig?.ratio || '' },
   ];
   const readiness = Math.round((checklist.filter((item) => item.ok).length / checklist.length) * 100);
-  const recommendedStep = !product ? 1 : readiness < 80 ? 2 : activeJobs.length > 0 ? 4 : 3;
-  const qualityWarnings = [
-    !product ? 'Selecione um anúncio base para contextualizar o roteiro.' : '',
-    !generationPreview && selectedMedia.length === 0 ? 'Adicione uma imagem real ou gere um criativo IA para evitar vídeo genérico.' : '',
-    !briefing.promise.trim() ? 'Preencha a promessa principal para deixar o gancho mais forte.' : '',
-    scriptPreview && scriptPreview.length < 120 ? 'Roteiro curto demais: revise antes de renderizar.' : '',
-  ].filter(Boolean);
-  const currentStep = activeWizardStep;
-  const wizardProgress = Math.round((currentStep / 4) * 100);
-  const stepCards = [
-    { number: 1, title: 'Anúncio', desc: 'Escolha produto, destino e formato', done: Boolean(product) },
-    { number: 2, title: 'Briefing', desc: 'Defina promessa, público e CTA', done: readiness >= 80 },
-    { number: 3, title: 'Roteiro & mídia', desc: 'Gere roteiro, imagem e escolha assets', done: Boolean(product && (scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration) || generationPreview || selectedMedia.length)) },
-    { number: 4, title: 'Render & revisão', desc: 'Renderize, acompanhe fila e aprove', done: stats.review + stats.approved > 0 },
-  ];
-  const canAdvanceWizard =
-    currentStep === 1
-      ? Boolean(product)
-      : currentStep === 2
-        ? readiness >= 60
-        : currentStep === 3
-          ? Boolean(product && (scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration) || generationPreview || selectedMedia.length || product.image_url))
-          : readiness >= 80;
   const stageCardClass = (step: number) =>
-    cn(
-      'rounded-2xl border bg-card p-4 transition-all sm:p-5',
-      currentStep === step
-        ? 'border-primary/60 shadow-lg shadow-primary/10 ring-1 ring-primary/20'
-        : 'border-border',
-    );
-
-  useEffect(() => {
-    setActiveWizardStep((current) => (recommendedStep > current ? recommendedStep : current));
-  }, [recommendedStep]);
+    cn('rounded-2xl border border-border bg-card p-4 transition-all sm:p-5', step > 0 && 'shadow-sm shadow-black/[0.02]');
 
   const updateScene = (id: string, patch: Partial<VideoScene>) => {
     setScenes((current) => current.map((scene) => (scene.id === id ? { ...scene, ...patch } : scene)));
@@ -410,6 +300,7 @@ export default function VideoGeneration() {
         visualDirection: '',
         cameraDirection: 'Vídeo vertical 9:16, produto centralizado, texto em área segura e sem cortar detalhes importantes.',
         referenceUse: '',
+        visualFidelity: 'Manter o produto extremamente fiel às imagens do usuário: mesma aparência, cor, proporção, textura, acessórios e detalhes físicos.',
         transition: '',
         constraints: 'Não inventar características do produto. Manter linguagem natural e comercial.',
       },
@@ -426,7 +317,7 @@ export default function VideoGeneration() {
   };
 
   const buildStructuredScript = (baseScript = scriptPreview) => {
-    const filledScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection || scene.goal || scene.visualAction);
+    const filledScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection || scene.goal || scene.visualAction || scene.visualFidelity);
     if (filledScenes.length === 0) return scriptPreview;
 
     const sceneText = filledScenes
@@ -440,6 +331,7 @@ export default function VideoGeneration() {
         scene.visualDirection ? `Direção visual: ${scene.visualDirection}` : '',
         scene.cameraDirection ? `Câmera e enquadramento 9:16: ${scene.cameraDirection}` : '',
         scene.referenceUse ? `Uso das imagens de referência: ${scene.referenceUse}` : '',
+        scene.visualFidelity ? `Fidelidade ao produto: ${scene.visualFidelity}` : '',
         scene.transition ? `Transição/conexão com a próxima cena: ${scene.transition}` : '',
         scene.constraints ? `Restrições da cena: ${scene.constraints}` : '',
       ].filter(Boolean).join('\n'))
@@ -452,6 +344,7 @@ export default function VideoGeneration() {
         `- Formato final: ${selectedFormatConfig?.ratio || '9:16'} vertical, otimizado para Reels, TikTok e Shorts.`,
         '- Manter continuidade visual entre cenas, como se fosse uma demonstração de produto com começo, meio e CTA.',
         '- Usar as imagens reais selecionadas como referência de aparência, cor, proporção e acessórios do produto.',
+        '- Fidelidade visual obrigatória: o produto gerado deve ser extremamente fiel às fotos enviadas pelo usuário ou ao pedido feito na plataforma. Não trocar modelo, cor, formato, textura, escala, embalagem, controle, tela, logo aparente ou acessórios.',
         '- Não inventar funções, marcas, preço, descontos ou resultados que não estejam no anúncio/briefing.',
         '- Texto na tela deve ser curto, grande, legível no celular e dentro da área segura vertical.',
       ].join('\n'),
@@ -460,7 +353,7 @@ export default function VideoGeneration() {
       `Observações: ${briefing.restrictions || 'Evitar promessas exageradas e manter linguagem natural.'}`,
     ].filter(Boolean).join('\n\n');
   };
-  const filledSceneCount = scenes.filter((scene) => scene.title && scene.goal && scene.onScreenText && scene.narration && scene.visualAction).length;
+  const filledSceneCount = scenes.filter((scene) => scene.title && scene.goal && scene.onScreenText && scene.narration && scene.visualAction && scene.visualFidelity).length;
   const hasVisualBase = Boolean(generationPreview || selectedMedia.length || product?.image_url);
   const creativeScore = Math.min(
     100,
@@ -475,20 +368,6 @@ export default function VideoGeneration() {
     ),
   );
   const creativeScoreLabel = creativeScore >= 82 ? 'Pronto para render' : creativeScore >= 62 ? 'Bom, mas revise' : 'Precisa de ajustes';
-  const creativeJourneyStages = [
-    { id: 'product', label: 'Produto', description: product ? product.name : 'Escolha o anúncio', icon: Target, status: product ? 'done' as const : 'active' as const },
-    { id: 'script', label: 'Roteiro', description: scriptPreview ? 'Roteiro revisável' : 'Gerar antes do render', icon: Sparkles, status: scriptPreview ? 'done' as const : product ? 'active' as const : 'waiting' as const },
-    { id: 'scenes', label: 'Cenas', description: `${filledSceneCount}/${scenes.length} completas`, icon: Layers3, status: filledSceneCount >= Math.min(3, scenes.length) ? 'done' as const : product ? 'active' as const : 'waiting' as const },
-    { id: 'ai', label: 'IA', description: hasVisualBase ? 'Referências prontas' : 'Precisa de imagem', icon: Bot, status: hasVisualBase ? 'done' as const : product ? 'active' as const : 'waiting' as const },
-    { id: 'render', label: 'Render', description: activeJobs.length ? 'Job em andamento' : 'Aguardando aprovação', icon: Film, status: activeJobs.length ? 'active' as const : creativeScore >= 80 ? 'done' as const : 'waiting' as const },
-    { id: 'approval', label: 'Aprovação', description: stats.review ? `${stats.review} em revisão` : 'Revise o resultado', icon: CheckCircle, status: stats.review || stats.approved ? 'active' as const : 'waiting' as const },
-    { id: 'publish', label: 'Publicação', description: stats.approved ? 'Pronto para agendar' : 'Depois da aprovação', icon: Rocket, status: stats.approved ? 'done' as const : 'waiting' as const },
-  ];
-  const storyboardScenes = scenes.map((scene) => ({
-    title: scene.title || 'Cena sem título',
-    text: scene.onScreenText || scene.visualAction || scene.narration || scene.visualDirection,
-    duration: scene.duration,
-  }));
   const costPreview = estimateVideoCost(duration);
 
   useEffect(() => {
@@ -549,6 +428,8 @@ Regras de qualidade:
 - O vídeo deve ser pensado para formato vertical 9:16, com texto legível em celular e área segura.
 - O roteiro precisa ter começo, meio e fim: gancho, demonstração, prova/contexto e CTA.
 - Cada cena precisa explicar o que aparece, o que acontece, como a câmera se move e como conecta com a próxima.
+- Fidelidade máxima ao produto: toda cena deve respeitar rigorosamente as imagens enviadas pelo usuário e o pedido feito na plataforma. O vídeo não pode transformar o produto em outro modelo, mudar cor, proporção, textura, embalagem, controle/acessório, tela, logo aparente ou detalhes físicos.
+- Quando houver dúvida visual, preferir uma cena mais simples e fiel ao produto real em vez de inventar elementos.
 - Não invente preço, desconto, marca, garantia, recursos técnicos ou resultados que não estejam no anúncio.
 - Evite frases genéricas. Mostre benefício por ação visual concreta.
 - Linguagem natural de vendedor/apresentador, sem promessa exagerada e sem cara de spam.
@@ -571,6 +452,7 @@ Ação visual obrigatória: [o que deve acontecer na imagem/vídeo]
 Direção visual: [luz, fundo, ritmo, estética]
 Câmera e enquadramento 9:16: [posição do produto, margem segura, movimento]
 Uso das imagens de referência: [qual tipo de imagem usar e como]
+Fidelidade ao produto: [quais detalhes das fotos do usuário precisam permanecer idênticos nesta cena]
 Transição/conexão com a próxima cena: [como uma cena puxa a outra]
 Restrições da cena: [o que não fazer]
 
@@ -819,110 +701,11 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
           <StudioMetric label="Rejeitados" value={stats.rejected} icon={XCircle} tone="destructive" />
         </div>
 
-        <section className="overflow-hidden rounded-3xl border border-border bg-card">
-          <div className="grid gap-0 lg:grid-cols-[1fr_360px]">
-            <div className="p-4 sm:p-5">
-              <SectionTitle icon={Rocket} title="Fluxo guiado do criativo" subtitle="Do anúncio base até o vídeo pronto para publicação" />
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {stepCards.map((step) => (
-                  <FlowStep
-                    key={step.number}
-                    number={step.number}
-                    title={step.title}
-                    desc={step.desc}
-                    active={currentStep === step.number}
-                    done={step.done}
-                    onClick={() => setActiveWizardStep(step.number)}
-                  />
-                ))}
-              </div>
-              <div className="mt-5 rounded-2xl border border-border bg-muted/25 p-3">
-                <div className="mb-2 flex items-center justify-between gap-3 text-xs">
-                  <span className="font-medium text-muted-foreground">Progresso do fluxo</span>
-                  <span className="font-syne font-bold text-primary">{wizardProgress}%</span>
-                </div>
-                <Progress value={wizardProgress} />
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    Etapa {currentStep}/4: {stepCards[currentStep - 1]?.desc}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 gap-1"
-                      disabled={currentStep === 1}
-                      onClick={() => setActiveWizardStep((step) => Math.max(1, step - 1))}
-                    >
-                      <ArrowLeft className="h-3.5 w-3.5" /> Voltar
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 gap-1"
-                      disabled={currentStep === 4 || !canAdvanceWizard}
-                      onClick={() => setActiveWizardStep((step) => Math.min(4, step + 1))}
-                    >
-                      Próximo <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="border-t border-border bg-muted/25 p-4 sm:p-5 lg:border-l lg:border-t-0">
-              <p className="font-syne text-sm font-bold text-foreground">Próxima melhor ação</p>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                {!product
-                  ? 'Escolha um anúncio base para a IA entender o produto.'
-                  : readiness < 80
-                    ? 'Complete o checklist para reduzir erros no render.'
-                    : activeJobs.length > 0
-                      ? 'Acompanhe o job até finalizar e revise o vídeo.'
-                      : 'Gere o vídeo ou crie uma variação com outro template.'}
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <InfoPill label="Prontidão" value={`${readiness}%`} />
-                <InfoPill label="Formato" value={selectedFormatConfig?.ratio || '9:16'} />
-                <InfoPill label="Template" value={selectedTemplateConfig?.label || 'Direto'} />
-                <InfoPill label="Destino" value={String(platform)} />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {!loading && (
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.35fr_0.65fr]">
-            <div className="space-y-5">
-              <CreativeJourney stages={creativeJourneyStages} />
-              <StoryboardStrip scenes={storyboardScenes} />
-            </div>
-            <div className="space-y-5">
-              <PhoneCreativePreview
-                title={scenes[0]?.onScreenText || briefing.promise || product?.name || 'Seu vídeo de divulgação'}
-                subtitle={product?.name || selectedTemplateConfig?.label}
-                imageUrl={generationPreview || product?.image_url}
-                badge={selectedTemplateConfig?.label || 'IA'}
-                cta={briefing.cta}
-                progress={creativeScore}
-              />
-              <QualityTrafficLight score={creativeScore} label="Prontidão do vídeo" />
-            </div>
-          </div>
-        )}
-
-        {!loading && (
-          <FlowGuide
-            title="Gerar vídeo sem se perder no fluxo"
-            items={[
-              { label: 'Escolha a oferta', description: 'Selecione o anúncio base para a IA entender produto, categoria e promessa.', icon: Target },
-              { label: 'Monte roteiro e visual', description: 'Use briefing, cenas e imagem IA para criar um criativo menos genérico.', icon: Wand2 },
-              { label: 'Renderize e revise', description: 'Envie para a fila, acompanhe o job e aprove antes de agendar.', icon: CheckCircle },
-            ]}
-          />
-        )}
-
         {error && <ErrorState onRetry={load} />}
+
+        {queue.length > 0 && (
+          <JobStatusPanel jobs={queue} onRetry={handleRetryJob} />
+        )}
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-5">
@@ -1168,19 +951,6 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
               </Button>
             </section>
 
-            <section className={stageCardClass(4)}>
-              <SectionTitle icon={Clock} title="Fila de jobs" subtitle="Status, progresso, retry e erros" />
-              <div className="mt-4 space-y-2">
-                {queue.length === 0 ? (
-                  <p className="rounded-xl bg-muted/35 p-4 text-sm text-muted-foreground">Nenhum job em andamento.</p>
-                ) : (
-                  queue.map((job) => (
-                    <JobQueueCard key={job.id} job={job} onRetry={() => handleRetryJob(job)} onCancel={() => updateQueue(job.id, { status: 'cancelled', progress: 100 })} />
-                  ))
-                )}
-              </div>
-            </section>
-
             {failedJobs.length > 0 && (
               <section className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 sm:p-5">
                 <SectionTitle icon={AlertTriangle} title="Central de erros amigável" subtitle="O que falhou, em linguagem simples, e qual ação tomar" />
@@ -1191,153 +961,17 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                 </div>
               </section>
             )}
-
-            <section className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-              <SectionTitle icon={AlertTriangle} title="Qualidade antes do render" subtitle="Sinais que ajudam a evitar criativos fracos" />
-              <div className="mt-4 space-y-3">
-                <QualitySignal label="Base visual" ok={Boolean(generationPreview || selectedMedia.length || product?.image_url)} value={generationPreview ? 'Criativo IA' : selectedMedia.length ? `${selectedMedia.length} asset(s)` : product?.image_url ? 'Imagem do anúncio' : 'Ausente'} />
-                <QualitySignal label="Roteiro" ok={Boolean(product && (scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration)))} value={scriptPreview ? 'IA + cenas' : product && scenes.some((scene) => scene.onScreenText || scene.narration) ? 'Cenas editáveis' : 'Ainda não gerado'} />
-                <QualitySignal label="CTA" ok={Boolean(briefing.cta.trim())} value={briefing.cta || 'Ausente'} />
-                <QualitySignal label="Score criativo" ok={creativeScore >= 62} value={`${creativeScore}% · ${creativeScoreLabel}`} />
-                <QualitySignal label="Risco operacional" ok={qualityWarnings.length === 0} value={qualityWarnings.length === 0 ? 'Baixo' : `${qualityWarnings.length} alerta(s)`} />
-              </div>
-              {qualityWarnings.length > 0 && (
-                <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/10 p-3">
-                  <p className="text-xs font-semibold text-warning">Ajustes recomendados</p>
-                  <ul className="mt-2 space-y-1 text-xs leading-5 text-muted-foreground">
-                    {qualityWarnings.map((warning) => <li key={warning}>• {warning}</li>)}
-                  </ul>
-                </div>
-              )}
-            </section>
           </div>
         </div>
 
         <section className={stageCardClass(3)}>
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <SectionTitle icon={ListChecks} title="Editor de roteiro por cenas" subtitle="Monte cada cena com objetivo, ação, câmera 9:16 e continuidade antes do render" />
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button type="button" variant="outline" size="sm" className="gap-2" onClick={resetScenesFromBriefing}>
-                <Sparkles className="h-4 w-4" /> Sugerir cenas
-              </Button>
-              <Button type="button" size="sm" className="gap-2" onClick={addScene}>
-                <Plus className="h-4 w-4" /> Adicionar cena
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
-            {scenes.map((scene, index) => (
-              <div key={scene.id} className="rounded-2xl border border-border bg-muted/25 p-4">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-syne text-xs font-bold uppercase tracking-[0.14em] text-primary">Cena {index + 1}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Cena vertical 9:16 com começo, ação visual e conexão narrativa.</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                    disabled={scenes.length <= 1}
-                    onClick={() => removeScene(scene.id)}
-                    aria-label={`Remover cena ${index + 1}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
-                  <Field label="Título da cena" value={scene.title} onChange={(value) => updateScene(scene.id, { title: value })} placeholder="Gancho, benefício, prova..." />
-                  <Field label="Tempo" value={scene.duration} onChange={(value) => updateScene(scene.id, { duration: value })} placeholder="0-3s" />
-                </div>
-                <div className="mt-3">
-                  <Label>Objetivo da cena</Label>
-                  <Textarea
-                    value={scene.goal}
-                    onChange={(event) => updateScene(scene.id, { goal: event.target.value })}
-                    className="mt-1.5 h-20 resize-none"
-                    placeholder="Ex: parar o scroll, mostrar benefício, provar uso, preparar CTA..."
-                  />
-                </div>
-                <div className="mt-3">
-                  <Label>Texto na tela</Label>
-                  <Textarea
-                    value={scene.onScreenText}
-                    onChange={(event) => updateScene(scene.id, { onScreenText: event.target.value })}
-                    className="mt-1.5 h-20 resize-none"
-                    placeholder="Frase curta que aparecerá no vídeo"
-                  />
-                </div>
-                <div className="mt-3">
-                  <Label>Narração ou legenda</Label>
-                  <Textarea
-                    value={scene.narration}
-                    onChange={(event) => updateScene(scene.id, { narration: event.target.value })}
-                    className="mt-1.5 h-20 resize-none"
-                    placeholder="O que a IA/roteiro deve comunicar nesta cena"
-                  />
-                </div>
-                <div className="mt-3">
-                  <Label>Ação visual obrigatória</Label>
-                  <Textarea
-                    value={scene.visualAction}
-                    onChange={(event) => updateScene(scene.id, { visualAction: event.target.value })}
-                    className="mt-1.5 h-20 resize-none"
-                    placeholder="Ex: mão abrindo embalagem, close no controle, produto projetando imagem..."
-                  />
-                </div>
-                <div className="mt-3">
-                  <Label>Direção visual</Label>
-                  <Textarea
-                    value={scene.visualDirection}
-                    onChange={(event) => updateScene(scene.id, { visualDirection: event.target.value })}
-                    className="mt-1.5 h-20 resize-none"
-                    placeholder="Zoom, close, movimento, fundo, elementos visuais..."
-                  />
-                </div>
-                <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                  <div>
-                    <Label>Câmera e enquadramento 9:16</Label>
-                    <Textarea
-                      value={scene.cameraDirection}
-                      onChange={(event) => updateScene(scene.id, { cameraDirection: event.target.value })}
-                      className="mt-1.5 h-24 resize-none"
-                      placeholder="Produto central, texto em área segura, movimento vertical..."
-                    />
-                  </div>
-                  <div>
-                    <Label>Uso das imagens de referência</Label>
-                    <Textarea
-                      value={scene.referenceUse}
-                      onChange={(event) => updateScene(scene.id, { referenceUse: event.target.value })}
-                      className="mt-1.5 h-24 resize-none"
-                      placeholder="Qual imagem usar: close, embalagem, detalhe, uso real..."
-                    />
-                  </div>
-                </div>
-                <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                  <div>
-                    <Label>Transição para próxima cena</Label>
-                    <Textarea
-                      value={scene.transition}
-                      onChange={(event) => updateScene(scene.id, { transition: event.target.value })}
-                      className="mt-1.5 h-24 resize-none"
-                      placeholder="Como essa cena puxa a próxima sem parecer cortada..."
-                    />
-                  </div>
-                  <div>
-                    <Label>Restrições da cena</Label>
-                    <Textarea
-                      value={scene.constraints}
-                      onChange={(event) => updateScene(scene.id, { constraints: event.target.value })}
-                      className="mt-1.5 h-24 resize-none"
-                      placeholder="O que a IA não deve inventar, exagerar ou mostrar..."
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <SceneEditor
+            scenes={scenes}
+            onSceneChange={updateScene}
+            onAddScene={addScene}
+            onRemoveScene={removeScene}
+            onSuggestScenes={resetScenesFromBriefing}
+          />
         </section>
 
         <section className={stageCardClass(3)}>
@@ -1398,7 +1032,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
         onConfirm={handleGenerate}
         generating={generating}
       />
-      <VideoDetailsDialog asset={activeVideo} open={Boolean(activeVideo)} onOpenChange={(open) => !open && setActiveVideo(null)} onStatus={handleVideoStatus} />
+      <VideoPreviewModal asset={activeVideo} open={Boolean(activeVideo)} onOpenChange={(open) => !open && setActiveVideo(null)} onStatus={handleVideoStatus} />
     </div>
   );
 }
@@ -1432,19 +1066,19 @@ function PreflightDialog({
   onConfirm: () => void;
   generating: boolean;
 }) {
-  const visibleScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection || scene.goal || scene.visualAction);
+  const visibleScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection || scene.goal || scene.visualAction || scene.visualFidelity);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto rounded-3xl border-border bg-card p-0 sm:max-w-4xl">
-        <DialogHeader className="border-b border-border bg-[radial-gradient(circle_at_10%_0%,hsl(var(--primary)/0.18),transparent_38%)] px-5 py-5 sm:px-6">
-          <DialogTitle className="font-syne text-xl">Revisar antes de gastar crédito</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="flex !h-[94dvh] !w-[calc(100vw-0.75rem)] !max-w-none flex-col overflow-hidden rounded-[1.5rem] border-border bg-card p-0 shadow-2xl sm:!h-[92dvh] sm:!w-[calc(100vw-2rem)] lg:!h-[min(90dvh,900px)] lg:!w-[min(94vw,1320px)] xl:!w-[min(90vw,1460px)]">
+        <DialogHeader className="shrink-0 border-b border-border bg-[radial-gradient(circle_at_8%_0%,hsl(var(--primary)/0.22),transparent_36%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.28))] px-5 py-5 sm:px-7 lg:px-8">
+          <DialogTitle className="font-syne text-xl sm:text-2xl">Revisar antes de gastar crédito</DialogTitle>
+          <DialogDescription className="max-w-3xl text-sm leading-6">
             Confira roteiro, cenas e custo estimado antes de enviar para IA/render.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 p-5 sm:p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7 lg:px-8">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <PreflightMetric label="Produto" value={productName} />
             <PreflightMetric label="Template" value={template} />
@@ -1452,23 +1086,23 @@ function PreflightDialog({
             <PreflightMetric label="Prontidão" value={`${readiness}%`} tone={readiness >= 80 ? 'success' : 'warning'} />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
-            <div className="rounded-3xl border border-border bg-muted/25 p-4">
+          <div className="mt-5 grid min-h-[520px] gap-5 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
+            <div className="flex min-h-0 flex-col rounded-3xl border border-border bg-muted/20 p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-syne text-sm font-bold text-foreground">Plano de cenas</p>
-                  <p className="text-xs text-muted-foreground">Cada bloco será usado para orientar a IA e o render.</p>
+                  <p className="font-syne text-base font-bold text-foreground">Plano de cenas</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">Cada bloco será usado para orientar a IA e o render com fidelidade às imagens do produto.</p>
                 </div>
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   {visibleScenes.length} cena(s)
                 </span>
               </div>
-              <div className="space-y-3">
+              <div className="grid gap-3 overflow-visible lg:grid-cols-2 xl:max-h-[58vh] xl:overflow-y-auto xl:pr-2">
                 {visibleScenes.map((scene, index) => (
-                  <div key={scene.id} className="rounded-2xl border border-border bg-background/70 p-3">
+                  <div key={scene.id} className="rounded-2xl border border-border bg-background/75 p-4 shadow-sm">
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <p className="font-syne text-xs font-bold text-foreground">Cena {index + 1}: {scene.title || 'Sem título'}</p>
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{scene.duration || 'sem tempo'}</span>
+                      <p className="line-clamp-1 font-syne text-sm font-bold text-foreground">Cena {index + 1}: {scene.title || 'Sem título'}</p>
+                      <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[10px] text-muted-foreground">{scene.duration || 'sem tempo'}</span>
                     </div>
                     {scene.goal && (
                       <p className="mb-1 text-xs leading-5 text-muted-foreground">
@@ -1478,9 +1112,10 @@ function PreflightDialog({
                     <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Tela:</span> {scene.onScreenText || 'Sem texto definido'}</p>
                     <p className="mt-1 text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Narração:</span> {scene.narration || 'Sem narração definida'}</p>
                     {(scene.visualAction || scene.cameraDirection || scene.transition) && (
-                      <div className="mt-2 space-y-1 rounded-xl border border-border bg-muted/25 p-2">
+                      <div className="mt-3 space-y-1.5 rounded-xl border border-border bg-muted/25 p-3">
                         {scene.visualAction && <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Ação:</span> {scene.visualAction}</p>}
                         {scene.cameraDirection && <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">9:16:</span> {scene.cameraDirection}</p>}
+                        {scene.visualFidelity && <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Fidelidade:</span> {scene.visualFidelity}</p>}
                         {scene.transition && <p className="text-xs leading-5 text-muted-foreground"><span className="font-semibold text-foreground">Transição:</span> {scene.transition}</p>}
                       </div>
                     )}
@@ -1489,15 +1124,15 @@ function PreflightDialog({
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="rounded-3xl border border-primary/20 bg-primary/10 p-4">
+            <div className="space-y-4 xl:sticky xl:top-0 xl:self-start">
+              <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5">
                 <p className="font-syne text-xs font-bold uppercase tracking-[0.14em] text-primary">Estimativa</p>
-                <p className="mt-3 font-syne text-3xl font-bold text-foreground">US$ {costPreview.estimatedCost.toFixed(4)}</p>
+                <p className="mt-4 font-syne text-4xl font-bold text-foreground">US$ {costPreview.estimatedCost.toFixed(4)}</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   {costPreview.segments} segmento(s) de IA · {costPreview.seconds}s · aprox. US$ {costPreview.costPerSegment.toFixed(2)} por segmento.
                 </p>
               </div>
-              <div className="rounded-3xl border border-border bg-muted/25 p-4">
+              <div className="rounded-3xl border border-border bg-muted/25 p-5">
                 <p className="font-syne text-sm font-bold text-foreground">Checklist rápido</p>
                 <div className="mt-3 space-y-2">
                   <MiniCheck ok={readiness >= 80} label="Anúncio pronto para render" />
@@ -1508,7 +1143,9 @@ function PreflightDialog({
               </div>
             </div>
           </div>
+        </div>
 
+        <div className="shrink-0 border-t border-border bg-card/95 px-5 py-4 backdrop-blur sm:px-7 lg:px-8">
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Voltar e ajustar</Button>
             <Button className="gap-2" onClick={onConfirm} disabled={generating}>
@@ -1572,106 +1209,11 @@ function StudioMetric({ label, value, icon: Icon, tone = 'neutral' }: { label: s
   );
 }
 
-function FlowStep({ number, title, desc, active, done, onClick }: { number: number; title: string; desc: string; active?: boolean; done?: boolean; onClick?: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        active ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10' : done ? 'border-success/25 bg-success/5' : 'border-border bg-muted/25',
-      )}
-    >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <span className={cn('flex h-8 w-8 items-center justify-center rounded-xl font-syne text-sm font-bold', done ? 'bg-success text-success-foreground' : active ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>
-          {done ? <CheckCircle className="h-4 w-4" /> : number}
-        </span>
-        {active && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">Agora</span>}
-      </div>
-      <p className="font-syne text-sm font-bold text-foreground">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{desc}</p>
-    </button>
-  );
-}
-
 function InfoPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-2xl border border-border bg-card px-3 py-2">
       <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
       <p className="mt-0.5 truncate font-syne text-xs font-bold text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function QualitySignal({ label, value, ok }: { label: string; value: string; ok: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/25 p-3">
-      <div className="flex min-w-0 items-center gap-3">
-        <span className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-xl', ok ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
-          {ok ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground">{label}</p>
-          <p className="truncate text-xs text-muted-foreground">{value}</p>
-        </div>
-      </div>
-      <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', ok ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
-        {ok ? 'OK' : 'Ajustar'}
-      </span>
-    </div>
-  );
-}
-
-function JobQueueCard({ job, onCancel, onRetry }: { job: Job; onCancel: () => void; onRetry: () => void }) {
-  const stage = getJobStage(job);
-  const isActive = ['queued', 'processing', 'rendering', 'uploading'].includes(job.status);
-  const stageSteps = [
-    { label: 'Roteiro', active: stage.progress >= 25 },
-    { label: 'Segmentos', active: stage.progress >= 45 },
-    { label: 'Concat', active: stage.progress >= 82 },
-    { label: 'Biblioteca', active: stage.progress >= 90 },
-  ];
-  const payload = readRecord(job.payload);
-  const fallbackReason = readString(payload.ai_video_fallback_reason);
-  const cost = readRecord(job.result?.cost || payload.cost_estimate);
-  const costValue = readNumber(cost.estimated_cost_usd);
-
-  return (
-    <div className="rounded-2xl border border-border bg-muted/20 p-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-foreground">{job.title}</p>
-          <p className="mt-1 text-xs font-medium text-primary">{stage.label}</p>
-          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">{stage.detail}</p>
-        </div>
-        <JobStatusBadge status={job.status} />
-      </div>
-      <Progress value={stage.progress} className="mt-3" />
-      {(fallbackReason || costValue !== undefined) && (
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {costValue !== undefined && (
-            <div className="rounded-xl border border-border bg-background/70 px-3 py-2 text-xs text-muted-foreground">
-              Custo estimado: <span className="font-semibold text-foreground">US$ {costValue.toFixed(4)}</span>
-            </div>
-          )}
-          {fallbackReason && (
-            <div className="rounded-xl border border-warning/20 bg-warning/10 px-3 py-2 text-xs text-warning">
-              Fallback: {fallbackReason}
-            </div>
-          )}
-        </div>
-      )}
-      <div className="mt-3 grid grid-cols-4 gap-1">
-        {stageSteps.map((step) => (
-          <div key={step.label} className={cn('rounded-full px-2 py-1 text-center text-[9px] font-semibold', step.active ? 'bg-primary/15 text-primary' : 'bg-background text-muted-foreground')}>
-            {step.label}
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 flex justify-end gap-2">
-        {job.status === 'failed' && <Button size="sm" variant="outline" className="h-8 gap-1" onClick={onRetry}><RefreshCw className="h-3.5 w-3.5" /> Tentar novamente</Button>}
-        {isActive && <Button size="sm" variant="ghost" className="h-8" onClick={onCancel}>Cancelar</Button>}
-      </div>
     </div>
   );
 }
@@ -1767,183 +1309,6 @@ function ScoreMini({ label, value, invert }: { label: string; value: number; inv
     <div className="rounded-xl bg-muted/45 p-2">
       <p className={cn('font-bold', good ? 'text-success' : 'text-warning')}>{value}%</p>
       <p className="text-[10px] text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function VideoDetailsDialog({ asset, open, onOpenChange, onStatus }: { asset: MediaAsset | null; open: boolean; onOpenChange: (open: boolean) => void; onStatus: (asset: MediaAsset, status: Status, message: string) => void }) {
-  if (!asset) return null;
-  const score = getVideoScore(asset);
-  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
-  const shortId = String(asset.id || '').slice(0, 10) || 'sem_id';
-  const preview = asset.thumbnail_url || asset.url;
-  const qualityTone =
-    score >= 80
-      ? 'border-success/20 bg-success/10 text-success'
-      : score >= 50
-        ? 'border-warning/20 bg-warning/10 text-warning'
-        : 'border-destructive/20 bg-destructive/10 text-destructive';
-  const qualityLabel = score >= 80 ? 'Alta qualidade' : score >= 50 ? 'Boa para revisar' : 'Baixa qualidade';
-  const reviewMessage =
-    score < 50
-      ? 'Revisar antes de publicar - qualidade baixa detectada'
-      : score < 80
-        ? 'Bom para testes - revise roteiro e CTA antes do disparo'
-        : 'Pronto para divulgação - ativo com boa qualidade';
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex !h-[94dvh] !w-[calc(100vw-0.75rem)] !max-w-none flex-col overflow-hidden rounded-t-[1.5rem] border-border bg-card p-0 text-foreground shadow-2xl sm:!h-[90dvh] sm:!w-[calc(100vw-2rem)] sm:rounded-[1.5rem] lg:!h-[min(88dvh,860px)] lg:!w-[min(92vw,1280px)] xl:!h-[min(86dvh,900px)] xl:!w-[min(88vw,1380px)]">
-        <DialogHeader className="shrink-0 border-b border-border bg-[radial-gradient(circle_at_8%_0%,hsl(var(--primary)/0.18),transparent_38%),linear-gradient(135deg,hsl(var(--card)),hsl(var(--muted)/0.35))] px-4 py-3 pr-10 sm:px-6 sm:py-4 sm:pr-12">
-          <div className="flex min-w-0 items-start gap-3 sm:items-center">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20 sm:h-11 sm:w-11">
-              <Film className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <DialogTitle className="line-clamp-2 font-syne text-base font-bold leading-tight text-foreground sm:line-clamp-1 sm:text-lg">
-                {asset.title || 'Detalhes do vídeo gerado'}
-              </DialogTitle>
-              <DialogDescription className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
-                {asset.product_name || 'Sem anúncio vinculado'}
-              </DialogDescription>
-            </div>
-            <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
-              <StatusBadge status={asset.status} />
-              <span className={cn('rounded-full border px-2.5 py-1 text-[10px] font-semibold', qualityTone)}>{qualityLabel} · {normalizedScore}%</span>
-              <span className="rounded-full bg-primary/15 px-2.5 py-1 text-[10px] font-semibold text-primary">IA</span>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(560px,1.2fr)_minmax(480px,0.8fr)] lg:overflow-hidden">
-          <section className="flex min-h-[52dvh] flex-col items-center gap-3 border-b border-border bg-muted/35 p-3 sm:min-h-[620px] sm:gap-4 sm:p-5 md:p-6 lg:min-h-0 lg:border-b-0 lg:border-r">
-            <div className="relative flex min-h-[320px] w-full max-w-[720px] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-border bg-background shadow-xl shadow-black/10 sm:rounded-3xl lg:min-h-0">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,hsl(var(--primary)/0.12),transparent_38%)]" />
-              {asset.url ? (
-                <video src={asset.url} poster={asset.thumbnail_url} controls className="relative h-full w-full bg-black object-contain" />
-              ) : preview ? (
-                <img src={preview} alt={asset.title || ''} className="relative h-full w-full object-cover" />
-              ) : (
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-border bg-muted">
-                  <Play className="ml-0.5 h-5 w-5 fill-muted-foreground/25 text-muted-foreground/25" />
-                </div>
-              )}
-            </div>
-            <div className="flex w-full max-w-[720px] shrink-0 items-center justify-between gap-3 px-1">
-              <span className="font-syne text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                {preview ? 'Prévia do vídeo' : 'Prévia indisponível'}
-              </span>
-              <span className="rounded-full bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
-                {asset.duration ? `${asset.duration}` : 'Vídeo'}
-              </span>
-            </div>
-            <div className={cn('w-full max-w-[720px] shrink-0 rounded-2xl border p-3', qualityTone)}>
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-[10px] font-semibold">Qualidade</span>
-                <span className="font-syne text-xs font-bold text-foreground">{normalizedScore}%</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-background/70">
-                <div className={cn('h-full rounded-full transition-all', score >= 80 ? 'bg-success' : score >= 50 ? 'bg-warning' : 'bg-gradient-to-r from-destructive to-primary')} style={{ width: `${normalizedScore}%` }} />
-              </div>
-            </div>
-          </section>
-
-          <section className="flex min-h-0 min-w-0 flex-col gap-4 p-4 sm:gap-5 sm:p-6 lg:overflow-hidden">
-            <div className={cn('shrink-0 rounded-2xl border p-4 sm:rounded-3xl', qualityTone)}>
-              <div className="flex items-center justify-between gap-3 sm:gap-4">
-                <div className="min-w-0">
-                  <p className="font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Qualidade do vídeo</p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">{qualityLabel}</p>
-                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{reviewMessage}</p>
-                </div>
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-background/80 font-syne text-lg font-bold text-foreground shadow-sm sm:h-16 sm:w-16 sm:text-xl">
-                  {normalizedScore}%
-                </div>
-              </div>
-              <div className="mt-4 space-y-3">
-                <QualityLine label="Qualidade visual" value={score} />
-                <QualityLine label="Clareza da oferta" value={Math.min(score + 4, 100)} />
-                <QualityLine label="Força do CTA" value={Math.min(score + 6, 100)} />
-                <QualityLine label="Adequação à plataforma" value={Math.min(score + 2, 100)} />
-                <QualityLine label="Risco de parecer spam" value={Math.max(100 - score, 8)} invert />
-              </div>
-            </div>
-
-            <div className="shrink-0">
-              <p className="mb-3 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Metadados</p>
-              <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:gap-3">
-                <PreviewMetaBox label="Tipo" value={asset.type?.replace('_', ' ') || 'generated video'} />
-                <PreviewMetaBox label="Origem" value={asset.source || 'Não informada'} />
-                <PreviewMetaBox label="Duração" value={asset.duration ? String(asset.duration) : 'Não informada'} muted={!asset.duration} />
-                <PreviewMetaBox label="Arquivo" value={asset.file_size ? `${Math.round(asset.file_size / 1024)} KB` : 'Não informado'} muted={!asset.file_size} />
-              </div>
-            </div>
-
-            <div className="shrink-0">
-              <p className="mb-3 font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Ações</p>
-              <div className="grid gap-2 min-[420px]:grid-cols-2 sm:gap-3">
-                <Button className="h-12 gap-2 rounded-2xl bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-lg shadow-primary/20" onClick={() => asset.url && window.open(asset.url, '_blank')}>
-                  <Play className="h-3.5 w-3.5" /> Abrir vídeo
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset, 'approved', 'Vídeo aprovado')}>
-                  <CheckCircle className="h-3.5 w-3.5" /> Aprovar
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset, 'rejected', 'Vídeo rejeitado')}>
-                  <XCircle className="h-3.5 w-3.5" /> Rejeitar
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => onStatus(asset, 'generating', 'Variação enviada para geração')}>
-                  <RefreshCw className="h-3.5 w-3.5" /> Criar variação
-                </Button>
-                <Button variant="outline" className="h-12 gap-2 rounded-2xl bg-card" onClick={() => navigator.clipboard?.writeText(asset.url || '')}>
-                  <Copy className="h-3.5 w-3.5" /> Copiar link
-                </Button>
-                <Button className="h-12 gap-2 rounded-2xl" onClick={() => onStatus(asset, 'scheduled', 'Vídeo enviado para agendamento')}>
-                  <Clock className="h-3.5 w-3.5" /> Agendar publicação
-                </Button>
-              </div>
-            </div>
-
-            <div className="min-h-[150px] rounded-2xl border border-border bg-muted/25 p-4 sm:min-h-[170px] sm:rounded-3xl lg:flex-1">
-              <p className="font-syne text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Roteiro e legenda</p>
-              <p className="mt-2 line-clamp-7 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
-                {asset.caption || 'Sem roteiro salvo.'}
-              </p>
-            </div>
-          </section>
-        </div>
-
-        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-muted/30 px-4 py-3 sm:px-5">
-          <span className="flex min-w-0 items-center gap-2 text-[11px] text-muted-foreground">
-            <XCircle className={cn('h-3.5 w-3.5 shrink-0', score < 50 ? 'text-destructive' : score < 80 ? 'text-warning' : 'text-success')} />
-            <span className="truncate">{reviewMessage}</span>
-          </span>
-          <span className="shrink-0 rounded-lg border border-border bg-background px-2 py-1 font-mono text-[10px] text-muted-foreground">
-            {shortId}
-          </span>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function QualityLine({ label, value, invert }: { label: string; value: number; invert?: boolean }) {
-  const good = invert ? value <= 30 : value >= 75;
-  return (
-    <div>
-      <div className="mb-1 flex justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className={cn('font-semibold', good ? 'text-success' : 'text-warning')}>{value}%</span>
-      </div>
-      <Progress value={value} />
-    </div>
-  );
-}
-
-function PreviewMetaBox({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-border bg-muted/25 px-3 py-3 transition-colors hover:border-primary/30 hover:bg-muted/40">
-      <p className="font-syne text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
-      <p className={cn('mt-1 line-clamp-1 font-syne text-xs font-semibold', muted ? 'text-muted-foreground' : 'text-foreground')}>{value}</p>
     </div>
   );
 }
