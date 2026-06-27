@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import ApiStatusIndicator from "@/components/common/ApiStatusIndicator";
 import { useAuth } from "@/lib/AuthContext";
 import { useNotifications } from "@/lib/NotificationContext";
 import { useTheme } from "@/lib/ThemeContext";
@@ -43,6 +44,8 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
               /
             </span>
           </div>
+
+          <ApiStatusIndicator />
 
           <Button
             variant="ghost"

@@ -1,5 +1,7 @@
 type RequestOptions = RequestInit & {
   query?: Record<string, string | number | boolean | undefined>;
+  timeoutMs?: number;
+  retry?: number;
 };
 
 function resolveApiBaseUrl() {
@@ -14,10 +16,14 @@ function resolveApiBaseUrl() {
   return '/api';
 }
 
-const API_BASE_URL = resolveApiBaseUrl();
+export const API_BASE_URL = resolveApiBaseUrl();
 export const API_TOKEN_STORAGE_KEY = 'automedia_api_token';
 export const API_REFRESH_TOKEN_STORAGE_KEY = 'automedia_api_refresh_token';
 export const API_AUTH_EXPIRED_EVENT = 'automedia:auth-expired';
+export const API_STATUS_EVENT = 'automedia:api-status';
+
+const DEFAULT_TIMEOUT_MS = 20000;
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 type ApiEnvelope<T> = {
   data?: T;
@@ -35,6 +41,11 @@ type LastApiError = {
 };
 
 let lastApiError: LastApiError | null = null;
+
+function notifyApiStatus(online: boolean, detail?: string) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(API_STATUS_EVENT, { detail: { online, detail, checkedAt: new Date().toISOString() } }));
+}
 
 function notifyAuthExpired() {
   if (typeof window === 'undefined') return;
@@ -138,6 +149,17 @@ function buildUrl(path: string, query?: RequestOptions['query']) {
   return url.toString();
 }
 
+function createTimeoutSignal(timeoutMs = DEFAULT_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  return { controller, timeoutId };
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
 async function refreshAccessToken() {
   const refreshToken = typeof window !== 'undefined' ? window.localStorage.getItem(API_REFRESH_TOKEN_STORAGE_KEY) : null;
   if (!refreshToken) return false;
@@ -164,10 +186,12 @@ async function refreshAccessToken() {
 }
 
 async function request<T>(path: string, options: RequestOptions = {}, didRefresh = false): Promise<T> {
-  const { query, headers, body, ...init } = options;
+  const { query, headers, body, timeoutMs = DEFAULT_TIMEOUT_MS, retry, ...init } = options;
   const isFormData = body instanceof FormData;
   const requestHeaders = new Headers(headers);
   const token = typeof window !== 'undefined' ? window.localStorage.getItem(API_TOKEN_STORAGE_KEY) : null;
+  const method = String(init.method || 'GET').toUpperCase();
+  const retryLimit = retry ?? (READ_METHODS.has(method) ? 1 : 0);
 
   if (token) {
     requestHeaders.set('Authorization', `Bearer ${token}`);
@@ -177,18 +201,44 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
     requestHeaders.set('Content-Type', 'application/json');
   }
 
-  let response: Response;
+  let response: Response | null = null;
+  let attempt = 0;
 
-  try {
-    response = await fetch(buildUrl(path, query), {
-      ...init,
-      body,
-      headers: requestHeaders,
-    });
-  } catch (error) {
-    const technicalMessage = error instanceof Error ? error.message : 'Falha de conexão com a API';
-    const message = friendlyApiMessage(0, technicalMessage);
-    lastApiError = { path, status: 0, message, technicalMessage };
+  while (attempt <= retryLimit) {
+    const { controller, timeoutId } = createTimeoutSignal(timeoutMs);
+
+    try {
+      response = await fetch(buildUrl(path, query), {
+        ...init,
+        body,
+        headers: requestHeaders,
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeoutId);
+      notifyApiStatus(true);
+      break;
+    } catch (error) {
+      window.clearTimeout(timeoutId);
+      const timedOut = isAbortError(error);
+      const technicalMessage = timedOut ? `Tempo limite de ${Math.round(timeoutMs / 1000)}s excedido` : error instanceof Error ? error.message : 'Falha de conexão com a API';
+
+      if (attempt < retryLimit) {
+        attempt += 1;
+        await new Promise((resolve) => window.setTimeout(resolve, 450 * attempt));
+        continue;
+      }
+
+      const message = friendlyApiMessage(0, technicalMessage);
+      lastApiError = { path, status: 0, message, technicalMessage };
+      notifyApiStatus(false, technicalMessage);
+      throw new ApiRequestError(message, 0, null);
+    }
+  }
+
+  if (!response) {
+    const message = friendlyApiMessage(0, 'Resposta vazia da API');
+    lastApiError = { path, status: 0, message, technicalMessage: 'Resposta vazia da API' };
+    notifyApiStatus(false, 'Resposta vazia da API');
     throw new ApiRequestError(message, 0, null);
   }
 
@@ -204,6 +254,7 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
     const technicalMessage = typeof payload === 'object' && payload?.error?.message ? payload.error.message : 'Erro inesperado na API';
     const message = friendlyApiMessage(response.status, technicalMessage);
     lastApiError = { path, status: response.status, message, technicalMessage };
+    notifyApiStatus(response.status < 500, technicalMessage);
     if (response.status === 401 && path !== '/auth/login') {
       notifyAuthExpired();
     }
@@ -213,6 +264,8 @@ async function request<T>(path: string, options: RequestOptions = {}, didRefresh
   if (lastApiError?.path === path) {
     lastApiError = null;
   }
+
+  notifyApiStatus(true);
 
   return unwrapPayload<T>(payload);
 }

@@ -6,3 +6,7 @@ export { default as JobStatusBadge } from "./JobStatusBadge";
 export { default as EmptyState } from "./EmptyState";
 export { default as MetricCard } from "./MetricCard";
 export { default as PageToolbar } from "./PageToolbar";
+export { default as ApiStatusIndicator } from "./ApiStatusIndicator";
+export { default as FeedbackState } from "./FeedbackState";
+export { default as SectionHeader } from "./SectionHeader";
+export { default as SurfaceCard } from "./SurfaceCard";
