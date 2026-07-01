@@ -3,9 +3,13 @@ import type { VideoGenerateRequest, VideoGenerateResponse } from '@/types/api';
 import type { Job, MediaAsset } from '@/types/entities';
 import { createMediaAsset } from './mediaAssets';
 
-export async function generateVideo(payload: VideoGenerateRequest) {
+type VideoRequestOptions = {
+  timeoutMs?: number;
+};
+
+export async function generateVideo(payload: VideoGenerateRequest, options?: VideoRequestOptions) {
   try {
-    return await apiClient.post<VideoGenerateResponse>('/videos/generate', payload);
+    return await apiClient.post<VideoGenerateResponse>('/videos/generate', payload, options);
   } catch (error) {
     if (!isNotFoundError(error)) {
       throw error;

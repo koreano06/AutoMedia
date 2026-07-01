@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TopBar from '@/components/layout/TopBar';
 import StatusBadge from '@/components/common/StatusBadge';
 import ErrorState from '@/components/common/ErrorState';
@@ -42,6 +42,7 @@ import type { EntityId, Job, MediaAsset, Platform, Product, Status } from '@/typ
 import JobStatusPanel from '@/features/video-generation/JobStatusPanel';
 import SceneEditor from '@/features/video-generation/SceneEditor';
 import VideoPreviewModal from '@/features/video-generation/VideoPreviewModal';
+import { createVideoImagePrompt, createVideoScriptPrompt, type VideoPromptContext } from '@/features/video-generation/prompts';
 import type { Briefing, VideoScene } from '@/features/video-generation/types';
 
 const templates = [
@@ -195,6 +196,19 @@ const getFriendlyError = (error: unknown, fallback = 'Não foi possível conclui
   return raw || fallback;
 };
 
+const withRequestTimeout = async <T,>(promise: Promise<T>, message: string, timeoutMs = 60_000): Promise<T> => {
+  let timeoutId: ReturnType<typeof window.setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+};
+
 export default function VideoGeneration() {
   const [products, setProducts] = useState<Product[]>([]);
   const [videos, setVideos] = useState<MediaAsset[]>([]);
@@ -222,8 +236,9 @@ export default function VideoGeneration() {
   const [historyFilter, setHistoryFilter] = useState('all');
   const [activeVideo, setActiveVideo] = useState<MediaAsset | null>(null);
   const [showPreflight, setShowPreflight] = useState(false);
+  const generatingRef = useRef(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setError(false);
     try {
@@ -240,16 +255,17 @@ export default function VideoGeneration() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
-  const product = products.find((item) => item.id === selectedProduct);
+  const product = useMemo(() => products.find((item) => item.id === selectedProduct), [products, selectedProduct]);
+  const selectedProductName = product?.name;
   const availableMedia = useMemo(
-    () => mediaAssets.filter((asset) => !selectedProduct || asset.product_id === selectedProduct || asset.product_name === product?.name),
-    [mediaAssets, product?.name, selectedProduct],
+    () => mediaAssets.filter((asset) => !selectedProduct || asset.product_id === selectedProduct || asset.product_name === selectedProductName),
+    [mediaAssets, selectedProduct, selectedProductName],
   );
   const selectedMedia = useMemo(
     () => mediaAssets.filter((asset) => selectedMediaIds.includes(asset.id)),
@@ -260,8 +276,24 @@ export default function VideoGeneration() {
   const generationSource = generatedVisual || selectedMedia[0] || null;
   const generationPreview = generationSource ? getAssetPreview(generationSource) : '';
   const filteredVideos = videos.filter((asset) => historyFilter === 'all' || asset.status === historyFilter);
-  const activeJobs = queue.filter((job) => ['queued', 'processing', 'rendering', 'uploading'].includes(job.status));
-  const failedJobs = queue.filter((job) => job.status === 'failed' || job.error_message);
+  const activeJobs = useMemo(() => queue.filter((job) => ['queued', 'processing', 'rendering', 'uploading'].includes(job.status)), [queue]);
+  const failedJobs = useMemo(() => queue.filter((job) => job.status === 'failed' || job.error_message), [queue]);
+  const promptContext = useMemo<VideoPromptContext | null>(() => {
+    if (!product) return null;
+
+    return {
+      product,
+      template: selectedTemplateConfig,
+      format: selectedFormatConfig,
+      duration,
+      rhythm,
+      audio,
+      platform,
+      briefing,
+      selectedMedia,
+      visualPrompt,
+    };
+  }, [audio, briefing, duration, platform, product, rhythm, selectedFormatConfig, selectedMedia, selectedTemplateConfig, visualPrompt]);
 
   const stats = {
     total: videos.length,
@@ -281,6 +313,11 @@ export default function VideoGeneration() {
   const readiness = Math.round((checklist.filter((item) => item.ok).length / checklist.length) * 100);
   const stageCardClass = (step: number) =>
     cn('rounded-2xl border border-border bg-card p-4 transition-all sm:p-5', step > 0 && 'shadow-sm shadow-black/[0.02]');
+
+  const upsertQueue = useCallback((job: Job) => setQueue((current) => [job, ...current]), []);
+  const updateQueue = useCallback((id: EntityId, patch: Partial<Job>) => {
+    setQueue((current) => current.map((job) => (job.id === id ? { ...job, ...patch } : job)));
+  }, []);
 
   const updateScene = (id: string, patch: Partial<VideoScene>) => {
     setScenes((current) => current.map((scene) => (scene.id === id ? { ...scene, ...patch } : scene)));
@@ -316,7 +353,7 @@ export default function VideoGeneration() {
     toast.success('Estrutura de cenas atualizada');
   };
 
-  const buildStructuredScript = (baseScript = scriptPreview) => {
+  const buildStructuredScript = useCallback((baseScript = scriptPreview) => {
     const filledScenes = scenes.filter((scene) => scene.title || scene.onScreenText || scene.narration || scene.visualDirection || scene.goal || scene.visualAction || scene.visualFidelity);
     if (filledScenes.length === 0) return scriptPreview;
 
@@ -352,7 +389,9 @@ export default function VideoGeneration() {
       `CTA final: ${briefing.cta}`,
       `Observações: ${briefing.restrictions || 'Evitar promessas exageradas e manter linguagem natural.'}`,
     ].filter(Boolean).join('\n\n');
-  };
+  }, [briefing.cta, briefing.restrictions, scenes, scriptPreview, selectedFormatConfig?.ratio]);
+
+  const structuredScript = useMemo(() => buildStructuredScript(), [buildStructuredScript]);
   const filledSceneCount = scenes.filter((scene) => scene.title && scene.goal && scene.onScreenText && scene.narration && scene.visualAction && scene.visualFidelity).length;
   const hasVisualBase = Boolean(generationPreview || selectedMedia.length || product?.image_url);
   const creativeScore = Math.min(
@@ -372,6 +411,7 @@ export default function VideoGeneration() {
 
   useEffect(() => {
     if (activeJobs.length === 0) return;
+    let cancelled = false;
 
     const timer = window.setInterval(async () => {
       const settledJobs: Job[] = [];
@@ -382,120 +422,53 @@ export default function VideoGeneration() {
 
           try {
             const freshJob = await getJob(job.id);
+            if (cancelled) return;
             updateQueue(job.id, freshJob);
             if (['completed', 'failed', 'cancelled'].includes(freshJob.status)) {
               settledJobs.push(freshJob);
             }
           } catch {
+            if (cancelled) return;
             updateQueue(job.id, { error_message: 'Não foi possível atualizar o status em tempo real.' });
           }
         }),
       );
 
-      if (settledJobs.some((job) => job.status === 'completed')) {
+      if (cancelled) return;
+
+      if (settledJobs.some((job) => ['completed', 'failed'].includes(job.status))) {
         const updatedVideos = await filterMediaAssets({ type: 'generated_video' }, '-created_date', 50);
+        if (cancelled) return;
         setVideos(updatedVideos);
       }
     }, 3500);
 
-    return () => window.clearInterval(timer);
-  }, [activeJobs]);
-
-  const createPrompt = (currentProduct: Product, scriptOnly = false) => `
-Você é um diretor criativo especialista em vídeos curtos de produto para afiliados, social commerce e anúncios UGC.
-Crie ${scriptOnly ? 'um roteiro estruturado por cenas' : 'um roteiro final'} para transformar um anúncio pronto em vídeo de divulgação.
-Anúncio/oferta base: ${currentProduct.name}
-Texto/contexto do anúncio original: ${currentProduct.description || 'Sem descrição'}
-Categoria/nicho: ${currentProduct.category || 'Não informada'}
-Template: ${selectedTemplateConfig?.label}
-Direção visual do template: ${selectedTemplateConfig?.visual} - ${selectedTemplateConfig?.motion}
-Guia criativo do template: ${selectedTemplateConfig?.prompt}
-Formato: ${selectedFormatConfig?.label} ${selectedFormatConfig?.ratio}
-Duração: ${duration}
-Ritmo: ${rhythm}
-Áudio: ${audio}
-Plataforma: ${platform}
-Público-alvo: ${briefing.targetAudience || 'compradores interessados'}
-Tom de voz: ${briefing.tone}
-Objetivo: ${briefing.objective}
-Promessa principal: ${briefing.promise || 'benefício claro da oferta'}
-CTA: ${briefing.cta}
-Restrições: ${briefing.restrictions || 'evitar promessas exageradas'}
-Mídias selecionadas: ${selectedMedia.map((asset) => asset.title || asset.url).join(', ') || 'usar imagem principal do anúncio'}
-Briefing extra: ${briefing.extra || 'sem briefing extra'}
-
-Regras de qualidade:
-- O vídeo deve ser pensado para formato vertical 9:16, com texto legível em celular e área segura.
-- O roteiro precisa ter começo, meio e fim: gancho, demonstração, prova/contexto e CTA.
-- Cada cena precisa explicar o que aparece, o que acontece, como a câmera se move e como conecta com a próxima.
-- Fidelidade máxima ao produto: toda cena deve respeitar rigorosamente as imagens enviadas pelo usuário e o pedido feito na plataforma. O vídeo não pode transformar o produto em outro modelo, mudar cor, proporção, textura, embalagem, controle/acessório, tela, logo aparente ou detalhes físicos.
-- Quando houver dúvida visual, preferir uma cena mais simples e fiel ao produto real em vez de inventar elementos.
-- Não invente preço, desconto, marca, garantia, recursos técnicos ou resultados que não estejam no anúncio.
-- Evite frases genéricas. Mostre benefício por ação visual concreta.
-- Linguagem natural de vendedor/apresentador, sem promessa exagerada e sem cara de spam.
-
-Responda em português neste formato exato:
-
-Resumo criativo:
-- Ideia central:
-- Público:
-- Promessa principal:
-- CTA:
-
-Roteiro estruturado por cenas:
-Cena 1: [título curto]
-Tempo: [ex: 0-3s]
-Objetivo da cena: [por que essa cena existe]
-Texto na tela: [frase curta e grande]
-Narração/legenda: [fala natural]
-Ação visual obrigatória: [o que deve acontecer na imagem/vídeo]
-Direção visual: [luz, fundo, ritmo, estética]
-Câmera e enquadramento 9:16: [posição do produto, margem segura, movimento]
-Uso das imagens de referência: [qual tipo de imagem usar e como]
-Fidelidade ao produto: [quais detalhes das fotos do usuário precisam permanecer idênticos nesta cena]
-Transição/conexão com a próxima cena: [como uma cena puxa a outra]
-Restrições da cena: [o que não fazer]
-
-Repita para 4 a 6 cenas, conforme a duração ${duration}. Depois finalize com:
-
-Legenda para publicação:
-CTA final:
-Observação anti-spam/naturalidade:
-`;
-
-  const createImagePrompt = (currentProduct: Product) => `
-Crie um criativo vertical profissional para anúncio em vídeo curto.
-Anúncio/oferta base: ${currentProduct.name}
-Categoria: ${currentProduct.category || 'campanha de afiliado/colaborador'}
-Descrição do anúncio original: ${currentProduct.description || 'Sem descrição'}
-Formato: ${selectedFormatConfig?.label} ${selectedFormatConfig?.ratio}
-Plataforma: ${platform}
-Template: ${selectedTemplateConfig?.label}
-Direção visual do template: ${selectedTemplateConfig?.visual}
-Movimento esperado: ${selectedTemplateConfig?.motion}
-Guia criativo: ${selectedTemplateConfig?.prompt}
-Promessa principal: ${briefing.promise || 'benefício claro da oferta'}
-Tom visual: moderno, premium, alto contraste, luz de estúdio, composição limpa.
-Instrução: gerar uma imagem comercial bonita para divulgação, com foco na oferta, fundo profissional, espaço para texto curto e sem marcas d'agua.
-${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
-`;
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [activeJobs, updateQueue]);
 
   const handleGenerateScript = async () => {
-    if (!product) {
+    if (!product || !promptContext) {
       toast.error('Selecione um anúncio base antes de gerar o roteiro.');
       return;
     }
 
     setGeneratingScript(true);
     try {
-      const script = await invokeLLM(createPrompt(product, true));
+      const script = await withRequestTimeout(
+        invokeLLM(createVideoScriptPrompt(promptContext, true), { timeoutMs: 60_000 }),
+        'A IA demorou para criar o roteiro. Tente novamente em alguns instantes.',
+        60_000,
+      );
       setScriptPreview(script);
       if (!scenes.some((scene) => scene.onScreenText || scene.narration)) {
         setScenes(createDefaultScenes(product.name, briefing));
       }
       toast.success('Roteiro criado para revisão');
-    } catch {
-      toast.error('Não foi possível gerar o roteiro');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar o roteiro');
     } finally {
       setGeneratingScript(false);
     }
@@ -509,35 +482,45 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
 
     setGeneratingScript(true);
     try {
-      const suggestion = await invokeLLM(
-        `Melhore este briefing para transformar o anúncio/oferta "${product.name}" em vídeos curtos de divulgação. Retorne público-alvo, promessa, tom, CTA permitido, ângulo criativo e restrições. Briefing atual: ${JSON.stringify(briefing)}`
+      const suggestion = await withRequestTimeout(
+        invokeLLM(
+          `Melhore este briefing para transformar o anúncio/oferta "${product.name}" em vídeos curtos de divulgação. Retorne público-alvo, promessa, tom, CTA permitido, ângulo criativo e restrições. Briefing atual: ${JSON.stringify(briefing)}`,
+          { timeoutMs: 60_000 },
+        ),
+        'A IA demorou para sugerir a estratégia. Tente novamente em alguns instantes.',
+        60_000,
       );
       setScriptPreview(suggestion);
       toast.success('Estratégia sugerida pela IA');
-    } catch {
-      toast.error('Não foi possível sugerir melhorias');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível sugerir melhorias');
     } finally {
       setGeneratingScript(false);
     }
   };
 
   const handleGenerateVisual = async () => {
-    if (!product) {
+    if (!product || !promptContext) {
       toast.error('Selecione um anúncio base antes de gerar a imagem.');
       return;
     }
 
     setGeneratingVisual(true);
     try {
-      const result = await generateImage({
-        prompt: createImagePrompt(product),
-        product_id: product.id,
-        product_name: product.name,
-        title: `Criativo IA - ${product.name}`,
-        platform,
-        format: selectedFormatConfig?.ratio,
-        size: selectedFormatConfig?.ratio === '16:9' ? '1536x1024' : selectedFormatConfig?.ratio === '1:1' ? '1024x1024' : '1024x1536',
-      });
+      const imagePrompt = createVideoImagePrompt(promptContext);
+      const result = await withRequestTimeout(
+        generateImage({
+          prompt: imagePrompt,
+          product_id: product.id,
+          product_name: product.name,
+          title: `Criativo IA - ${product.name}`,
+          platform,
+          format: selectedFormatConfig?.ratio,
+          size: selectedFormatConfig?.ratio === '16:9' ? '1536x1024' : selectedFormatConfig?.ratio === '1:1' ? '1024x1024' : '1024x1536',
+        }, { timeoutMs: 90_000 }),
+        'A geração de imagem demorou mais que o esperado. Tente novamente em alguns instantes.',
+        90_000,
+      );
 
       if (result.asset) {
         setGeneratedVisual(result.asset);
@@ -554,7 +537,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
           source: result.provider,
           url: result.image_url,
           thumbnail_url: result.image_url,
-          caption: createImagePrompt(product),
+          caption: imagePrompt,
           platforms: [platform],
           quality_score: 88,
         };
@@ -576,8 +559,16 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       return;
     }
 
-    const images = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
-    if (!images.length) return;
+    const fileList = Array.from(files || []);
+    const rejected = fileList.filter((file) => !file.type.startsWith('image/'));
+    const images = fileList.filter((file) => file.type.startsWith('image/'));
+    if (rejected.length) {
+      toast.warning(`${rejected.length} arquivo(s) ignorado(s): apenas imagens são aceitas.`);
+    }
+    if (!images.length) {
+      toast.error('Selecione pelo menos uma imagem válida para usar como referência.');
+      return;
+    }
 
     setUploadingReferences(true);
     try {
@@ -592,10 +583,6 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       setUploadingReferences(false);
     }
   };
-
-  const upsertQueue = (job: Job) => setQueue((current) => [job, ...current]);
-  const updateQueue = (id: EntityId, patch: Partial<Job>) =>
-    setQueue((current) => current.map((job) => (job.id === id ? { ...job, ...patch } : job)));
 
   const requestGenerate = () => {
     if (!product) {
@@ -612,7 +599,9 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
   };
 
   const handleGenerate = async () => {
-    if (!product) return;
+    if (!product || !promptContext) return;
+    if (generatingRef.current) return;
+    generatingRef.current = true;
     setShowPreflight(false);
     setGenerating(true);
     const jobId = `job-${Date.now()}`;
@@ -627,28 +616,36 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
     });
 
     try {
-      const baseScript = scriptPreview || (await invokeLLM(createPrompt(product)));
+      const baseScript = scriptPreview || (await withRequestTimeout(
+        invokeLLM(createVideoScriptPrompt(promptContext), { timeoutMs: 60_000 }),
+        'A criação do roteiro demorou mais que o esperado. Tente novamente em alguns instantes.',
+        60_000,
+      ));
       if (!scriptPreview) setScriptPreview(baseScript);
       const script = buildStructuredScript(baseScript) || baseScript;
       updateQueue(jobId, { progress: 72 });
 
-      const result = await generateVideo({
-        product_id: product.id,
-        media_asset_ids: selectedMediaIds,
-        style: selectedTemplate,
-        template: selectedTemplateConfig?.label || selectedTemplate,
-        format: selectedFormat,
-        ratio: selectedFormatConfig?.ratio,
-        duration,
-        platform,
-        platforms: [platform],
-        briefing: briefing.extra,
-        briefing_fields: briefing,
-        visual_prompt: visualPrompt,
-        script,
-        rhythm,
-        audio,
-      });
+      const result = await withRequestTimeout(
+        generateVideo({
+          product_id: product.id,
+          media_asset_ids: selectedMediaIds,
+          style: selectedTemplate,
+          template: selectedTemplateConfig?.label || selectedTemplate,
+          format: selectedFormat,
+          ratio: selectedFormatConfig?.ratio,
+          duration,
+          platform,
+          platforms: [platform],
+          briefing: briefing.extra,
+          briefing_fields: briefing,
+          visual_prompt: visualPrompt,
+          script,
+          rhythm,
+          audio,
+        }, { timeoutMs: 90_000 }),
+        'O backend demorou para criar o job de vídeo. Confira a fila e tente novamente se necessário.',
+        90_000,
+      );
 
       setQueue((current) => [
         result.job,
@@ -663,6 +660,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
       updateQueue(jobId, { status: 'failed', progress: 100, error_message: friendly });
       toast.error(friendly);
     } finally {
+      generatingRef.current = false;
       setGenerating(false);
     }
   };
@@ -723,7 +721,7 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
                 </div>
                 <div>
                   <Label>Plataforma principal</Label>
-                  <Select value={String(platform)} onValueChange={(value) => setPlatform(value)}>
+                  <Select value={String(platform)} onValueChange={(value) => setPlatform(value as Platform)}>
                     <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                     <SelectContent>{platforms.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
                   </Select>
@@ -977,11 +975,22 @@ ${visualPrompt ? `Direção visual adicional: ${visualPrompt}` : ''}
         <section className={stageCardClass(3)}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <SectionTitle icon={Play} title="Prévia do roteiro" subtitle="Revise antes de renderizar o vídeo final" />
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => navigator.clipboard.writeText(buildStructuredScript())}><Copy className="h-4 w-4" /> Copiar roteiro</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                navigator.clipboard.writeText(structuredScript)
+                  .then(() => toast.success('Roteiro copiado!'))
+                  .catch(() => toast.error('Não foi possível copiar o roteiro.'));
+              }}
+            >
+              <Copy className="h-4 w-4" /> Copiar roteiro
+            </Button>
           </div>
           <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-4">
             {scriptPreview || scenes.some((scene) => scene.onScreenText || scene.narration) ? (
-              <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">{buildStructuredScript()}</pre>
+              <pre className="whitespace-pre-wrap text-sm leading-6 text-foreground">{structuredScript}</pre>
             ) : (
               <p className="text-sm text-muted-foreground">Gere um roteiro para visualizar gancho, cenas, texto na tela, legenda e CTA final.</p>
             )}
